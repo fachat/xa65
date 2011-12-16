@@ -295,3 +295,19 @@ xa-2.3.5
   * Documentation updated.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 7 February, 2009
+
+xa-2.x.x
+
+  * Add -E commandline option to not stop after 20 errors, but show all
+    of them
+  * Introduce -X compatibility set commandline option, to distinguish 
+    between MASM and CA65 compatibility options
+  * Implement CA65 "cheap local labels", ":=" label definitions,
+    and various pseudo opcodes (.include, .import, .importzp,
+    .zeropage, .proc (anonymous only), .endproc, .code, .org, .reloc)
+  * some bugfixes around error/warning logs
+  * some more comments
+  * Stuff is mostly untested...
+
+ -- André Fachat <afachat@gmx.de> 25 June, 2011
+

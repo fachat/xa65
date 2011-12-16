@@ -49,6 +49,7 @@ typedef struct {
 	int len;
 	int fl;		/* 0 = label value not valid/known,
 			 * 1 = label value known
+			 * 2 = label value not known, external global label (imported on link)
 			 */
 	int afl;	/* 0 = no address (no relocation), 1 = address label */
 	int nextindex;
@@ -174,6 +175,8 @@ typedef struct {
 #define SEG_BSS		4
 #define SEG_ZERO	5
 #define SEG_MAX         6
+
+#define SEG_UNDEFZP     7	/* is being mapped to UNDEF */
 
 typedef struct Fopt {
 	signed char *text;	/* text after pass1 */

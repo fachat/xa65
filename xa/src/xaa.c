@@ -122,10 +122,12 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 /* printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
 			er, segment, afl, nolink, fundef); */
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( nolink || (afl==SEG_UNDEF)) {
+	    if( nolink || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
 	      *v = 0;
-	      afl = SEG_UNDEF;
+	      if(afl!=SEG_UNDEFZP) {
+	        afl = SEG_UNDEF;
+	      }
 	      *label = cval(s+pp+1);
 	    }
 	  }
@@ -169,7 +171,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
                if(!(er=ag_term(s,pr[o],&w, nafl, label)))
                {
 		    if(afl || *nafl) {	/* check pointer arithmetic */
-		      if((afl == *nafl) && (afl!=SEG_UNDEF) && o==2) {
+		      if((afl == *nafl) && (afl!=SEG_UNDEFZP) && (afl!=SEG_UNDEF) && o==2) {
 			afl = 0; 	/* substract two pointers */
 		      } else 
 		      if(((afl && !*nafl) || (*nafl && !afl)) && o==1) {

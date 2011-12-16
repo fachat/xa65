@@ -25,7 +25,7 @@
 extern File *alloc_file(void);
 
 /* jumps to r[td]_set, depending on segment */
-int r_set(int pc, int reloc, int len);
+/*int r_set(int pc, int reloc, int len);*/
 int u_set(int pc, int reloc, int label, int len);
 
 int rt_set(int pc, int reloc, int len, int label);

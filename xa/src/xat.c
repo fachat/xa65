@@ -51,6 +51,16 @@ static void tg_bin(signed char*,int*,int*);
 
 /* assembly mnemonics and pseudo-op tokens */
 /* ina and dea don't work yet */
+/* Note AF 20110624: added some ca65 compatibility pseudo opcodes,
+ * many are still missing (and will most likely never by supported in this
+ * code base). Potential candidates are .hibytes, .lobytes, .asciiz,
+ * .addr, .charmap, .dbyt, .faraddr, .bankbytes, .segment (at least for the known ones)
+ * .incbin is similar to our .bin, but with parameters reversed (argh...)
+ * I like the .popseg/.pushseg pair; 
+ * .global/.globalzp is equivalent to forward-defining a label in the global block
+ * .export/.exportzp could be implemented with a commandline switch to NOT export
+ * global labels, where .exported labels would still be exported in an o65 file.
+ */
 static char *kt[] ={ 
 /*    1     2     3    4      5     6      7   8      9     10   */
      "adc","and","asl","bbr","bbs","bcc","bcs","beq","bit","bmi",
@@ -75,7 +85,9 @@ static char *kt[] ={
 
      ".byt",".word",".asc",".dsb", ".(", ".)", "*=", ".text",".data",".bss",
      ".zero",".fopt", ".byte", ".end", ".list", ".xlist", ".dupb", ".blkb", ".db", ".dw",
-     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code"
+     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code",
+     ".include", ".import", ".importzp", ".proc", ".endproc",
+     ".zeropage", ".org", ".reloc"
 
 };
 
@@ -84,8 +96,6 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 /* index into token array for pseudo-ops */
 /* last valid mnemonic */
 #define   Lastbef   93
-/* last valid token+1 */
-#define   Anzkey    124
 
 #define   Kbyt      Lastbef+1
 #define   Kword     Lastbef+2
@@ -121,8 +131,24 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
 #define	  Kcode	    Lastbef+30	/* gets remapped to Ktext */
 
-#define   Kreloc    Anzkey   	/* *= (relocation mode) */
-#define   Ksegment  Anzkey+1
+/* 93 + 30 -> 123 */
+
+#define	  Kinclude  Lastbef+31
+#define   Kimport   Lastbef+32
+#define   Kimportzp Lastbef+33
+#define	  Kproc     Lastbef+34	/* mapped to Kopen */
+/* 93 + 35 -> 128 */
+#define	  Kendproc  Lastbef+35	/* mapped to Kclose */
+#define	  Kzeropage Lastbef+36	/* mapped to Kzero */
+#define	  Korg      Lastbef+37	/* mapped to Kpcdef - with parameter equivalent to "*=$abcd" */
+#define	  Krelocx   Lastbef+38	/* mapped to Kpcdef - without parameter equivalent to "*=" */
+
+/* last valid token+1 */
+#define	  Anzkey    Lastbef+39	/* define last valid token number; last define above plus one */
+
+
+#define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
+#define   Ksegment  (Anzkey+1-256)	/* this actually now is 129, which might be a problem as char is signed ... */
 
 /* array used for hashing tokens (26 entries, a-z) */
 
@@ -342,7 +368,6 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 #endif
      er=t_conv(s,t,&l,pc[segment],&nk,&na1,&na2,0,&byte);
      /* leaving our token sequence in t */
-
      *ll=l;
 /*
      printf("t_conv (er=%d):",er);
@@ -372,7 +397,26 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 	  if(n==Kend || n==Klist || n==Kxlist) {
 	    *ll = 0;		/* ignore */
 	  } else
-
+	  if(n==Kinclude) {
+	    *ll = 0;		/* no output length */
+	    i=1;
+            if(t[i]=='\"') {
+	       int k,j=0;
+	       char binfname[255];
+               i++;
+               k=t[i]+i+1;
+               i++;
+               while(i<k && !er) {
+                 binfname[j++] = t[i++];
+                 if (j > 255)
+                    er = E_NOMEM; /* buffer overflow */
+               }
+               binfname[j] = '\0';
+	       er=icl_open(binfname);
+	    } else {
+	       er=E_SYNTAX;
+	    }
+	  } else
 	  if(n==Kfopt) {
 	    if(romable==1) er=E_ROMOPT;
 	    t[0] = Kbyt;
@@ -777,6 +821,48 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 		/* .byt, .asc, .word, .dsb, .fopt pseudo-op dispatch */
 
           } else
+	  if(n==Kimportzp) {
+	    int i;
+	    *ll=0;		/* no output */
+	    bl = 0;		/* no output length */
+	    /* import labels; next follow a comma-separated list of labels that are
+ 	       imported. Tokenizer has already created label entries, we only need to
+	       set the flags appropriately */
+	    i=1;
+/*printf("Kimport: t[i]=%d\n",t[i]);*/
+	    while(t[i]==T_LABEL) {
+		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
+/*printf("lg_import: %d\n",n);*/
+		lg_importzp(n);
+		i+=3;
+		while (t[i]==' ') i++;
+		if (t[i]!=',') break;
+		i++;
+		while (t[i]==' ') i++;
+	    }
+	    er=E_NOLINE;
+	  } else
+	  if(n==Kimport) {
+	    int i;
+	    *ll=0;		/* no output */
+	    bl = 0;		/* no output length */
+	    /* import labels; next follow a comma-separated list of labels that are
+ 	       imported. Tokenizer has already created label entries, we only need to
+	       set the flags appropriately */
+	    i=1;
+/*printf("Kimport: t[i]=%d\n",t[i]);*/
+	    while(t[i]==T_LABEL) {
+		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
+/*printf("lg_import: %d\n",n);*/
+		lg_import(n);
+		i+=3;
+		while (t[i]==' ') i++;
+		if (t[i]!=',') break;
+		i++;
+		while (t[i]==' ') i++;
+	    }
+	    er=E_NOLINE;
+	  } else
           if(n==Kbyt || n==Kasc || n==Kaasc)
           {
 #ifdef DEBUG_AM
@@ -858,7 +944,8 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                       v2=v;
                     } else {
                       if( (!(er=l_get(n,&v2, &afl))) 
-				&& ((afl & A_FMASK)!=(SEG_UNDEF<<8)) )
+				&& ((afl & A_FMASK)!=(SEG_UNDEF<<8)) 
+				&& ((afl & A_FMASK)!=(SEG_UNDEFZP<<8)) )
                       {
                          if(t[3]=='+')
                          {
@@ -1175,7 +1262,7 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                }
 	       dsb_len = 0;
           } else
-          if(n<=Lastbef)
+          if(n>=0 && n<=Lastbef)
           {
                if((c=t[1])=='#')
                {
@@ -1633,7 +1720,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 
           }
 
-          if((n & 0xff) <=Lastbef)
+          if(n>=0 && n<=Lastbef)
                mk=1;     /* 1= nur 1 Komma erlaubt *//* = only 1 comma ok */
      }
 
@@ -1980,6 +2067,11 @@ static int t_keyword(signed char *s, int *l, int *n)
      if(i==Kblock) i=Kopen;
      if(i==Kbend) i=Kclose;
      if(i==Kcode) i=Ktext;
+     if(i==Kproc) i=Kopen;
+     if(i==Kendproc) i=Kclose;
+     if(i==Kzeropage) i=Kzero;
+     if(i==Korg) i=Kpcdef;
+     if(i==Krelocx) i=Kpcdef;
 
 
      *l=j;

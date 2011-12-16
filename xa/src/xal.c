@@ -183,7 +183,7 @@ int cll_getcur() {
 /**********************************************************************************/
 
 /**
- * define a global label
+ * define a global label (from the "-L" command line parameter)
  */
 int lg_set(char *s ) {
 	int n, er;
@@ -194,11 +194,39 @@ int lg_set(char *s ) {
 	  fprintf(stderr,"Warning: global label doubly defined!\n");
 	} else {
           if(!(er=ll_def(s,&n,0))) {
-            ltp=afile->la.lt+n;
-            ltp->fl=2;
-            ltp->afl=SEG_UNDEF;
-          }
+	    return lg_import(n);
+	  }
       	}
+	return er;
+}
+
+/**
+ * define a global label (from the .import pseudo opcode))
+ * "s" is a pointer to the first label character, end is at \0
+ * or at non-alphanumeric/_ char
+ */
+int lg_import(int n) {
+	int er=E_OK;
+
+        ltp=afile->la.lt+n;
+        ltp->fl=2;
+        ltp->afl=SEG_UNDEF;
+
+	return er;
+}
+
+/**
+ * define a global zeropage label (from the .importzp pseudo opcode))
+ * "s" is a pointer to the first label character, end is at \0
+ * or at non-alphanumeric/_ char
+ */
+int lg_importzp(int n) {
+	int er=E_OK;
+
+        ltp=afile->la.lt+n;
+        ltp->fl=2;
+        ltp->afl=SEG_UNDEFZP;
+
 	return er;
 }
 

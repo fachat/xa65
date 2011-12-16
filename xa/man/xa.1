@@ -453,7 +453,7 @@ and
 are synonymous, so you can mix things such as
 .B .byt $43, 22, """a character string"""
 and get the expected result. The string is subject to the current character
-set, but the remaining bytes are inserted wtihout modification.
+set, but the remaining bytes are inserted without modification.
 .TP
 .B .aasc """text1""","text2",...
 Specifies a character string that is
@@ -503,10 +503,21 @@ a block, precede the label with
 or precede it with
 .B &
 to declare it within the previous level only (or globally if you are only
-one level deep). Sixteen levels of scoping are permitted.
+one level deep). Sixteen levels of scoping are permitted. 
+.B \&.)
+is equivalent to
+.B .block
+or
+.B .proc
+. The latter is similar to the ca65 pseudo-opcode, but only anonymous blocks
+are supported.
 .TP
 .B \&.)
-Closes a block.
+Closes a block. This is equivalent to
+.B .bend
+or 
+.B .endproc
+.
 .TP
 .B \.as \.al \.xs \.xl
 Only relevant in 65816 mode (with the
@@ -533,6 +544,11 @@ and
 generate errors if
 .B \-w
 is not specified.
+.TP
+.B .include "filename"
+Includes another file in place of the pseudo opcode. Same as the preprocessor 
+.B #include
+
 .LP
 The following pseudo-ops apply primarily to relocatable .o65 objects.
 A full discussion of the relocatable format is beyond the
@@ -552,6 +568,8 @@ are valid in relative and absolute modes.
 .TP
 .B .code
 For CA65 compatibility this is currently mapped to ".text".
+.B .zeropage
+For CA65 compatibility this is currently mapped to ".zero".
 .TP
 .B .align value
 Aligns the current segment to a byte boundary (2, 4 or 256) as specified by
@@ -570,6 +588,17 @@ is used to specify the file option being referenced. A table of these options
 is in the relocatable o65 file format description. The remainder of the options
 are interpreted as values to insert. Any number of values may be specified,
 and may also be strings.
+.TP
+.B .import label1, label2, label3, ...
+Defines the given labels as global labels which are imported and resolved during
+the link stage. Similar to the
+.B -L
+command line parameter
+.TP
+.B .importzp label1, label2, label3, ...
+Similar to
+.B .import
+only it imports zeropage labels (i.e. byte values)
 
 .SH PREPROCESSOR
 
@@ -845,7 +874,7 @@ This manual page was written by David Weinehall <tao@acc.umu.se>,
 Andre Fachat <fachat@web.de>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall,
+(C)1989-2011 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
 
 .SH WEBSITE

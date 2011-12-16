@@ -50,7 +50,8 @@ static int pp_replace(char*,char*,int,int);
 static int searchdef(char*);
 static int fgetline(char*,int len, int *rlen, FILE*);
 
-static int icl_open(char*),pp_ifdef(char*),pp_ifndef(char*);
+/*static int icl_open(char*);*/
+static int pp_ifdef(char*),pp_ifndef(char*);
 static int pp_else(char*),pp_endif(char*);
 static int pp_echo(char*),pp_if(char*),pp_print(char*),pp_prdef(char*);
 static int pp_ifldef(char*),pp_iflused(char*);

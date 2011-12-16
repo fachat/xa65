@@ -30,6 +30,8 @@ long gm_labm(void);
 long ga_labm(void);
 
 int lg_set(char *);
+int lg_import(int);
+int lg_importzp(int);
 
 int b_init(void);
 int b_depth(void);
