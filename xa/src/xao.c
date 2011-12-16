@@ -66,7 +66,7 @@ void o_write(FILE *fp) {
 	  l=afile->fo.olist[i].len;
 	  t=afile->fo.olist[i].text;
 /* do not optimize */
-	  t_p2(t, &l, 1, &afl);
+	  t_p2_l(t, &l, 1, &afl);
 	
 	  if(l>254) {
 	    errout(E_OPTLEN);

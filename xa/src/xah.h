@@ -53,6 +53,7 @@ typedef struct {
 			 */
 	int afl;	/* 0 = no address (no relocation), 1 = address label */
 	int nextindex;
+	int is_cll;	/* 0 is normal label, 1 is cheap local label (used for listing) */
 	char *n;
 	struct LabOcc *occlist;
 } Labtab;
@@ -134,18 +135,24 @@ typedef struct {
 #define W_OVER16M	-73	/* included binary over 16M in 65816 mode */
 /* warnings 74-76 are placeholders */
 
-#define T_VALUE		-1
-#define T_LABEL		-2
-#define T_OP		-3
-#define T_END		-4
-#define T_LINE		-5
-#define T_FILE		-6
-#define T_POINTER	-7
+/* Meta-values for the token list. Note must not overlap with the
+ * K* definitions in xat.c, which have outgrown the positive numbers
+ * and are now growing up from -128 ... */
+#define T_VALUE		-1	/* following is a 24 bit value in the token list */
+#define T_LABEL		-2	/* referring to a label, following the token is the 16bit label number */
+#define T_OP		-3	/* label oriented operation; following is the label number (16bit), plus the operation char (e.g. '+') */
+#define T_END		-4	/* end of line marker */
+#define T_LINE		-5	/* new line indicator; following is the 16 bit line number */
+#define T_FILE		-6	/* new file indicator; following is the 16 bit line number, then the file name (zero-term) */
+#define T_POINTER	-7	/* ??? */
+#define T_COMMENT	-8	/* unused */
+#define T_DEFINE	-9	/* define a label; inserted at conversion and discarded in pass1, only used in listing output */
+#define T_LISTING	-10	/* meta token, inserted after conversion before pass1, used after pass2 to create listing */
 
-#define P_START		 0	/* Prioritaeten fuer Arithmetik    */
-#define P_LOR		 1	/* Von zwei Operationen wird immer */
-#define P_LAND		 2	/* die mit der hoeheren Prioritaet */
-#define P_OR		 3	/* zuerst ausgefuehrt              */
+#define P_START		 0	/* arithmetic operation priorities    */
+#define P_LOR		 1	/* of any two operations, the one with */
+#define P_LAND		 2	/* the higher priority will be done first */
+#define P_OR		 3	
 #define P_XOR		 4
 #define P_AND		 5
 #define P_EQU		 6

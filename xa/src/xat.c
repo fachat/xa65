@@ -25,6 +25,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "xad.h"
 #include "xah.h"
@@ -48,6 +49,8 @@ static void tg_dez(signed char*,int*,int*);
 static void tg_hex(signed char*,int*,int*);
 static void tg_oct(signed char*,int*,int*);
 static void tg_bin(signed char*,int*,int*);
+static int t_p2(signed char *t, int *ll, int fl, int *al);
+static void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
 
 /* assembly mnemonics and pseudo-op tokens */
 /* ina and dea don't work yet */
@@ -148,7 +151,7 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
 
 #define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
-#define   Ksegment  (Anzkey+1-256)	/* this actually now is 129, which might be a problem as char is signed ... */
+#define   Ksegment  (Anzkey+1-256)	/* this actually now is above 127, which might be a problem as char is signed ... */
 
 /* array used for hashing tokens (26 entries, a-z) */
 
@@ -347,11 +350,14 @@ static int le[] ={ 1,2,2,2,2,2,2,2,3,3,3,2,3,3,3,2,
 static int opt[] ={ -1,-1,-1,-1,-1,-1,-1,-1,1,2,3,-1,4,5,-1,-1,
            /*new*/ -1,8,9,-1,-1,-1,-1,-1 }; /* abs -> zp */
 
+/*********************************************************************************************/
 /* pass 1 */
 int t_p1(signed char *s, signed char *t, int *ll, int *al)
 {
      static int er,l,n,v,nk,na1,na2,bl,am,sy,i,label,byte; /*,j,v2 ;*/
      int afl = 0;
+     int tlen;	/* token listing length, to adjust length that is returned */
+     int inp;	/* input pointer in t[] */
 
 /* notes and typical conventions ... er = error code
 	am = addressing mode in use
@@ -366,18 +372,68 @@ int t_p1(signed char *s, signed char *t, int *ll, int *al)
 #ifdef DEBUG_AM
 fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 #endif
-     er=t_conv(s,t,&l,pc[segment],&nk,&na1,&na2,0,&byte);
-     /* leaving our token sequence in t */
+    
+     /* As the t_p1 code below always works through the tokens
+      * from t_conv in such a way that it always produces a shorter
+      * result, the conversion below takes place "in place".
+      * This, however, means that the original token sequence, which
+      * would be useful for some assembler listing, is overwritten.
+      * While the original assumption was ok for a constrained 
+      * environment like the Atari ST, this is no longer true.
+      * Converting the code below to have separate input and output
+      * areas would be error-prone, so we do some copy-magic here
+      * instead...*/
+     /* we keep three bytes buffer for "T_LISTING" and the length of the
+      * token list
+      */
+     t[0]=T_LISTING;
+     er=t_conv(s,t+6,&l,pc[segment],&nk,&na1,&na2,0,&byte);
+     tlen = l+6;
+     t[1]=tlen&255;
+     t[2]=(tlen>>8)&255;
+     t[3]=segment;
+     t[4]=pc[segment]&255;
+     t[5]=(pc[segment]>>8)&255;
+     /* now duplicate the token sequence from the T_LISTING buffer
+      * to the end of "t", so we can then in-place convert it
+      * below. Non-overlapping, size is known in advance, so 
+      * using memcpy is fine here
+      */
+     memcpy(t+tlen, t+6, l);
+     t=t+tlen;
+
+     /* the result of this is that we always have a Klisting entry in the buffer
+      * for each tokenization call */
+     /* here continue as before, except for adjusting the returne *ll length 
+      * in the end, just before return */
+
+     inp = 0;
+     /* discard label definitions */
+     while (inp<l && t[inp]==T_DEFINE) {
+	inp+=3;
+     }
+     if (inp) {
+        /* sorry, anything else would be way to risky below */
+	l -= inp;
+	if (l != 0) {
+printf("t=%p, inp=%d, l=%d\n", t, inp, l);
+	    memmove(t, t+inp, l);
+	}
+     }
+
+     /* return length default is input length */
      *ll=l;
-/*
+
+#if 0
      printf("t_conv (er=%d):",er);
      for(i=0;i<l;i++)
           printf("%02x,",t[i]);
      printf("\n");
-*/
+#endif
+
      /* if text/data produced, then no more fopt allowed in romable mode */
      /* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
-     if((romable>1) && (t[0]<Kopen || t[0]==Kbyte || t[0]==Kpcdef)) {
+     if((romable>1) && (t[inp]<Kopen || t[inp]==Kbyte || t[inp]==Kpcdef)) {
        afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
        romable=1;
      }
@@ -705,6 +761,8 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 #ifdef DEBUG_AM
 fprintf(stderr, "E_OK ... t_p2 xat.c\n");
 #endif
+	       /* this actually calls pass2 on the current tokenization stream,
+ 		* but without including the Klisting token listing */
                er=t_p2(t,ll,(0 | byte), al);
 	}
           
@@ -732,7 +790,7 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
           if(n>=0 && n<=Lastbef)
           {
-               if(t[1]==T_END)
+               if(t[1]==T_END || t[1]==T_COMMENT)
                {
                     sy=0;	/* implied */
                } else
@@ -906,10 +964,75 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
      if(segment==SEG_TEXT) pc[SEG_ABS]+=bl;
      if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
 
+     /* adjust length by token listing buffer length */
+     *ll = *ll + tlen;
      return(er);
 }
 
-/*t_pass 2*/
+/*********************************************************************************************/
+/* t_pass 2
+ *
+ * *t is the token list as given from pass1
+ * *ll is the returned length of bytes (doubles as 
+ *     input for whether OK or OKDEF status from pass1)
+ * fl defines if we allow zeropage optimization
+ *
+ * Conversion takes place "in place" in the *t array.
+ */
+
+/**
+ * function called from the main loop, where "only" the
+ * undefined labels have to be resolved and the affected 
+ * opcodes are assembled, the rest is passed through from
+ * pass1 (pass-through is done in t_p2, when *ll<0)
+ *
+ * *t	is the input token list
+ * *ll	is the input length of the token list,
+ * 	and the output of how many bytes of the buffer are to be taken
+ * 	into the file
+ */
+int t_p2_l(signed char *t, int *ll, int fl, int *al)
+{
+	int er = E_OK;
+
+	if (t[0] == T_LISTING) {
+	  int tlen;
+	  tlen=((t[2]&255)<<8) | (t[1]&255);
+	  if (*ll<0) {
+	    *ll=(*ll) + tlen;
+	  } else {
+	    *ll=(*ll) - tlen;
+	  }
+
+	  if (*ll != 0) {
+  	    er = t_p2(t+tlen, ll, fl, al);
+	  }
+
+	  /* do the actual listing (*ll-2 as we need to substract the place for the tlen value */
+	  do_listing(t+3, tlen-3, t+tlen, *ll);
+
+	  /* adapt back, i.e. remove token listing */
+	  if (*ll != 0) {
+	  	memmove(t, t+tlen, abs(*ll));
+	  }
+	} else {
+	  er = t_p2(t, ll, fl, al);
+	}
+	return er;
+}
+
+/**
+ * This method does not handle a token list. Thus it
+ * is called internally from pass1 without the token listing, and 
+ * from the t_p2_l() method that strips the token listing 
+ * as well
+ *
+ * *t	is the input token list
+ * *ll	is the input length of the token list,
+ * 	and the output of how many bytes of the buffer are to be taken
+ * 	into the file
+ * 
+ */
 int t_p2(signed char *t, int *ll, int fl, int *al)
 {
      static int afl,nafl, i,j,k,er,v,n,l,bl,sy,am,c,vv[3],v2,label;
@@ -924,11 +1047,12 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 
      er=E_OK;
      bl=0;
-     if(*ll<0) /* <0 bei E_OK, >0 bei E_OKDEF     */
+     if(*ll<0) /* <0 when E_OK, >0 when E_OKDEF     */
      {
           *ll=-*ll;
           bl=*ll;
           er=E_OK;
+	
      } else
      {
           n=t[0];
@@ -1591,10 +1715,11 @@ fprintf(stderr, "address mode: %i address: %i\n", am, vv[0]);
                               er=E_SYNTAX;
                     }
                }          
-                    
+               
           } else
                er=E_SYNTAX;
      }
+
 #ifdef DEBUG_AM
 fprintf(stderr, "-- endof P2\n");
 #endif
@@ -1605,6 +1730,11 @@ fprintf(stderr, "-- endof P2\n");
      return(er);
 }
 
+/*********************************************************************************************/
+/* helper function for the preprocessor, to compute an arithmetic value
+ * (e.g. for #if or #print).
+ * First tokenizes it, then calculates the value
+ */
 int b_term(char *s, int *v, int *l, int pc)
 {
      static signed char t[MAXLINE];
@@ -1618,10 +1748,14 @@ int b_term(char *s, int *v, int *l, int pc)
      return(er);
 }
      
-/* translate a string into a first-pass sequence of tokens */
+/*********************************************************************************************/
+/* translate a string into a first-pass sequence of tokens;
+ * Take the text from *s (stopping at \0 or ';'), tokenize it
+ * and write the result to *t, returning the length of the
+ * token sequence in *l
+ */
 static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
-             int *na1, int *na2, int af, int *bytep)  /* Pass1 von s nach t */
-/* tr. pass1, from s to t */
+             int *na1, int *na2, int af, int *bytep)  
 {
      static int v,f;
      static int operand,o;
@@ -1712,10 +1846,17 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     p++;
                     while(s[p]==' ') p++;
                     l_set(n,pc,segment);        /* set as address value */
+		    t[q++]=T_DEFINE;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
                     n=0;
+
                } else {		/* label ... syntax */
                     l_set(n,pc,segment);        /* set as address value */
-                    n=0;
+      		    t[q++]=T_DEFINE;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
+        	    n=0;
                }
 
           }
@@ -2017,13 +2158,17 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
           }
      }
      /* FIXME: this is an unholy union of two "!" implementations :-( */
-     t[q++]='\0';
-     t[q++]=cast;
+     /* FIXME FIXME FIXME ... */
+     if (operand==1) {
+         t[q++]='\0';
+         t[q++]=cast;
+     }
      *l=q;
      if(bytep) *bytep=byte; 
      return(er);
 }
 
+/*********************************************************************************************/
 static int t_keyword(signed char *s, int *l, int *n)
 {
      int i = 0, j = 0, hash;
@@ -2205,4 +2350,292 @@ fprintf(stderr, "tg_asc token = %i\n", n);
      *p +=i;
      return(er);
 }
+
+/*********************************************************************************************/
+/* this is the listing code
+ *
+ * Unfortunately this code has to go here (for now), as this file is the only one
+ * where we have access to the tables that allow to convert the tokens back to 
+ * a listing
+ */
+
+static FILE *listfp = NULL;
+
+static int list_string(char *buf, char *string);
+static int list_tokens(char *buf, signed char *input, int len);
+static int list_value(char *buf, int val);
+static int list_nchar(char *buf, signed char c, int n);
+static int list_char(char *buf, signed char c);
+static int list_sp(char *buf);
+static int list_word(char *buf, int outword);
+static int list_byte(char *buf, int outbyte);
+static int list_nibble(char *buf, int outnib);
+
+void list_setfile(FILE *fp) {
+	listfp = fp;
+}
+
+/**
+ * listing/listing_len give the buffer address and length respectively that contains
+ * 	the token as they are produced by the tokenizer. 
+ * bincode/bincode_len give the buffer address and length that contain the binary code
+ * 	that is produced from the token listing
+ * 
+ * Note that both lengths may be zero
+ */
+void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len) {
+	
+	int i, n_hexb;
+
+	char outline[MAXLINE];
+	char *buf = outline;
+
+	int lst_seg = listing[0];
+	int lst_pc = (listing[2]<<8) | (listing[1] & 255);
+
+	signed char c = '?';
+
+	/* no output file (not even stdout) */
+	if (listfp == NULL) return;
+
+	/*printf("do_listing: listing=%p (%d), bincode=%p (%d)\n", listing, listing_len, bincode, bincode_len);*/
+
+	if (bincode_len < 0) bincode_len = -bincode_len;
+
+	/* preamble <segment>':'<address>' ' */
+	switch(lst_seg) {
+	case SEG_ABS:	c='A'; break;
+	case SEG_TEXT:	c='T'; break;
+	case SEG_BSS:	c='B'; break;
+	case SEG_DATA:	c='D'; break;
+	case SEG_UNDEF:	c='U'; break;
+	case SEG_ZERO:	c='Z'; break;
+	}
+	buf = buf + list_char(buf, c);
+	buf = buf + list_char(buf, ':');
+	buf = buf + list_word(buf, lst_pc);
+	buf = buf + list_sp(buf);
+
+	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
+	n_hexb = bincode_len;
+	if (n_hexb >= 8) {
+		n_hexb = 7;
+	}
+	for (i = 0; i < n_hexb; i++) {
+		buf = buf + list_byte(buf, bincode[i]);
+		buf = buf + list_sp(buf);
+	}
+	if ((n_hexb == 7) && (bincode_len > 7)) {
+		buf = buf + list_nchar(buf, '.', 3);
+	} else {
+		/* can move loop into nchar ... */
+		for (; i < 8; i++) {
+			buf = buf + list_nchar(buf, ' ', 3);
+		}
+	}
+	buf = buf + list_sp(buf);
+
+	buf += list_tokens(buf, listing + 3, listing_len - 3);
+
+	/* for now only do a hex dump so we see what actually happens */
+	i = buf - outline;
+	if (i<80) buf += list_nchar(buf, ' ', 80-i);
+		
+	buf += list_string(buf, " >>");
+	for (i = 3; i < listing_len; i++) {
+		buf = buf + list_byte(buf, listing[i]);
+		buf = buf + list_sp(buf);
+	}
+	buf[0] = 0;
+
+	
+	fprintf(listfp, "%s\n", outline);
+}
+
+int list_tokens(char *buf, signed char *input, int len) {
+	int outp = 0;
+	int inp = 0;
+	int tmp;
+	char *name;
+	signed char c;
+	int is_cll;
+	int tabval;
+
+	if (inp >= len) return 0;
+
+	tmp = input[inp] & 255;
+
+	tabval = 0;
+	if (tmp == (T_DEFINE & 255)) {
+		while (tmp == (T_DEFINE & 255)) {
+			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			name=l_get_name(tmp, &is_cll);
+			if (is_cll) outp += list_char(buf+outp, '@');
+			tmp = list_string(buf+outp, name);
+			tabval += tmp + 1 + is_cll;
+			outp += tmp;
+			outp += list_char(buf+outp, ' ');
+			inp += 3;
+			tmp = input[inp] & 255;
+		}
+		if (tabval < 10) {
+			outp += list_nchar(buf+outp, ' ', 10-tabval);
+		}
+	} else {
+		if (tmp >= 0 && tmp < Anzkey) {
+			outp += list_string(buf+outp, "          ");
+		}
+	}
+
+	if (tmp >= 0 && tmp < Anzkey) {
+		/* assembler keyword */
+		/*printf("tmp=%d, kt[tmp]=%p\n", tmp, kt[tmp]);*/
+		if (kt[tmp] != NULL) {
+			outp += list_string(buf+outp, kt[tmp]);
+		}
+		outp += list_sp(buf + outp);
+		inp += 1;
+	}
+
+	while (inp < len) {
+		switch(input[inp]) {
+		case T_VALUE:
+			/*outp += list_char(buf+outp, 'V');*/
+			/* 24 bit value */
+			tmp = ((input[inp+3]&255)<<16) | ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			outp += list_value(buf+outp, tmp);
+			inp += 4;
+			break;
+		case T_LABEL:
+			/*outp += list_char(buf+outp, 'L');*/
+			/* 16 bit label number */
+			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			name=l_get_name(tmp, &is_cll);
+			if (is_cll) outp += list_char(buf+outp, '@');
+			outp += list_string(buf+outp, name);
+			inp += 3;
+			break;
+		case T_OP:
+			/* arithmetic operation; inp[3] is operation like '=' or '+' */
+			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			name=l_get_name(tmp, &is_cll);
+			if (is_cll) outp += list_char(buf+outp, '@');
+			outp += list_string(buf+outp, name);
+			outp += list_char(buf+outp, input[inp+3]);
+			inp += 4;
+			break;
+		case T_END:
+			/* end of operation */
+			/*outp += list_string(buf+outp, ";");*/
+			inp += 1;
+			goto end;
+			break;
+		case T_LINE:
+			/* newline marker - ignored? */
+			outp += list_string(buf+outp, "\\n ");
+			/* line number */
+			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			outp += list_word(buf+outp, tmp);
+			inp += 3;
+			break;
+		case T_FILE:
+			/* new file marker - ignored? */
+			outp += list_string(buf+outp, "\\f ");
+			/* line number */
+			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+			outp += list_word(buf+outp, tmp);
+			/* file name */
+			tmp = list_string(buf+outp, (char*)input+inp+3);
+			outp += tmp;
+			inp += tmp + 3;
+			break;
+		case T_POINTER:
+			/* what is this? It's actually resolved during token conversion */
+			outp += list_byte(buf+outp, input[inp+1]);
+			outp += list_char(buf+outp, '#');
+			tmp = ((input[inp+3]&255)<<8) | (input[inp+2]&255);
+			outp += list_value(buf+outp, tmp);
+			inp += 4;
+			break;
+		default:
+			c = input[inp];
+			if (c > 31) {
+				outp += list_char(buf+outp, input[inp]);
+			} else {
+				outp += list_char(buf+outp, '\'');
+				outp += list_byte(buf+outp, input[inp]);
+			}
+			inp += 1;
+			break;
+		}
+	}
+end:
+	return outp;	
+}
+
+int list_string(char *buf, char *string) {
+	int p = 0;
+	while (string[p] != 0) {
+		buf[p] = string[p];
+		p++;
+	}
+	return p;
+}
+
+int list_value(char *buf, int val) {
+	int p = 0;
+	p += list_char(buf + p, '$');
+	if (val & (255<<16)) {
+		p += list_byte(buf+p, val>>16);
+		p += list_word(buf+p, val);
+	} else
+	if (val & (255<<8)) {
+		p += list_word(buf+p, val);
+	} else {
+		p += list_byte(buf+p, val);
+	}
+	return p;
+}
+
+int list_nchar(char *buf, signed char c, int n) {
+	int i;
+	for (i = 0; i < n; i++) {
+		buf[i]=c;
+	}
+	return n;
+}
+
+int list_char(char *buf, signed char c) {
+	buf[0] = c;
+	return 1;
+}
+
+int list_sp(char *buf) {
+	buf[0] = ' ';
+	return 1;
+}
+
+int list_word(char *buf, int outword) {
+	buf = buf + list_byte(buf, outword >> 8);
+	list_byte(buf, outword);
+	return 4;
+}
+
+int list_byte(char *buf, int outbyte) {
+	buf = buf + list_nibble(buf, (outbyte >> 4));
+	list_nibble(buf, outbyte);
+	return 2;
+}
+
+int list_nibble(char *buf, int outnib) {
+	outnib = outnib & 0xf;
+	if (outnib < 10) {
+		buf[0]='0'+outnib;
+	} else {
+		buf[0]='a'-10+outnib;
+	}
+	return 1;
+}
+
+
 

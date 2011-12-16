@@ -77,7 +77,7 @@ char altppchar;
 
 static char out[MAXLINE];
 static time_t tim1, tim2;
-static FILE *fpout, *fperr, *fplab;
+static FILE *fpout, *fperr, *fplab, *fplist;
 static int ner = 0;
 static int ner_max = 20;
 
@@ -123,9 +123,10 @@ int main(int argc,char *argv[])
      int no_link = 0;
 
      char **ifiles;
-     char *ofile;
-     char *efile;
-     char *lfile;
+     char *printfile;	/* print listing to this file */
+     char *ofile;	/* output file */
+     char *efile;	/* error listing goes there */
+     char *lfile;	/* labels go here */
      char *ifile;
      
      char old_e[MAXLINE];
@@ -179,6 +180,7 @@ int main(int argc,char *argv[])
      ofile="a.o65";
      efile=NULL;
      lfile=NULL;
+     printfile=NULL;
 
      if(pp_init()) {
        logout("fatal: pp: no memory!");
@@ -298,6 +300,13 @@ int main(int argc,char *argv[])
 		  reg_include(argv[i]+2);
 		}
 		break;
+	  case 'P':
+		if(argv[i][2]==0) {
+		  printfile=argv[++i];
+		} else {
+		  printfile=argv[i]+2;
+		}
+		break;
 	  case 'o':
 		if(argv[i][2]==0) {
 		  ofile=argv[++i];
@@ -378,6 +387,12 @@ int main(int argc,char *argv[])
 	if(setfext(old_l,".lab")==0) lfile = old_l;
      }
 
+     if (printfile!=NULL && !strcmp(printfile, "-")) {
+	printfile=NULL;
+	fplist = stdout;
+     } else {
+        fplist= printfile ? xfopen(printfile,"w") : NULL;
+     }
      fplab= lfile ? xfopen(lfile,"w") : NULL;
      fperr= efile ? xfopen(efile,"w") : NULL;
      if(!strcmp(ofile,"-")) {
@@ -393,6 +408,7 @@ int main(int argc,char *argv[])
 
      if(verbose) fprintf(stderr, "%s\n",copyright);
 
+
      if(1 /*!m_init()*/)
      {
        if(1 /*!b_init()*/)
@@ -405,6 +421,8 @@ int main(int argc,char *argv[])
              {
 	       if(fperr) fprintf(fperr,"%s\n",copyright);
 	       if(verbose) logout(ctime(&tim1));
+
+     	       list_setfile(fplist);
 
 	       /* Pass 1 */
 
@@ -498,9 +516,10 @@ int main(int argc,char *argv[])
 
 	       if((!er) && relmode) seg_end(fpout);	/* write reloc/label info */
 			                              
+               if(fplist && fplist!=stdout) fclose(fplist);
                if(fperr) fclose(fperr);
                if(fplab) fclose(fplab);
-               if(fpout) fclose(fpout);
+               if(fpout && fpout!=stdout) fclose(fpout);
 
              } else {
                logout("fatal: x: no memory!\n");
@@ -673,7 +692,7 @@ static int pass2(void)
           } else
           {
 /* do not attempt address mode optimization on pass 2 */
-               er=t_p2(afile->mn.tmp+afile->mn.tmpe,&ll,1,&al);
+               er=t_p2_l(afile->mn.tmp+afile->mn.tmpe,&ll,1,&al);
 
                if(er==E_NOLINE)
                {
@@ -779,7 +798,7 @@ fprintf(stderr, "offset = %i length = %i fstart = %i flen = %i charo = %c\n",
 
 static int pass1(void)
 {
-     signed char o[MAXLINE];
+     signed char o[2*MAXLINE];	/* doubled for token listing */
      int l,er,temp_er,al;
 
      memode=0;

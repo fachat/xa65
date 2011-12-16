@@ -313,6 +313,7 @@ int l_def(char *s, int *l, int *x, int *f)
                     ltp=afile->la.lt+n;
                     *l=ltp->len+i;
                     ltp->fl=0;
+		    ltp->is_cll=cll_fl;
                }
           } 
 
@@ -363,7 +364,8 @@ int l_search(char *s, int *l, int *x, int *v, int *afl)
           er=ll_def(s,x,b); /* ll_def(...,*v); */
 
           ltp=afile->la.lt+(*x);
-          
+          ltp->is_cll = cll_fl;
+
           *l=ltp->len + cll_fl;
 
           if(!er) 
@@ -409,6 +411,13 @@ void l_addocc(int n, int *v, int *afl) {
      } else {
        ltp->occlist = p;
      }
+}
+
+/* for the list functionality */
+char *l_get_name(int n, int *is_cll) {
+     ltp=afile->la.lt+n;
+     *is_cll = ltp->is_cll;
+     return ltp->n;
 }
 
 int l_get(int n, int *v, int *afl)
@@ -495,6 +504,7 @@ static int ll_def(char *s, int *n, int b)          /* definiert naechstes Label 
                ltp->blk=b;
                ltp->fl=0;
                ltp->afl=0;
+               ltp->is_cll=0;
                ltp->occlist=NULL;
                hash=hashcode(s,j); 
                ltp->nextindex=afile->la.hashindex[hash];
@@ -689,7 +699,7 @@ int b_close(void)
      } else {
 	  return E_BLOCK;
      }
-
+     cll_clear();
      return(E_OK);
 }
 
