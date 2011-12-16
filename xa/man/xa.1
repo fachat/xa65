@@ -19,6 +19,9 @@ further in this manual page.
 
 .SH OPTIONS
 .TP
+.B \-E
+Do not stop after 20 errors, but show all errors.
+.TP
 .B \-v
 Verbose output.
 .TP
@@ -67,9 +70,18 @@ to reconstruct source.
 Add cross-reference list to labellist (requires
 .BR \-l ).
 .TP
+.B \-Xcompatset
+Enables compatibility settings to become more (not fully!) compatible with other 6502 assemblers.
+Currently supported are compatibility set "MASM" and "CA65".
+"MASM" allows colons to appear in comments. This does not affect colon interpretation elsewhere.
+"CA65" allows the ":=" label definition (instead of "="), and also the "cheap local labels" using
+the "@" character. This, however, disables the "@" 24-bit enforcement.
+.TP
 .B \-M
 Allow colons to appear in comments; for MASM compatibility. This does
-not affect colon interpretation elsewhere.
+not affect colon interpretation elsewhere. This option is deprecated. Use
+.BR -X
+instead.
 .TP
 .B \-R
 Start assembler in relocating mode.
@@ -339,7 +351,7 @@ for those opcodes that support it (i.e., keep as 16 bit word)
 .B @
 render as 24-bit quantity for 65816 (must specify
 .B \-w
-command-line option).
+command-line option, must not specify the CA65 compatibility).
 .B This is required to specify any
 .B 24-bit quantity!
 .TP
@@ -537,6 +549,9 @@ code section, .data being the data segment, .bss being uninitialized label
 space for allocation and .zero being uninitialized zero page space for
 allocation. In .bss and .zero, only labels are evaluated. These pseudo-ops
 are valid in relative and absolute modes.
+.TP
+.B .code
+For CA65 compatibility this is currently mapped to ".text".
 .TP
 .B .align value
 Aligns the current segment to a byte boundary (2, 4 or 256) as specified by

@@ -42,7 +42,7 @@ int l_search(char *s, int *l, int *x, int *v, int *afl);
 void l_set(int n, int v, int afl);
 int l_get(int n, int *v, int *afl);
 int l_vget(int n, int *v, char **s);
-int ll_search(char *s, int *n);
+int ll_search(char *s, int *n, int cll_fl);
 int ll_pdef(char *t);
 
 int b_open(void);

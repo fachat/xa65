@@ -130,7 +130,7 @@ int pp_ifldef(char *t)
 int pp_iflused(char *t)
 {
 	int n;
-	loopfl=(loopfl<<1)+( ll_search(t,&n) ? 1 : 0 );
+	loopfl=(loopfl<<1)+( ll_search(t,&n,0) ? 1 : 0 );
 	return(0);
 }
 

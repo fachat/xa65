@@ -20,15 +20,22 @@
 #ifndef __XA65_XAH_H__
 #define __XA65_XAH_H__
 
-#define ANZLAB		5000	/* mal 14 -> Byte */
+/* 
+ * Note: the computations to get the number of bytes necessary to allocate are
+ * a historic remnant of the Atari ST (the original platform) not being able to efficiently allocate small chunks
+ * of memory so I had to allocate a large chunk myself and manage the tables myself.
+ * This has changed and some parts of xa65 are modified to just do a malloc() now.
+ * These fixed numbers should actually go away. AF 20110623
+ */
+#define ANZLAB		5000	/* multiplied by sizeof(Labtab) -> Byte */
 #define LABMEM		40000L
 #define MAXLAB		32
 #define MAXBLK		16
 #define MAXFILE		7
 #define MAXLINE		2048
 #define MAXPP		40000L
-#define ANZDEF		2340	/* mal 14 -> Byte, ANZDEF * 14 < 32768 */
-#define TMPMEM		200000L	/* Zwischenspeicher von Pass1 nach Pass 2 */
+#define ANZDEF		2340	/* multiplied by sizeof(List) -> Byte, ANZDEF * 20 < 32768 */
+#define TMPMEM		200000L	/* temporary memory buffer from Pass1 to Pass 2 */
 
 typedef struct LabOcc {
 	struct LabOcc *next;

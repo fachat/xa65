@@ -50,6 +50,12 @@ static int b_get(int*);
 static int b_test(int);
 static int ll_def(char *s, int *n, int b);     
 
+static int b_new(void);
+static void cll_init();
+static int cll_get();
+static void cll_clear();
+static int cll_getcur();
+
 /* local variables */
 
 /*
@@ -69,6 +75,7 @@ static Labtab *ltp;
 
 int l_init(void)
 {
+	cll_init();
 	return 0;
 #if 0
      int er;
@@ -139,10 +146,49 @@ FILE *fp;
      }
 }
 
+/**********************************************************************************
+ * cheap local labels
+ */
+
+static int cll_current = 0;	/* the current cheap local labels block */
+
+/**
+ * init the cheap local labels
+ */
+void cll_init() {
+	cll_current = 0;
+}
+
+/**
+ * get the block number for a new cheap local label block
+ */
+int cll_get() {
+	if (cll_current == 0) {
+		cll_current = b_new();
+	}
+	return cll_current;
+}
+
+/**
+ * clear the local labels
+ */
+void cll_clear() {
+	cll_current = 0;
+}
+
+int cll_getcur() {
+	return cll_current;
+}
+
+/**********************************************************************************/
+
+/**
+ * define a global label
+ */
 int lg_set(char *s ) {
 	int n, er;
 
-	er = ll_search(s,&n);
+	er = ll_search(s,&n, 0);
 
 	if(er==E_OK) {
 	  fprintf(stderr,"Warning: global label doubly defined!\n");
@@ -156,52 +202,73 @@ int lg_set(char *s ) {
 	return er;
 }
 
+/**********************************************************************************/
           
 int l_def(char *s, int *l, int *x, int *f)
 {     
      int n,er,b,i=0;
+     int cll_fl;
  
-     *f=0;
-     b=0;
-     n=0;
+     *f=0;	/* flag (given as param) that the label is to be re-defined and the 
+		   "label defined error" is to be skipped */
+     b=0;	/* block level on block stack, resp. block number */
+     n=0;	/* flag, when set, b is absolute block number and not being translated */
+     cll_fl=0;	/* when set, clear the cheap local label block */
 
      if(s[0]=='-')
      {
-          *f+=1;
+          *f+=1;	/* label is being redefined */
           i++;
+     } else
+     if(s[0]=='@')
+     {
+	  i++;
+          n++;		/* block number b is absolute */
+	  b=cll_get();	/* current (possibly newly allocated) cheap label block */
+	  cll_fl=1;	/* do not clear the cll block again... */
      } else
      if(s[0]=='+')
      {
           i++;
-          n++;
-          b=0;
+          n++;		/* block number b is absolute */
+          b=0;		/* global block number */
      } 
      while(s[i]=='&')
      {
-          n=0;     
+	  if (n) b=0;	/* reset block number */
+          n=0; 		/* block number is relative */    
           i++;
-          b++;
+          b++;		/* one (more) level up the block stack */
      }
-     if(!n)
+     if(!n) {
+	  /* translate from block stack level to absolute block number */
           b_fget(&b,b);
+     }
 
+     if(!cll_fl) {
+	/* clear cheap local labels */
+	cll_clear();
+     }
 
-     if(!isalpha(s[i]) && s[i]!='_')
+     if(!isalpha(s[i]) && s[i]!='_' && !(ca65 && isdigit(s[i]) ) )
           er=E_SYNTAX;
      else
      {
-          er=ll_search(s+i,&n);
+          er=ll_search(s+i,&n, cll_fl);
                
           if(er==E_OK)
           {
+	       /* we actually found an existing label in the same scope */
                ltp=afile->la.lt+n;
                
                if(*f)
                {
+		    /* redefinition of label */
                     *l=ltp->len+i;
                } else
                if(ltp->fl==0)
                {
+		    /* label has not been defined yet, (e.g. pass1 forward ref), so we try to set it. */
                     *l=ltp->len+i;
                     if(b_ltest(ltp->blk,b))
                          er=E_LABDEF;
@@ -213,7 +280,7 @@ int l_def(char *s, int *l, int *x, int *f)
           } else
           if(er==E_NODEF)
           {
-               if(!(er=ll_def(s+i,&n,b))) /* ll_def(...,*f) */
+               if(!(er=ll_def(s+i,&n,b))) /* store the label in the table of labels */
                {
                     ltp=afile->la.lt+n;
                     *l=ltp->len+i;
@@ -229,15 +296,23 @@ int l_def(char *s, int *l, int *x, int *f)
 int l_search(char *s, int *l, int *x, int *v, int *afl)
 {
      int n,er,b;
+     int cll_fl;
 
      *afl=0;
 
-     er=ll_search(s,&n);
-/*printf("l_search: lab=%s(l=%d), afl=%d, er=%d, n=%d\n",s,*l, *afl,er,n);*/
+     /* check cheap local label */
+     cll_fl=0;
+     if (s[0]=='@') {
+	cll_fl=1;	/* also used as offset to the label length, so must be 1 */
+	s++;
+     }
+
+     er=ll_search(s,&n, cll_fl);
+/*printf("l_search: lab=%s(l=%d, afl=%d, er=%d, n=%d, cll_fl=%d, cll_cur=%d)\n",s,*l, *afl,er,n, cll_fl, cll_getcur());*/
      if(er==E_OK)
      {
           ltp=afile->la.lt+n;
-          *l=ltp->len;
+          *l=ltp->len + cll_fl;
           if(ltp->fl == 1)
           {
                l_get(n,v,afl);/*               *v=lt[n].val;*/
@@ -251,12 +326,17 @@ int l_search(char *s, int *l, int *x, int *v, int *afl)
      }
      else
      {
-          b_get(&b);
+	  if(cll_fl) {
+		b=cll_get();
+	  } else {
+          	b_get(&b);
+	  }
+	  
           er=ll_def(s,x,b); /* ll_def(...,*v); */
 
           ltp=afile->la.lt+(*x);
           
-          *l=ltp->len;
+          *l=ltp->len + cll_fl;
 
           if(!er) 
           {
@@ -401,8 +481,14 @@ static int ll_def(char *s, int *n, int b)          /* definiert naechstes Label 
      return(er);
 }
 
-
-int ll_search(char *s, int *n)          /* search Label in Tabelle ,nr->n    */
+/**
+ * search a label name in the label table. Return the label number
+ * in "n". Finds only labels that are in a block that is in the current
+ * set of blocks (in the block stack)
+ *
+ * If cll_fl is set, the label is also searched in the local cheap label scope
+ */
+int ll_search(char *s, int *n, int cll_fl)          /* search Label in Tabelle ,nr->n    */
 {
      int i,j=0,k,er=E_NODEF,hash;
 
@@ -411,7 +497,6 @@ int ll_search(char *s, int *n)          /* search Label in Tabelle ,nr->n    */
      hash=hashcode(s,j);
      i=afile->la.hashindex[hash];
 
-/*printf("search?\n");*/
      if(i>=afile->la.ltm) return E_NODEF;
 
      do
@@ -422,11 +507,21 @@ int ll_search(char *s, int *n)          /* search Label in Tabelle ,nr->n    */
           {
                for (k=0;(k<j)&&(ltp->n[k]==s[k]);k++);
 
-               if((j==k)&&(!b_test(ltp->blk)))
-               {
-                    er=E_OK;
-                    break;
-               }
+	       if (cll_fl) {
+			if (ltp->blk == cll_getcur()) {
+				er=E_OK;
+				break;
+			}
+	       } else {
+		       /* check if the found label is in any of the blocks in the
+ 			  current block stack */
+               		if((j==k)&&(!b_test(ltp->blk)))
+               		{
+		    		/* ok, label found and it is reachable (its block nr is in the current block stack */
+                    		er=E_OK;
+                   		break;
+               		}
+	       }
           }
 
           if(!i)
@@ -451,7 +546,7 @@ int ll_pdef(char *t)
 {
 	int n;
 	
-	if(ll_search(t,&n)==E_OK)
+	if(ll_search(t,&n, 0)==E_OK)
 	{
 		ltp=afile->la.lt+n;
 		if(ltp->fl)
@@ -496,9 +591,22 @@ int l_write(FILE *fp)
      return 0;
 }
 
-static int bt[MAXBLK];
-static int blk;
-static int bi;
+/*******************************************************************************************
+ * block management code. Here the ".(" and ".)" blocks are maintained. 
+ *
+ * Blocks are numbered uniquely, every time a new block is opened, the "blk" variable
+ * is increased and its number used as block number.
+ *
+ * The currently open blocks are maintained in a stack (bt[]). The lowest entry is the outermost
+ * block number, adding block numbers as blocks are opened. When a block is closed,
+ * the block stack is shortened again (bi has the length of the block stack)
+ *
+ * Methods exist to open new blocks, close a block, and do some checks, e.g. whether
+ * a specific block number is contained in the current block stack.
+ */
+static int bt[MAXBLK];	/* block stack */
+static int bi;		/* length of the block stack (minus 1, i.e. bi[bi] has the innermost block) */
+static int blk;		/* current block number for allocation */
 
 int b_init(void)
 {
@@ -508,6 +616,11 @@ int b_init(void)
 
      return(E_OK);
 }     
+
+int b_new(void) 
+{
+	return ++blk;
+}
 
 int b_depth(void)
 {
@@ -519,19 +632,25 @@ int ga_blk(void)
 	return(blk);
 }
 
+/**
+ * open a new block scope
+ */
 int b_open(void)
 {
      int er=E_BLKOVR;
 
      if(bi<MAXBLK-1)
      {
-          bt[++bi]=++blk;
+          bt[++bi]=b_new();
           
           er=E_OK;  
      }
      return(er);
 }
 
+/**
+ * close a block scope
+ */
 int b_close(void)
 {
 
@@ -546,6 +665,9 @@ int b_close(void)
      return(E_OK);
 }
 
+/**
+ * get the block number of the current innermost block
+ */
 static int b_get(int *n)
 {
      *n=bt[bi];
@@ -553,6 +675,9 @@ static int b_get(int *n)
      return(E_OK);
 }
 
+/**
+ * returns the block number of the block "i" levels up in the current block stack
+ */
 static int b_fget(int *n, int i)
 {
      if((bi-i)>=0)
@@ -562,6 +687,10 @@ static int b_fget(int *n, int i)
      return(E_OK);
 }
 
+/**
+ * tests whether the given block number n is in the current stack of
+ * current block numbers bt[]
+ */
 static int b_test(int n)
 {
      int i=bi;
@@ -572,6 +701,9 @@ static int b_test(int n)
      return( i+1 ? E_OK : E_NOBLK );
 }
 
+/**
+ * tests whether the given block number "a" is in the 
+ */
 static int b_ltest(int a, int b)    /* testet ob bt^-1(b) in intervall [0,bt^-1(a)]   */
 {
      int i=0,er=E_OK;

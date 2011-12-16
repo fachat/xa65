@@ -75,7 +75,7 @@ static char *kt[] ={
 
      ".byt",".word",".asc",".dsb", ".(", ".)", "*=", ".text",".data",".bss",
      ".zero",".fopt", ".byte", ".end", ".list", ".xlist", ".dupb", ".blkb", ".db", ".dw",
-     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc"
+     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code"
 
 };
 
@@ -85,7 +85,7 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 /* last valid mnemonic */
 #define   Lastbef   93
 /* last valid token+1 */
-#define   Anzkey    123
+#define   Anzkey    124
 
 #define   Kbyt      Lastbef+1
 #define   Kword     Lastbef+2
@@ -118,6 +118,8 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
 #define   Kbin      Lastbef+28
 #define   Kaasc     Lastbef+29
+
+#define	  Kcode	    Lastbef+30	/* gets remapped to Ktext */
 
 #define   Kreloc    Anzkey   	/* *= (relocation mode) */
 #define   Ksegment  Anzkey+1
@@ -349,6 +351,7 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
      printf("\n");
 */
      /* if text/data produced, then no more fopt allowed in romable mode */
+     /* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
      if((romable>1) && (t[0]<Kopen || t[0]==Kbyte || t[0]==Kpcdef)) {
        afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
        romable=1;
@@ -1536,7 +1539,8 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      static int v,f;
      static int operand,o;
      int fl,afl;
-     int p,q,ud,n,ll,mk,er;
+     int p,q,ud,ll,mk,er;
+     int n;	/* label number to be passed between l_def (definition) and l_set (set the value) */
      int m, uz, byte;
      static unsigned char cast;
 
@@ -1586,6 +1590,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 
                if(s[p]=='=')
                {
+		    /*printf("Found = @%s\n",s+p);*/
                     t[q++]=T_OP;
                     t[q++]=n&255;
                     t[q++]=(n>>8)&255;
@@ -1593,6 +1598,17 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     p++;
                     ll=n=0;
                     break;
+               } else
+               if(s[p]==':' && s[p+1]=='=')		/* support := label assignments (ca65 compatibility) */
+	       {
+		    /*printf("Found := @%s\n", s+p);*/
+		    t[q++]=T_OP;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
+		    t[q++]='=';
+		    p+=2;
+		    ll=n=0;
+		    break;
                } else
                if(f && s[p]!='\0' && s[p+1]=='=')
                {
@@ -1674,8 +1690,10 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                  if(operand)
                  {
 			/* are we forcing the operand into a particular
-				addressing mode? !, @, ` operators */
-                    if(s[p]=='!' || s[p]=='@' || s[p]=='`')
+			   addressing mode? !, @, ` operators 
+			   Note these are not available in ca65, but we only
+			   switch off "@" which are used for cheap local labels*/
+                    if(s[p]=='!' || (s[p]=='@' && !ca65) || s[p]=='`')
                     {
                        cast=s[p];
                        operand= -operand+1;
@@ -1691,12 +1709,12 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     {
                          t[q++]=s[p++];
                     } else
-		/* maybe it's a label */
-                    if(isalpha(s[p]) || s[p]=='_')
+		/* maybe it's a label 
+ 			Note that for ca65 cheap local labels, we check for "@" */
+                    if(isalpha(s[p]) || s[p]=='_' || (s[p]=='@' && ca65))
                     {
                          m=n;
                          er=l_search((char*)s+p,&ll,&n,&v,&afl);
-
 /*
                          if(m==Kglobl || m==Kextzero) {
                               if(er==E_NODEF) {
@@ -1961,6 +1979,7 @@ static int t_keyword(signed char *s, int *l, int *n)
      if(i==Kdw) i=Kword;
      if(i==Kblock) i=Kopen;
      if(i==Kbend) i=Kclose;
+     if(i==Kcode) i=Ktext;
 
 
      *l=j;

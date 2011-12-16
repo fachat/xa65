@@ -61,7 +61,10 @@
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
-int masm = 0;
+/* compatibility flags */
+int masm = 0;	/* MASM */
+int ca65 = 0;	/* CA65 */
+
 int nolink = 0;
 int romable = 0;
 int romaddr = 0;
@@ -71,10 +74,12 @@ int crossref = 0;
 char altppchar;
 
 /* local variables */
+
 static char out[MAXLINE];
 static time_t tim1, tim2;
 static FILE *fpout, *fperr, *fplab;
 static int ner = 0;
+static int ner_max = 20;
 
 static int align = 1;
 
@@ -91,6 +96,7 @@ static int getline(char *);
 static void lineout(void);
 static long ga_p1(void);
 static long gm_p1(void);
+static int set_compat(char *compat_name);
 
 /* text */
 int memode,xmode;
@@ -191,6 +197,9 @@ int main(int argc,char *argv[])
      while(i<argc) {
 	if(argv[i][0]=='-') {
 	  switch(argv[i][1]) {
+	  case 'E':
+		ner_max = 0;
+		break;
 	  case 'p':
 		/* intentionally not allowing an argument to follow with a
 			space to avoid - being seen as the alternate
@@ -209,6 +218,19 @@ int main(int argc,char *argv[])
 		break;
 	  case 'M':
 		masm = 1;	/* MASM compatibility mode */
+		break;
+	  case 'X':		/* compatibility across assemblers... */
+		{
+		  char *name = NULL;
+		  if (argv[i][2] == 0) { 
+		    name = argv[++i]; 
+		  } else {
+		    name = argv[i]+2;
+		  }
+		  if (set_compat(name) < 0) {
+		    fprintf(stderr, "Compatibility set '%s' unknown - ignoring! (check case?)\n", name);
+		  }
+		}
 		break;
 	  case 'O':		/* output charset */
 		{
@@ -500,7 +522,12 @@ int main(int argc,char *argv[])
 
      if(ner || er)
      {
+	if (ner_max > 0) {
           fprintf(stderr, "Break after %d error%c\n",ner,ner?'s':0);
+	} else {
+	  /* ner_max==0, i.e. show all errors */
+          fprintf(stderr, "End after %d error%c\n",ner,ner?'s':0);
+	}
 	  /*unlink();*/
 	  if(ofile) {
 	    unlink(ofile);
@@ -615,7 +642,7 @@ static int pass2(void)
      filep=&datei;
      afile->mn.tmpe=0L;
 
-     while(ner<20 && afile->mn.tmpe<afile->mn.tmpz)
+     while((ner_max==0 || ner<ner_max) && afile->mn.tmpe<afile->mn.tmpz)
      {
           l=afile->mn.tmp[afile->mn.tmpe++];
           ll=l;
@@ -827,6 +854,7 @@ static void usage(int default816, FILE *fp)
             programname);
 	fprintf(fp,
 	    " -v           verbose output\n"
+	    " -E           do not break after 20 errors, but show all\n"
 	    " -x           old filename behaviour (overrides `-o', `-e', `-l')\n"
 	    "              This is deprecated and may disappear in future versions!\n"
             " -C           no CMOS-opcodes\n"
@@ -844,6 +872,8 @@ static void usage(int default816, FILE *fp)
 	    " -l filename  sets labellist filename, default is none\n"
 	    " -r           adds crossreference list to labellist (if `-l' given)\n"
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
+	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"
+	    "              MASM, CA65\n"
 	    " -R           start assembler in relocating mode\n");
 	fprintf(fp,
 	    " -Llabel      defines `label' as absolute, undefined label even when linking\n"
@@ -900,7 +930,7 @@ static char *ertxt[] = {
         "NewFile",
 	"CMOS-Befehl",
 	"pp:Wrong parameter count",
-	"Illegal pointer arithmetic", 
+	"Illegal pointer arithmetic (-26)", 
 	"Illegal segment",
 	"File header option too long",
 	"File option not at file start (when ROM-able)",
@@ -939,11 +969,10 @@ static char *ertxt[] = {
 		"",
 		"",
 		"",
-		"",
 /* warnings */
 	  "Cutting word relocation in byte value",
 	  "Byte relocation in word value",
-	  "Illegal pointer arithmetic",
+	  "Illegal pointer arithmetic (-66)",
 	  "Address access to low or high byte pointer",
 	  "High byte access to low byte pointer",
 	  "Low byte access to high byte pointer",
@@ -1062,9 +1091,20 @@ static int getline(char *s)
 			comcom = 1;
                if (c=='\0') 
                     break;	/* hkfl = comcom = 0 */
-		if (c==':' && !hkfl && (!comcom || !masm)) {
-                    		gl=1;
-                    		break;
+		if (c==':' && !hkfl) {
+			/* if the next char is a "=" - so that we have a ":=" - and we
+ 			   we have ca65 compatibility, we ignore the colon */
+			if (l[i]!='=' || !ca65 || comcom) {
+				/* but otherwise we check if it is in a comment and we have
+ 				   MASM or CA65 compatibility, then we ignore the colon as well */
+				if(!comcom || !(masm || ca65)) {
+					/* we found a colon, so we keep the current line in memory
+					   but return the part before the colon, and next time the part
+					   after the colon, so we can parse C64 BASIC text assembler... */
+                    			gl=1;
+                    			break;
+				}
+			}
                }
                j++;
           } while (c!='\0' && j<MAXLINE-1 && i<MAXLINE-1);
@@ -1072,7 +1112,9 @@ static int getline(char *s)
           s[j]='\0';
      } else
           s[0]='\0';
-
+#if 0
+	printf("got line: %s\n", s);
+#endif
      return(ec);
 }
 
@@ -1092,8 +1134,8 @@ static void lineout(void)
 
 void errout(int er)
 {
-     if (er<-ANZERR || er>-1) {
-	if(er>=-(ANZERR+ANZWARN) && er < -ANZERR) {
+     if (er<=-ANZERR || er>-1) {
+	if(er>=-(ANZERR+ANZWARN) && er <= -ANZERR) {
 	  sprintf(out,"%s:line %d: %04x: Warning - %s\n",
 		filep->fname, filep->fline, pc[segment], ertxt[(-er)-1]);
 	} else {
@@ -1128,4 +1170,31 @@ void logout(char *s)
      if(fperr)
           fprintf(fperr,"%s",s);
 }
+
+/*****************************************************************/
+
+typedef struct {
+        char *name;
+        int *flag;
+} compat_set;
+
+static compat_set compat_sets[] = {
+        { "MASM", &masm },
+        { "CA65", &ca65 },
+        { NULL, NULL }
+};
+
+int set_compat(char *compat_name) {
+        int i = 0;
+        while (compat_sets[i].name != NULL) {
+                if (strcmp(compat_sets[i].name, compat_name) == 0) {
+			/* set appropriate compatibility flag */
+			(*compat_sets[i].flag) = 1;
+                        return 0;
+                }
+                i++;
+        }
+        return -1;
+}
+
 

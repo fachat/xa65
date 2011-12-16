@@ -180,6 +180,8 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 		      } else {
 			if(segment!=SEG_ABS) { 
 			  if(!dsb_len) {
+			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
+			    /* e.g. adding two pointers, adding two undefined values */
 			    er=E_ILLPOINTER;
 			  }
 			}
