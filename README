@@ -13,3 +13,8 @@ These are the directories:
 xa		- contains the main source. The master branch is the stable version (currently 2.3.5)
 
 
+These are the current branches:
+
+master		- stable branch, currently 2.3.5
+listing		- experimental branch that adds ca65 compatibility features and assembler listing
+
