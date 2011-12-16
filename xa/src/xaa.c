@@ -137,7 +137,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_VALUE)
      {
           *v=lval(s+pp+1);
-          pp+=4;
+          pp+=5;
 /* printf("value: v=%04x\n",*v); */
      }
      else
@@ -145,7 +145,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      {
 	  afl = s[pp+1];
           *v=cval(s+pp+2);
-          pp+=4;
+          pp+=6;
 /* printf("pointer: v=%04x, afl=%04x\n",*v,afl); */
      }
      else
@@ -161,7 +161,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 
      *v *= mf;
 
-     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END)
+     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
      {
           er=get_op(s,&o);
 

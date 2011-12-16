@@ -148,6 +148,7 @@ typedef struct {
 #define T_COMMENT	-8	/* unused */
 #define T_DEFINE	-9	/* define a label; inserted at conversion and discarded in pass1, only used in listing output */
 #define T_LISTING	-10	/* meta token, inserted after conversion before pass1, used after pass2 to create listing */
+#define T_CAST		-11	/* token inserted for a cast */
 
 #define P_START		 0	/* arithmetic operation priorities    */
 #define P_LOR		 1	/* of any two operations, the one with */

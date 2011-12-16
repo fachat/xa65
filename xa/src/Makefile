@@ -2,7 +2,7 @@ OBJ = xa.o xaa.o xal.o xap.o xat.o xar.o xar2.o xao.o xau.o xam.o xacharset.o
 
 #CFLAGS=-W -Wall -pedantic -ansi -g
 #CFLAGS=-W -Wall -ansi -O2
-CFLAGS=-g
+CFLAGS=-g -std=c99
 #LD = ${CC}
 #LDFLAGS = "-lc"
 

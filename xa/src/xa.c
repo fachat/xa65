@@ -672,6 +672,7 @@ static int pass2(void)
                {
                     datei.fline=(afile->mn.tmp[afile->mn.tmpe+1]&255)+(afile->mn.tmp[afile->mn.tmpe+2]<<8);
                     afile->mn.tmpe+=3;
+		    list_line(datei.fline);	/* set line number of next listing output */
                } else
                if(afile->mn.tmp[afile->mn.tmpe]==T_FILE)
                {
@@ -679,6 +680,8 @@ static int pass2(void)
 
 		    memcpy(&datei.fname, afile->mn.tmp+afile->mn.tmpe+3, sizeof(datei.fname));
                     afile->mn.tmpe+=3+sizeof(datei.fname);
+
+		    list_filename(datei.fname);	/* set file name of next listing output */
 /*
 		    datei.fname = malloc(strlen((char*) afile->mn.tmp+afile->mn.tmpe+3)+1);
 		    if(!datei.fname) {
@@ -692,7 +695,9 @@ static int pass2(void)
           } else
           {
 /* do not attempt address mode optimization on pass 2 */
-               er=t_p2_l(afile->mn.tmp+afile->mn.tmpe,&ll,1,&al);
+	       
+	       /* t_p2_l() includes the listing call to do_listing() */
+               er=t_p2_l(afile->mn.tmp+afile->mn.tmpe,&ll,&al);
 
                if(er==E_NOLINE)
                {

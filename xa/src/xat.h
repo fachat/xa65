@@ -23,7 +23,10 @@ extern int dsb_len;
 
 void list_setfile(FILE *fp);
 int t_p1(signed char *s, signed char *t, int *ll, int *al);
-int t_p2_l(signed char *t, int *ll, int fl, int *al);
+int t_p2_l(signed char *t, int *ll, int *al);
 int b_term(char *s, int *v, int *l, int pc);
+
+void list_line(int l);		/* set line number for the coming listing output */
+void list_filename(char *fname);/* set file name for the coming listing output */
 
 #endif /* __XA65_XAT_H__ */

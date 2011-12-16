@@ -22,6 +22,7 @@
 
 /* enable this to turn on (copious) optimization output */
 /* #define DEBUG_AM */
+#undef LISTING_DEBUG
 
 #include <ctype.h>
 #include <stdio.h>
@@ -94,6 +95,18 @@ static char *kt[] ={
 
 };
 
+/* arithmetic operators (purely for listing, parsing is done programmatically */
+static char *arith_ops[] = {
+	"", "+", "-", 
+	"*", "/", 
+	">>", "<<", 
+	"<", ">", "="
+	"<=", ">=", "<>", 
+	"&", "^", "|",
+	"&&", "||"
+};
+
+/* length of arithmetic operators indexed by operator number */
 static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
 /* index into token array for pseudo-ops */
@@ -358,11 +371,13 @@ int t_p1(signed char *s, signed char *t, int *ll, int *al)
      int afl = 0;
      int tlen;	/* token listing length, to adjust length that is returned */
      int inp;	/* input pointer in t[] */
+     unsigned char cast;
 
 /* notes and typical conventions ... er = error code
 	am = addressing mode in use
 */
 
+     cast='\0';
      bl=0;
      *al = 0;
 
@@ -394,32 +409,24 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
      t[3]=segment;
      t[4]=pc[segment]&255;
      t[5]=(pc[segment]>>8)&255;
-     /* now duplicate the token sequence from the T_LISTING buffer
+     /* now we have to duplicate the token sequence from the T_LISTING buffer
       * to the end of "t", so we can then in-place convert it
       * below. Non-overlapping, size is known in advance, so 
       * using memcpy is fine here
       */
-     memcpy(t+tlen, t+6, l);
+     inp = 0;
+     /* discard label definitions before copying the buffer */
+     while (inp<l && t[6+inp]==T_DEFINE) {
+	inp+=3;
+     }
+     /* copy the buffer */
+     memcpy(t+tlen, t+6+inp, l-inp);
      t=t+tlen;
-
+     l-=inp;
      /* the result of this is that we always have a Klisting entry in the buffer
       * for each tokenization call */
      /* here continue as before, except for adjusting the returne *ll length 
       * in the end, just before return */
-
-     inp = 0;
-     /* discard label definitions */
-     while (inp<l && t[inp]==T_DEFINE) {
-	inp+=3;
-     }
-     if (inp) {
-        /* sorry, anything else would be way to risky below */
-	l -= inp;
-	if (l != 0) {
-printf("t=%p, inp=%d, l=%d\n", t, inp, l);
-	    memmove(t, t+inp, l);
-	}
-     }
 
      /* return length default is input length */
      *ll=l;
@@ -485,7 +492,7 @@ printf("t=%p, inp=%d, l=%d\n", t, inp, l);
                if(!(er=a_term(t+1,&tmp /*&pc[SEG_ABS]*/,&l,pc[segment],&afl,&label,0)))
                {
                     i=1;
-                    wval(i,tmp /*pc[SEG_ABS]*/);
+                    wval(i,tmp /*pc[SEG_ABS]*/, 0);
                     t[i++]=T_END;
                     *ll=6;
                     er=E_OKDEF;
@@ -510,7 +517,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 			segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
 		   t[0]=Kreloc;
 		   i=1;
-		   wval(i,pc[SEG_TEXT]);
+		   wval(i,pc[SEG_TEXT], 0);
 		   t[i++]=T_END;
 		   *ll=6;
 	  	   er=E_OKDEF;
@@ -687,7 +694,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		}
 
 		/* three arguments only please */
-		if (!er && t[i] != T_END) {
+		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
 			er = E_SYNTAX;
 		}
 
@@ -738,10 +745,10 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		    t[0]=Kdsb;
 		    i=1;
 		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp);
+		    wval(i,tmp, 0);
                     t[i++]=',';
 		    tmp2= 0xea;
-		    wval(i,tmp2);	/* nop opcode */
+		    wval(i,tmp2, 0);	/* nop opcode */
                     t[i++]=T_END;
 		    *ll=9;
 		    er=E_OKDEF;
@@ -756,7 +763,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 	      er=E_ILLSEGMENT;
 	    }
 	  } else
-/* optimization okay on pass 1: use 0 for fl */
+            /* optimization okay on pass 1: use 0 for fl */
 		{
 #ifdef DEBUG_AM
 fprintf(stderr, "E_OK ... t_p2 xat.c\n");
@@ -770,11 +777,11 @@ fprintf(stderr, "E_OK ... t_p2 xat.c\n");
      if(er==E_NODEF)
      {
 
-/*
- * no label was found from t_conv!
- * try to figure out most likely length
- *
- */
+     /*
+      * no label was found from t_conv!
+      * try to figure out most likely length
+      *
+      */
 
 #ifdef DEBUG_AM
 fprintf(stderr, "E_NODEF pass1 xat.c\n");
@@ -790,20 +797,36 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
           if(n>=0 && n<=Lastbef)
           {
-               if(t[1]==T_END || t[1]==T_COMMENT)
+	       int inp = 1;	/* input pointer */
+
+               if(t[inp]==T_END || t[inp]==T_COMMENT)
                {
                     sy=0;	/* implied */
+		    inp++;
                } else
-               if(t[1]=='#')
+               if(t[inp]=='#')
                {
                     sy=1+nk;	/* immediate */
+		    inp++;
                } else
-               if(t[1]=='(')
+               if(t[inp]=='(')
                {
                     sy=7+nk;	/* computed */
-               } else
+		    inp++;
+               } else {
                     sy=4+nk;	/* absolute or zero page */
+	       }
 
+	       /* this actually finds the cast for all addressing modes,
+ 		  but t_conv() only puts it there for immediate (#) or absolute/
+		  absolute indexed addressing modes */
+	       if (t[inp] == T_CAST) {
+		    inp++;
+		    cast = t[inp];
+		    inp++;
+	       }
+
+	       
 		/* length counter set to maximum length + 1 */
                bl=Maxbyt+1;
                
@@ -842,20 +865,20 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
 		/* optimize operand length for 24-bit quantities */
 		/* look at cast byte from t_conv */
-               if (t[l-1]!='@' && t[l-1] != '!')
+               if (cast!='@' && cast!= '!')
                {
                      if(bl && !er && opt[am]>=0 && am>16) /* <<< NOTE! */
                           if(ct[n][opt[am]]>=0)
                                am=opt[am];
                }
 		/* if ` is declared, force further optimization */
-		if (t[l-1]=='`') {
+		if (cast=='`') {
 			if (opt[am]<0 || ct[n][opt[am]]<0)
 				errout(E_ADRESS);
 			am=opt[am];
 		}
 		/* if ! is declared, force to 16-bit quantity */
-		if (t[l-1]=='!' && am>16 && opt[am]>=0 && bl) {
+		if (cast=='!' && am>16 && opt[am]>=0 && bl) {
 			am=opt[am];
 		}
 
@@ -985,13 +1008,15 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
  * undefined labels have to be resolved and the affected 
  * opcodes are assembled, the rest is passed through from
  * pass1 (pass-through is done in t_p2, when *ll<0)
+ * As this is not called from p1, assume that we do not
+ * do length optimization
  *
  * *t	is the input token list
  * *ll	is the input length of the token list,
  * 	and the output of how many bytes of the buffer are to be taken
  * 	into the file
  */
-int t_p2_l(signed char *t, int *ll, int fl, int *al)
+int t_p2_l(signed char *t, int *ll, int *al)
 {
 	int er = E_OK;
 
@@ -1005,10 +1030,10 @@ int t_p2_l(signed char *t, int *ll, int fl, int *al)
 	  }
 
 	  if (*ll != 0) {
-  	    er = t_p2(t+tlen, ll, fl, al);
+  	    er = t_p2(t+tlen, ll, 1, al);
 	  }
 
-	  /* do the actual listing (*ll-2 as we need to substract the place for the tlen value */
+	  /* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
 	  do_listing(t+3, tlen-3, t+tlen, *ll);
 
 	  /* adapt back, i.e. remove token listing */
@@ -1016,7 +1041,7 @@ int t_p2_l(signed char *t, int *ll, int fl, int *al)
 	  	memmove(t, t+tlen, abs(*ll));
 	  }
 	} else {
-	  er = t_p2(t, ll, fl, al);
+	  er = t_p2(t, ll, 1, al);
 	}
 	return er;
 }
@@ -1031,19 +1056,14 @@ int t_p2_l(signed char *t, int *ll, int fl, int *al)
  * *ll	is the input length of the token list,
  * 	and the output of how many bytes of the buffer are to be taken
  * 	into the file
- * 
+ * fl	when set, do not do length optimization, when not set,
+ * 	allow length optimization (when called from p1)
  */
 int t_p2(signed char *t, int *ll, int fl, int *al)
 {
      static int afl,nafl, i,j,k,er,v,n,l,bl,sy,am,c,vv[3],v2,label;
      static int rlt[3];	/* relocation table */
      static int lab[3];	/* undef. label table */
-
-#if(0)
-     (void)fl;		/* quench warning */
-#endif
-/* fl was not used in 2.2.0 so I'm overloading it for zp-optimization
-     control */
 
      er=E_OK;
      bl=0;
@@ -1124,7 +1144,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
           {
                i=1;
                j=0;
-               while(!er && t[i]!=T_END)
+               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
                {
                     if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
                     {   
@@ -1135,7 +1155,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                          t[j++]=(v>>8)&255;
 
                          i+=l;     
-                         if(t[i]!=T_END && t[i]!=',')
+                         if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
                               er=E_SYNTAX;
                          else
                          if(t[i]==',')
@@ -1217,7 +1237,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 		}
 
 		/* three arguments only please */
-		if (!er && t[i] != T_END) {
+		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
 			er = E_SYNTAX;
 		}
 
@@ -1266,7 +1286,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 	} else if(n==Kasc || n==Kbyt || n==Kaasc) {
                i=1;
                j=0;
-               while(!er && t[i]!=T_END)
+               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
                {
                     if(t[i]=='\"')
                     {
@@ -1290,7 +1310,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                               }
                          }
                     }
-                    if(t[i]!=T_END && t[i]!=',')
+                    if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
                          er=E_SYNTAX;
                     else
                          if(t[i]==',')
@@ -1388,44 +1408,54 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
           } else
           if(n>=0 && n<=Lastbef)
           {
-               if((c=t[1])=='#')
+	       int inp = 1;		/* input pointer */
+ 	       signed char cast = '\0';	/* cast value */
+
+	       c = t[inp];
+
+               if(c=='#')
                {
-                    i=2;
+                    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=1;
-                    if(!(er=a_term(t+i,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
 /* if(1) printf("a_term returns afl=%04x\n",afl); */
 
 			 rlt[0] = afl;
 			 lab[0] = label;
-                         i+=l;
-                         if(t[i]!=T_END)
+                         inp+=l;
+                         if(t[inp]!=T_END && t[inp] != T_COMMENT)
                          {
-                              if(t[i]!=',')
+                              if(t[inp]!=',')
                                    er=E_SYNTAX;
                               else
                               {
-                                   i++;
+                                   inp++;
                                    sy++;
-                                   if(!(er=a_term(t+i,vv+1,&l,pc[segment],&afl,&label,1)))
+                                   if(!(er=a_term(t+inp,vv+1,&l,pc[segment],&afl,&label,1)))
                                    {
 			                rlt[1] = afl;
 					lab[1] = label;
-                                        i+=l;
-                                        if(t[i]!=T_END)
+                                        inp+=l;
+                                        if(t[inp]!=T_END && t[inp] != T_COMMENT)
                                         {
-                                             if(t[i]!=',')
+                                             if(t[inp]!=',')
                                                   er=E_SYNTAX;
                                              else
                                              {
-                                                  i++;
+                                                  inp++;
                                                   sy++;
-                                                  if(!(er=a_term(t+i,vv+2,&l,pc[segment],&afl,&label,1)))
+                                                  if(!(er=a_term(t+inp,vv+2,&l,pc[segment],&afl,&label,1)))
                                                   {
 			                               rlt[2] = afl;
 						       lab[2] = label;
-                                                       i+=l;
-                                                       if(t[i]!=T_END)
+                                                       inp+=l;
+                                                       if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                                             er=E_SYNTAX;
                                                   }
                                              }
@@ -1435,38 +1465,48 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                          }
                     }
                } else
-               if(c==T_END)
+               if(c==T_END || c==T_COMMENT)
                {
                     sy=0;
                } else
                if(c=='(')
                {
+		    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=7;
-                    if(!(er=a_term(t+2,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
 			 rlt[0] = afl;
 			 lab[0] = label;
 
-                         if(t[2+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[2+l]==',')
+                              if(t[inp]==',')
                               {
-                                   if (tolower(t[3+l])=='x')
+				   inp++;
+                                   if (tolower(t[inp])=='x')
                                         sy=8;
                                    else
                                         sy=13;
 
                               } else
-                              if(t[2+l]==')')
+                              if(t[inp]==')')
                               {
-                                   if(t[3+l]==',')
+				   inp++;
+                                   if(t[inp]==',')
                                    {
-                                        if(tolower(t[4+l])=='y')
+					inp++;
+                                        if(tolower(t[inp])=='y')
                                              sy=9;
                                         else
                                              er=E_SYNTAX;
                                    } else
-                                   if(t[3+l]!=T_END)
+                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                         er=E_SYNTAX;
                               } 
                          } else
@@ -1475,24 +1515,33 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                } else
                if(c=='[')
                {
+		    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=10;
-                    if(!(er=a_term(t+2,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
                          rlt[0] = afl;
 			 lab[0] = label;
 
-                         if(t[2+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[2+l]==']')
+                              if(t[inp]==']')
                               {
-                                   if(t[3+l]==',')
+				   inp++;
+                                   if(t[inp]==',')
                                    {
-                                        if(tolower(t[4+l])=='y')
+					inp++;
+                                        if(tolower(t[inp])=='y')
                                              sy=11;
                                         else
                                              er=E_SYNTAX;
                                    } else
-                                   if(t[3+l]!=T_END)
+                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                         er=E_SYNTAX;
                               } 
                          } else
@@ -1500,19 +1549,26 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                     }
                } else
                {
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=4;
-                    if(!(er=a_term(t+1,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
 			 rlt[0] = afl;
 			 lab[0] = label;
-                         if(t[1+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[1+l]==',')
+                              if(t[inp]==',')
                               {
-                                   if(tolower(t[2+l])=='y')
+				   inp++;
+                                   if(tolower(t[inp])=='y')
                                         sy=6;
                                    else
-                                   if(tolower(t[2+l])=='s')
+                                   if(tolower(t[inp])=='s')
                                         sy=12;
                                    else
                                         sy=5;
@@ -1557,7 +1613,7 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 
 /* only do optimization if we're being called in pass 1 -- never pass 2 */
 /* look at cast byte */
-               if (t[*ll-1]!='@')
+               if (cast!='@')
                {
 #ifdef DEBUG_AM
 fprintf(stderr,
@@ -1578,10 +1634,10 @@ fprintf(stderr,
 "aftaa1: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d\n",
 	pc[segment], am, vv[0], fl, (vv[0]&0xffff00));
 #endif
-                    if(t[*ll-1]!='!') {
+                    if(cast!='!') {
                          if(bl && !er && !(vv[0]&0xffff00) && opt[am]>=0) {
                               if(ct[n][opt[am]]>=0) {
-				if (!fl || t[*ll-1]=='`') {
+				if (!fl || cast=='`') {
                                    	am=opt[am];
 				} else {
 					errout(W_FORLAB);
@@ -1753,6 +1809,19 @@ int b_term(char *s, int *v, int *l, int pc)
  * Take the text from *s (stopping at \0 or ';'), tokenize it
  * and write the result to *t, returning the length of the
  * token sequence in *l
+ *
+ * Input params:
+ * 	s	source input line
+ * 	t	output token sequence buffer
+ * 	l	return length of output token sequence here
+ * 	pc	the current PC to set address labels to that value
+ * 	nk	return number of comma in the parameters
+ * 	na1	asc text count returned
+ * 	na2	total byte count in asc texts returned
+ * 	af	arithmetic flag: 0=do label definitions, parse opcodes and params;
+ * 		1=only tokenize parameters, for b_term() call from the preprocessor
+ * 		for arithmetic conditions
+ * 	bytep	???
  */
 static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
              int *na1, int *na2, int af, int *bytep)  
@@ -1760,10 +1829,12 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      static int v,f;
      static int operand,o;
      int fl,afl;
-     int p,q,ud,ll,mk,er;
+     int p,q,ll,mk,er;
+     int ud;	/* counts undefined labels */
      int n;	/* label number to be passed between l_def (definition) and l_set (set the value) */
-     int m, uz, byte;
-     static unsigned char cast;
+     int m, byte;
+     int uz;	/* unused at the moment */
+     /*static unsigned char cast;*/
 
 /* ich verstehe deutsch, aber verstehen andere leute nicht; so, werde ich
    diese bemerkungen uebersetzen ... cameron */
@@ -1786,7 +1857,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      while(s[p]==' ') p++;
 
      n=T_END;
-     cast='\0';
+     /*cast='\0';*/
 
      if(!af)
      {
@@ -1923,7 +1994,9 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 			   switch off "@" which are used for cheap local labels*/
                     if(s[p]=='!' || (s[p]=='@' && !ca65) || s[p]=='`')
                     {
-                       cast=s[p];
+		       t[q++]=T_CAST;
+		       t[q++]=s[p];
+                       /*cast=s[p];*/
                        operand= -operand+1;
                        p++;
                     } else
@@ -1961,8 +2034,13 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                              t[q++]=afl & 255;
                              t[q++]=v & 255;
                              t[q++]=(v>>8) & 255;
+			     t[q++]=n & 255;		/* cheap fix for listing */
+			     t[q++]=(n>>8) & 255;	/* why is the label already resolved in t_conv? */
                            } else {
-                             wval(q,v);
+                              t[q++]=T_LABEL;
+                              t[q++]=n & 255;
+                              t[q++]=(n>>8) & 255;
+                             /*wval(q,v, 0);*/
                            }
                          } else
                          if(er==E_NODEF)
@@ -1986,7 +2064,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     {
                          tg_dez(s+p,&ll,&v);
                          p+=ll;
-                         wval(q,v);
+                         wval(q,v, 'd');
                     }
                     else
 
@@ -1995,17 +2073,17 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     case '$':
                          tg_hex(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '$');
                          break;
                     case '%':
                          tg_bin(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '%');
                          break;
                     case '&':
                          tg_oct(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '&');
                          break;
                     case '\'':
                     case '\"':
@@ -2127,9 +2205,6 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     {
                          t[q++]=o;
                          p+=lp[o];
-#if(0)
-                         uz++; /* disable 8-bit detection */
-#endif
                     }
                     operand= -operand+1;
                  }
@@ -2151,18 +2226,35 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
           }
 */
 	  byte = 0;
-          t[q++]=T_END;
           if(ud > 0) {
                er=E_NODEF;
 		byte = 1;
           }
      }
+    
+     if (s[p] == ';') {
+	/* handle comments */
+	/* first find out how long */
+	int i;
+	for (i = p+1; s[i] != '\0'; i++);
+	i = i - p;	/* actual length of the comment, including zero-byte terminator */
+	/*if (i >= 1) {*/
+		/* there actually is a comment */
+		t[q++] = T_COMMENT;
+		t[q++] = i&255;
+		t[q++] = (i>>8)&255;
+		memcpy(t+q, s+p+1, i);	/* also copy zero terminator, used in listing */
+		q += i;
+	/*}*/
+     } 
+     t[q++]=T_END;
      /* FIXME: this is an unholy union of two "!" implementations :-( */
-     /* FIXME FIXME FIXME ... */
+     /* FIXME FIXME FIXME ... 
      if (operand==1) {
          t[q++]='\0';
          t[q++]=cast;
      }
+     */
      *l=q;
      if(bytep) *bytep=byte; 
      return(er);
@@ -2336,7 +2428,8 @@ fprintf(stderr, "tg_asc token = %i\n", n);
           t[1]=t[2];
           t[2]=0;
           t[3]=0;
-          j++;
+	  t[4]=delimiter;
+          j+=2;
      } else
      {		/* handle as string */
           t[1]=j-2;
@@ -2360,17 +2453,42 @@ fprintf(stderr, "tg_asc token = %i\n", n);
  */
 
 static FILE *listfp = NULL;
+static int list_lineno = 1;		/* current line number */
+static int list_last_lineno = 0;	/* current line number */
+static char *list_filenamep = NULL;	/* current file name pointer */
 
 static int list_string(char *buf, char *string);
 static int list_tokens(char *buf, signed char *input, int len);
-static int list_value(char *buf, int val);
+static int list_value(char *buf, int val, signed char format);
 static int list_nchar(char *buf, signed char c, int n);
 static int list_char(char *buf, signed char c);
 static int list_sp(char *buf);
 static int list_word(char *buf, int outword);
+static int list_word_f(char *buf, int outword, signed char format);
 static int list_byte(char *buf, int outbyte);
-static int list_nibble(char *buf, int outnib);
+static int list_byte_f(char *buf, int outbyte, signed char format);
+static int list_nibble_f(char *buf, int outnib, signed char format);
 
+/* set line number for the coming listing output */
+void list_line(int l) {
+	list_lineno = l;
+}
+
+/* set file name for the coming listing output */
+void list_filename(char *fname) {
+	if (list_filenamep == NULL || (fname != NULL && strcmp(fname, list_filenamep) != 0)) {
+		list_filenamep = fname;
+		list_lineno = 1;
+		list_last_lineno = 0;
+
+		/* Hack */
+		fprintf(listfp, "\n%s\n\n", fname);
+	}
+}
+
+/**
+ * set the output file descriptor where to write the listing
+ */
 void list_setfile(FILE *fp) {
 	listfp = fp;
 }
@@ -2402,6 +2520,20 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	if (bincode_len < 0) bincode_len = -bincode_len;
 
+	/* do we need a separation line? */
+	if (list_lineno > list_last_lineno+1) {
+		/* yes */
+		/*fprintf(listfp, "line=%d, last=%d\n", list_lineno, list_last_lineno);*/
+		fprintf(listfp, "\n");
+	}
+	list_last_lineno = list_lineno;
+
+	/* line number in file */
+	snprintf(buf, 10, "% 5d", list_lineno);
+	i = strlen(buf);
+	buf += i;
+	buf += list_char(buf, ' ');
+
 	/* preamble <segment>':'<address>' ' */
 	switch(lst_seg) {
 	case SEG_ABS:	c='A'; break;
@@ -2414,7 +2546,7 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	buf = buf + list_char(buf, c);
 	buf = buf + list_char(buf, ':');
 	buf = buf + list_word(buf, lst_pc);
-	buf = buf + list_sp(buf);
+	buf = buf + list_nchar(buf, ' ', 2);
 
 	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
 	n_hexb = bincode_len;
@@ -2437,6 +2569,7 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	buf += list_tokens(buf, listing + 3, listing_len - 3);
 
+#ifdef LISTING_DEBUG
 	/* for now only do a hex dump so we see what actually happens */
 	i = buf - outline;
 	if (i<80) buf += list_nchar(buf, ' ', 80-i);
@@ -2446,8 +2579,8 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 		buf = buf + list_byte(buf, listing[i]);
 		buf = buf + list_sp(buf);
 	}
+#endif
 	buf[0] = 0;
-
 	
 	fprintf(listfp, "%s\n", outline);
 }
@@ -2460,6 +2593,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 	signed char c;
 	int is_cll;
 	int tabval;
+	signed char format;
 
 	if (inp >= len) return 0;
 
@@ -2467,8 +2601,9 @@ int list_tokens(char *buf, signed char *input, int len) {
 
 	tabval = 0;
 	if (tmp == (T_DEFINE & 255)) {
-		while (tmp == (T_DEFINE & 255)) {
+		while (inp < len && tmp == (T_DEFINE & 255)) {
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
+/*printf("define: len=%d, inp=%d, tmp=%d\n", len, inp, tmp);*/
 			name=l_get_name(tmp, &is_cll);
 			if (is_cll) outp += list_char(buf+outp, '@');
 			tmp = list_string(buf+outp, name);
@@ -2495,16 +2630,36 @@ int list_tokens(char *buf, signed char *input, int len) {
 		}
 		outp += list_sp(buf + outp);
 		inp += 1;
+
+		if (tmp == Kinclude) {
+			/* just another exception from the rule... */
+			/* next char is terminator (", ') then the length and then the file name */
+			char term = input[inp];
+			int len = input[inp+1] & 255;
+			outp += list_char(buf+outp, term);
+			for (tmp = 2; tmp < len+2; tmp++) {
+				outp += list_char(buf+outp, input[inp+tmp]);
+			}
+			outp += list_char(buf+outp, term);
+			inp += len + 2;
+		}
 	}
 
 	while (inp < len) {
+		int operator = 0;
+
 		switch(input[inp]) {
+		case T_CAST:
+			outp += list_char(buf+outp, input[inp+1]);
+			break;
 		case T_VALUE:
 			/*outp += list_char(buf+outp, 'V');*/
 			/* 24 bit value */
 			tmp = ((input[inp+3]&255)<<16) | ((input[inp+2]&255)<<8) | (input[inp+1]&255);
-			outp += list_value(buf+outp, tmp);
-			inp += 4;
+			format = input[inp+4];
+			outp += list_value(buf+outp, tmp, format);
+			inp += 5;
+			operator = 1;	/* check if arithmetic operator follows */
 			break;
 		case T_LABEL:
 			/*outp += list_char(buf+outp, 'L');*/
@@ -2514,15 +2669,17 @@ int list_tokens(char *buf, signed char *input, int len) {
 			if (is_cll) outp += list_char(buf+outp, '@');
 			outp += list_string(buf+outp, name);
 			inp += 3;
+			operator = 1;	/* check if arithmetic operator follows */
 			break;
 		case T_OP:
-			/* arithmetic operation; inp[3] is operation like '=' or '+' */
+			/* label arithmetic operation; inp[3] is operation like '=' or '+' */
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 			name=l_get_name(tmp, &is_cll);
 			if (is_cll) outp += list_char(buf+outp, '@');
 			outp += list_string(buf+outp, name);
 			outp += list_char(buf+outp, input[inp+3]);
 			inp += 4;
+			
 			break;
 		case T_END:
 			/* end of operation */
@@ -2530,32 +2687,34 @@ int list_tokens(char *buf, signed char *input, int len) {
 			inp += 1;
 			goto end;
 			break;
-		case T_LINE:
-			/* newline marker - ignored? */
-			outp += list_string(buf+outp, "\\n ");
-			/* line number */
+		case T_COMMENT:
+			if (inp > 0 && inp < 20) {
+				outp += list_nchar(buf+outp, ' ', 20-inp);
+			}
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
-			outp += list_word(buf+outp, tmp);
-			inp += 3;
-			break;
-		case T_FILE:
-			/* new file marker - ignored? */
-			outp += list_string(buf+outp, "\\f ");
-			/* line number */
-			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
-			outp += list_word(buf+outp, tmp);
-			/* file name */
-			tmp = list_string(buf+outp, (char*)input+inp+3);
-			outp += tmp;
+			outp += list_char(buf+outp, ';');
+			outp += list_string(buf+outp, (char*)input+inp+3);
 			inp += tmp + 3;
+			break;
+		case T_LINE:
+		case T_FILE:
+			/* those two are meta-tokens, evaluated outside the t_p2 call,
+ 			 * they result in calls to list_line(), list_filename() */
 			break;
 		case T_POINTER:
 			/* what is this? It's actually resolved during token conversion */
+			tmp = ((input[inp+5]&255)<<8) | (input[inp+4]&255);
+			name=l_get_name(tmp, &is_cll);
+			if (is_cll) outp += list_char(buf+outp, '@');
+			outp += list_string(buf+outp, name);
+			/*
 			outp += list_byte(buf+outp, input[inp+1]);
 			outp += list_char(buf+outp, '#');
 			tmp = ((input[inp+3]&255)<<8) | (input[inp+2]&255);
 			outp += list_value(buf+outp, tmp);
-			inp += 4;
+			*/
+			inp += 6;
+			operator = 1;	/* check if arithmetic operator follows */
 			break;
 		default:
 			c = input[inp];
@@ -2567,6 +2726,15 @@ int list_tokens(char *buf, signed char *input, int len) {
 			}
 			inp += 1;
 			break;
+		}
+
+		if (operator && inp < len) {
+			signed char op = input[inp];
+			if (op > 0 && op <= 17) {
+				outp += list_string(buf+outp, arith_ops[op]);
+				inp += 1;
+			}
+			operator = 0;
 		}
 	}
 end:
@@ -2582,17 +2750,63 @@ int list_string(char *buf, char *string) {
 	return p;
 }
 
-int list_value(char *buf, int val) {
+int list_value(char *buf, int val, signed char format) {
 	int p = 0;
-	p += list_char(buf + p, '$');
-	if (val & (255<<16)) {
-		p += list_byte(buf+p, val>>16);
-		p += list_word(buf+p, val);
-	} else
-	if (val & (255<<8)) {
-		p += list_word(buf+p, val);
-	} else {
-		p += list_byte(buf+p, val);
+	char valbuf[32];
+
+	switch (format) {
+	case '$':
+		p += list_char(buf + p, '$');
+		if (val & (255<<16)) {
+			p += list_byte(buf+p, val>>16);
+			p += list_word(buf+p, val);
+		} else
+		if (val & (255<<8)) {
+			p += list_word(buf+p, val);
+		} else {
+			p += list_byte(buf+p, val);
+		}
+		break;
+	case '%':
+		p += list_char(buf + p, '%');
+		if (val & (255<<16)) {
+			p += list_byte_f(buf+p, val>>16,'%');
+			p += list_word_f(buf+p, val,'%');
+		} else
+		if (val & (255<<8)) {
+			p += list_word_f(buf+p, val,'%');
+		} else {
+			p += list_byte_f(buf+p, val,'%');
+		}
+		break;
+	case '&':
+		snprintf(valbuf, 32, "%o",val);
+		p+= list_char(buf+p, '&');
+		p+= list_string(buf+p, valbuf);
+		break;
+	case 'd':
+		snprintf(valbuf, 32, "%d",val);
+		p+= list_string(buf+p, valbuf);
+		break;
+	case '\'':
+	case '"':
+		p+= list_char(buf+p, format);
+		p+= list_char(buf+p, val);
+		p+= list_char(buf+p, format);
+		break;
+	default:
+		/* hex format as fallback */
+		p += list_char(buf + p, '$');
+		if (val & (255<<16)) {
+			p += list_byte(buf+p, val>>16);
+			p += list_word(buf+p, val);
+		} else
+		if (val & (255<<8)) {
+			p += list_word(buf+p, val);
+		} else {
+			p += list_byte(buf+p, val);
+		}
+		break;
 	}
 	return p;
 }
@@ -2616,25 +2830,56 @@ int list_sp(char *buf) {
 }
 
 int list_word(char *buf, int outword) {
-	buf = buf + list_byte(buf, outword >> 8);
-	list_byte(buf, outword);
-	return 4;
+	return list_word_f(buf, outword, '$');
+}
+
+int list_word_f(char *buf, int outword, signed char format) {
+	int p = 0;
+	p+= list_byte_f(buf+p, outword >> 8, format);
+	p+= list_byte_f(buf+p, outword, format);
+	return p;
 }
 
 int list_byte(char *buf, int outbyte) {
-	buf = buf + list_nibble(buf, (outbyte >> 4));
-	list_nibble(buf, outbyte);
-	return 2;
+	return list_byte_f(buf, outbyte, '$');
 }
 
-int list_nibble(char *buf, int outnib) {
+int list_byte_f(char *buf, int outbyte, signed char format) {
+	int p = 0;
+	p+= list_nibble_f(buf+p, (outbyte >> 4), format);
+	p+= list_nibble_f(buf+p, outbyte, format);
+	return p;
+}
+
+int list_nibble_f(char *buf, int outnib, signed char format) {
+	int p = 0;
 	outnib = outnib & 0xf;
-	if (outnib < 10) {
-		buf[0]='0'+outnib;
-	} else {
-		buf[0]='a'-10+outnib;
+	switch(format) {
+	case '$':
+		if (outnib < 10) {
+			buf[p]='0'+outnib;
+		} else {
+			buf[p]='a'-10+outnib;
+		}
+		p++;
+		break;
+	case '%':
+		buf[p++] = (outnib&8)?'1':'0';
+		buf[p++] = (outnib&4)?'1':'0';
+		buf[p++] = (outnib&2)?'1':'0';
+		buf[p++] = (outnib&1)?'1':'0';
+		break;
+	default:
+		/* hex as default */
+		if (outnib < 10) {
+			buf[p]='0'+outnib;
+		} else {
+			buf[p]='a'-10+outnib;
+		}
+		p++;
+		break;
 	}
-	return 1;
+	return p;
 }
 
 
