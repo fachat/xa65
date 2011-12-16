@@ -1,0 +1,12 @@
+
+******** pack 1.0 ******** 11.10.92, A.Fachat
+
+Dieses Programm fr den C64 packt Dateien in eine und kann sie wieder 
+auspacken. 'packen' ist zuviel, denn es werden nur Folgen gleicher Bytes
+mit einer L„nge von mehr als 3 Byte durch die Folge $f7,anz,byte ersetzt.
+$f7,0 zeigt das Ende der Datei, $f7 selbst werden durch diese Folge ersetzt,
+egal wieviel in Reihe sind.
+Das 'Archiv' beginnt mit der Versionsnummer: 1 Byte = 1
+Dann folgen die Einzelnen Dateien - der Dateiname in ASCII, mit Nullbyte
+abgeschlossen, danach die Datei selbst.
+

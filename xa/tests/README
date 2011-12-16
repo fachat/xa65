@@ -1,0 +1,24 @@
+This is a directory of test suites for complex or pathological cases that
+have been repaired (?) in the current version. It is primarily for internal
+testing, but is here for your interest.
+
+adrm/		Addressing mode test (especially the optimizer and quantity
+		prefixes)
+nonl/		Patryk's no-new-line-on-last-line cases ;)
+fordef/		Optimizer warnings for forward defined labels
+relocundef/  	Tests for the detection of undefined references during a
+		reloc65 export.
+ldoreloc/ 	Test case for the relocation table reading of ldo when undef'd
+		refs are involved
+comcom/		Comments-with-comments-with-commands-etc. for testing -M
+recmac/		Recursive macro evaluation testing
+openpp/		Testing of open #if*s in pp
+cpp/		Random preprocessor tests, mostly crap
+incerr/		1) .xl/.al should error without -w 2) error should be in
+		the correct file
+binclude/	Binary include code with some weird casing
+chppch/		Changing preprocessor characters (-p)
+charset/	Tests of when charsets should be honoured and when not
+
+Cameron Kaiser, André Fachat
+

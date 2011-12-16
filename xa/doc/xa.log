@@ -1,0 +1,254 @@
+xa-2.1.0
+
+  * Rewrite of command line option handling to better look like
+    usual (cc) options.
+  * Removed ^M from all files.
+  * Removed all external declarations to header files,
+    and made all static functions static.
+    | Now compiles almost without warning with 'gcc -W -Wall'.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 31 Oct, 1996
+
+xa-2.1.0a
+
+  * Introduced concept of code relocation.  Now each label being set to
+    the program counter is a 'pointer', that gets an entry in a
+    relocation table. Simple arithmetic operations are allowed. The
+    relocation table is still just printed unsortedly.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 31 Oct, 1996
+
+xa-2.1.0b
+
+  * Produces some preliminary kind of relocatable file, including header
+    etc. Problems -- relocation table does as if file is assembled for
+    address 0. Need
+    a) a better way to set program counter.
+    b) pseudo opcodes for distinguishing segments.
+    c) a way to temporarily disable relocation.
+    d) a way to include extra headers and options into the file.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 31 Oct, 1996
+
+  * Assembler now produces a relocatable file format, as described in
+    the file ``fileformat.txt''. Temporarily disabling relocation is with
+    the ``*=value'' directive, while switching back to relocation mode
+    goes with ``*='' (without value). New pseudo opcodes ``.text'',
+    ``.data'', ``.bss'', ``.zero'' switch between the segments.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 02 Nov, 1996
+
+xa-2.1.0e
+
+  * There was a bug in the arithmetic routine that had set all pointer
+    to the text segment, if something was added.
+  * There also was a bug in the loader when actually using options.
+  * A new pseudo opcode was added -- ``.fopt''.
+    | Works like ``.byte'', but puts these bytes in a file option.
+    | The length in the file option is automagically set. ``.fopt''
+    | may appear anywhere in the file, but it should be at the
+    | beginning | (might be mandatory in a later version).
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 06 Nov, 1996
+
+xa-2.1.0f
+
+  * Added a command line switch ``-M'' to ignore colons in a comment
+    after a semicolon.
+  * Without it, a colon separates complete mnemonics, including
+    the semicolon comment.
+    | Well, actually this switch is a ``MASM'' compatibility switch, and
+    will surely be expanded someday, when I get more info on MASM.
+  * Now ``*'' and ``='' can be separated for the definition
+    of the program counter and ``.byte'' is also accepted.
+    This makes it more MASM compatible. ".end" is ignored.
+    Still missing is ``.include''.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 11 Nov, 1996
+
+xa-2.1.0g
+
+  * Started working on ``official'' o65 fileformat.
+    If there are no undefined labels, and no relocated code
+    is embedded in absolute code, the thing should work.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 21 Dec, 1996
+
+xa-2.1.1
+
+  * ``.dsb'' now has an _optional_ parameter ``fillbyte''.
+  * Undefined references are now put into the relocation table
+    (i.e. handled correctly) if the ``-c'' option is given.
+  * The file format conforms to o65 version 1 file format.
+  * Embedding absolute in relocatable code and vice versa is buggy...
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 21 Dec, 1996
+
+xa-2.1.1a
+
+  * Embedding absolute code in relocatable seems to work now.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 21 Dec, 1996
+
+xa-2.1.1e
+
+  * The option to embed relocatable code in absolute code has been
+    dropped.  Therefore the command line options
+    ``-A'' (make it romable), ``-b?'' (set segment start addresses),
+    and ``-G'' (omit exported globals from file) have been added.
+  * Internally, the whole thing has been made dynamic; except for the
+    preprocessor (and the storage between pass1 and pass2), everything
+    uses dynamically allocated tables. m_alloc, which had been
+    introduced long time ago because of the buggy malloc
+    on the Atari ST is gone now!
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 22 Dec, 1996
+
+xa-2.1.1f
+
+  * Added the ``-a'' and ``-A'' options to file65, so that it can now
+    print the start addresses for following files in the ROM when making
+    romable code.
+  * Added shell (bash) script ``mkrom.sh'' that assembles a given list
+    of files and builds a ROMable file. The first two bytes are single
+    linked list pointers, and then comes the file.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 02 Jan, 1997
+
+xa-2.1.1g
+
+  * Added the file ``reloc65'', to relocate o65 files without
+    reassembling them.
+  * Fixed quite some bugs in xa (segment numbering in the globals list
+    and switched low/high byte relocation entry type in relocation
+    table. Now conforms to documentation, i.e. fileformat.txt)
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 03 Jan, 1997
+
+xa-2.1.2
+
+  * Added ``ld65'', a simple linker for o65 files.
+  * Another bug in xa fixed now. 
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 04 Jan, 1997
+
+xa-2.1.3
+
+  * Allows to use ``.data'' etc in absolute mode, too. No relocation
+    entries are generated then. Segment start can be set with ``-b?''
+    command line options, though. Also the data segment is discarded
+    with this method!  This allows to use the normal ``.data'' etc
+    syntax even when assembling a ROM (which is done in absolute mode.)
+  * Fixed a bug where ``.dsb'' in a data segment didn't fill with the
+    right value
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 25 Mar, 1997
+
+xa-2.1.3e
+
+  * Added preprocessor continuation lines, and .block and .bend
+    pseudo-opcodes (They map to ``.('' and ``.)'' respectively.)
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 27 Jul, 1997
+
+xa-2.1.4
+
+  * Do not leave output file around after an error -- this is
+    better for ``make''.
+  * Also it seems to have settled for a while, so I can release
+    a new version.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 11 Sep, 1997
+
+xa-2.1.4c
+
+  * Fixed a nasty bug that prevented correct relocation table
+    entries when a ``label2=label1'' contruct was used and
+    ``label2'' was accessed.
+  * Added ``-I'' option.
+ 
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 30 Dec, 1997
+
+xa-2.1.4d
+
+  * fixed align code. Now inserts NOP opcodes into text segment, and
+    sets file mode appropriately.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 26 Jan, 1998
+
+xa-2.1.4e
+
+  * Changed o65 fileformat and adopted it in xa.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 26 Jan, 1998
+
+xa-2.1.4g
+
+  * Fix handling of !zeropageaddress, that was broken (did not result
+    in absolute address, but gave error message.)
+  * Add cross reference list to labels if switched on on command line.
+  * Fix the filename when multiple files are given on the command line
+    (used to give the first filename for all errors in second pass.)
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 25 Nov, 1998
+
+xa-2.1.4h
+
+  * In file65 added support for undefined labels and globals,
+    also for (some known) file options.
+  * Fix a preprocessor bug.
+
+ -- André Fachat <a.fachat@physik.tu-chemnitz.de> 12 Dec, 1998
+
+xa-2.2.0-p1-1
+
+  * Update COPYING to the latest version (Y2K-fixed + new address to GNU)
+  * Lots of fixes to the Makefiles
+  * Cleaned up the structure of the TODO file
+  * Added manual-pages for file65, ld65, printcbm, reloc65, uncpk, and xa
+  * Commented out LIB-flags -lm, -lcurses and -ltermcap,
+    since they are all unused
+  * Added `--help' and `--version' to all binaries
+  * Removed `-h', `-?' and `-v' options where applicable
+  * Created a file containing the version-function; version.h
+  * Moved common macros to a separate file; xad.h
+  * Restructuring of printcbm to become more readable
+  * Added ifndef/define/endif traps to all header-files
+  * Fixed a few typos
+  * Renamed romadr to romaddr
+  * Renamed all functions matching *such* to *search*
+  * Fixed all warnings
+  * Cleaned up all header-files
+  * Reformatted xa.log
+
+ -- David Weinehall <tao@acc.umu.se> 20 Aug, 2002
+
+xa-2.3.0
+
+  * Version number jump for all the unofficial xa's out there
+  * Fixed addressing bugs for @, ! and completed 65816 merge
+    Thanks to David for the report
+  * Moderate legibility overhaul to xat.c (will continue on this)
+  * More compiler warnings corrected
+    Thanks to David for the report
+  * man files completed
+  * Documentation updated
+  * Last line bug corrected (where last line not assembled if no newline)
+    Thanks to silverdr for the report
+  * ld65 is now ldo65 to avoid conflicts with cc65 package
+  * Post-defined labels work better, or at least somewhat (no longer attempts
+    to optimize in pass 2 and generate bad code). Can be forced with `
+    Thanks to silverdr for the report
+  * Makefile bugs multiplied
+  * @ now mostly obligatory for 24-bit addressing
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 2 Apr, 2006
+
+xa-??
+
+  * Introduced switch to convert values in quotes to different character
+    sets. Currently supported are ASCII (default) and PETSCII
+  * Fixed some quote bugs
+
+ -- André Fachat <afachat@gmx.de> 23 Dec, 2006
+

@@ -1,0 +1,11 @@
+
+// this file defines an undefined label
+	.text
+	ldx #1
+l1	lda undefl
+	dex
+	bne l1
+	rts
+
+undefl	=1
+

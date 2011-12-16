@@ -8,4 +8,8 @@ xa65 was originally authored by me, André Fachat, but currently and still xa65 
 Due to current time constraints Cameron can not do any updates, so I decided to create this repository to publish my (beta) version that implements a long outstanding feature: assembler listings...
 
 
+These are the directories:
+
+xa		- contains the main source. The master branch is the stable version (currently 2.3.5)
+
 

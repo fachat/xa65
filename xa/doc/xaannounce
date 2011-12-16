@@ -1,0 +1,105 @@
+Subject: [ANN] 6502 reloc. binaries & assembler
+Newsgroups: comp.sys.cbm,comp.emulators.cbm,comp.sys.atari.8bit,comp.sys.apple2.programmer,comp.arch.embedded
+Organization: TU Chemnitz
+Summary: Announcement of 6502 relocatable binary format and assembler
+Keywords: 6502, 65816, relocation, cross assembler, assembler, file format 
+
+
+
+                    relocatable binary file format o65
+                        & 6502 cross assembler xa65
+
+This is the announcement for the 6502 relocatable binary file format 'o65'.
+
+This format allows to 
+
+- relocate (i.e. move to a different address) a file when loading it, to 
+  be able to execute at a different address
+
+- produce global label lists, i.e. being able to export labels from one
+  file to another
+
+- have undefined references, i.e. allow late binding (resolving symbols
+  at load time)
+
+- code sharing in virtual memory architectures
+
+- do block oriented transfer and have minimum side storage when loading a file
+
+The format works for the 6502 and for the 65816 CPU. It knows object from
+executable files and more. 
+The file format itself is free (I can do the clearance, if you have
+suggestions for extensions etc.)
+Have a look at: http://www.tu-chemnitz.de/~fachat/c64/xa/fileformat.txt
+
+About another 6502 file format, see note 1).
+
+
+                        6502 cross assembler xa65
+
+As reference assembler to produce this kind of code, I have implemented
+the file format in my 6502 cross assembler "xa65".
+From version 2.1.1 it supports the new file format standard, and from 
+version 2.1.2a, it comes with the "file65", "reloc65" and
+"ld65" utilities to print information about a file, relocate a file
+and link several object files together resp.
+All the programs are close to production stage (you never know if you
+got all bugs...), while the linker is in beta stage. Esp. I want to know
+about options you would like to have.
+
+The assembler is under GNU public license and can be found at:
+http://www.tu-chemnitz.de/~fachat/c64/xa/index.html
+
+Other changes from earlier versions:
+
+- supports o65 file format, including linker, relocator and file utility.
+
+- much better code quality (only two warnings with 
+  gcc -W -Wall -pedantic -ansi)
+
+- supports more MASM pseudo opcodes (but still not the important ones
+  that I have my C-like preprocessor for: .if, .macro, .include.
+  This might change someday...
+
+- DOS support by go32 cross-compiling (only Makefile changes!)
+
+General description:
+
+- C-like Preprocessor to make macros 
+- label "hiding" on different levels,
+  i.e. multiple use of the same label possible 
+- 1.5-pass assembler:
+  Everything that can be derefenced is being assembled in pass 1 and
+  saved in memory. The second pass does the rest. This (together
+  with hashing etc) gives quite a good speed (30kByte binary out of
+  300kByte source in less than two minutes on an 8MHz Atari ST -
+  hey, the first versions would have taken half an hour for this
+  job! - my 486DX4/100 with linux needs around two seconds or so...)
+- needs no linker - all stuff is in source code (with this speed,
+  it's ok) 
+- (optional) support for relocatable 'o65' file format,
+  including linker, relocator and file utility.  A loader in 6502
+  assembly code is also included. 
+- reads DOS and Unix(tm) files (LF or CR+LF)
+
+so long
+André Fachat
+
+----
+1) There is already another relocatable object file format, called "OMF",
+which is mostly used in the Apple community. I didn't take this format
+for my projects for several reasons: It has some limits on filename
+lengths; the relocation information is encoded between assembler code,
+i.e. one cannot easily use block loading; it doesn't provide different
+segments (as I can see) that have this meaning. 
+The OMF file format has never been published on the internet and mostly
+commercial companies from the Apple world seem to support it - but then
+they even have C compilers for this file format.
+
+
+
+--
+André Fachat                       |"I do not feel obliged to believe that the
+Institute of physics,              | same God who has endowed us with sense,
+Technische Universität Chemnitz    | reason, and intellect has intended us to
+http://www.tu-chemnitz.de/~fachat  | forego their use" -- Galileo Galilei

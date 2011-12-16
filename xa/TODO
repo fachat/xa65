@@ -1,0 +1,10 @@
+o	nm65 that prints labels from o65 files
+
+o	`-L' option for ldo65, such that globals can be suppressed,
+	but KERNEL can be kept
+
+o	inc a -> ina, dec a -> dea (right now uses bare inc and dec)
+
+o	VICE label file support
+
+o	Smarter -X that can cope with non-block-aligned segment sizes

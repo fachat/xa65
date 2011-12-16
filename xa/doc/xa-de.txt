@@ -1,0 +1,394 @@
+----------------------------------------------------------------------------
+
+                              XA 2.1.0
+                              
+                      65(c)02 Cross-Assembler 
+                 
+                         von Andre Fachat
+                         
+----------------------------------------------------------------------------
+
+     * Block-Struktur (Versteckte Label)
+
+     * Sehr schnell durch hashing 
+     
+     * C-ähnlicher Preprozessor
+     
+---------------------------------------------------------------------------- 
+
+ 1.  Was ist das überhaupt und Geschichte
+ 
+ 2.  Aufruf und Features
+ 
+ 3.  6502 Assembler
+
+ 4.  Pseudo-Opcodes, Block-Struktur und Gültigkeitsbereich von Labels
+  
+ 5.  Preprozessor
+
+----------------------------------------------------------------------------
+
+
+1.  Was ist das überhaupt und Geschichte
+----------------------------------------
+
+Mit dem Cross-Assembler können auf einem Rechner Programme für einen 
+anderen Rechner(typ) erstellt werden. Die Programmdateien müssen dann
+nur noch auf das Zielsystem übertragen werden. In diesem Fall handelt 
+es sich um einen 6502-Cross-Assembler. Der 6502 ist ein 8-Bit-Prozessor,
+der ursprünglich von MOS Technologies entwickelt wurde. Er tut seine
+Dienste u.a. im Apple II, Commodore PET, VC20 und C64 (in abgewandelter
+Form) und vielen anderen. 
+Inzwischen gibt es ihn in vielen Varianten mit verschiedenen Zusätzen
+und in verschiedenen Gehäusen. Gemeinsam ist allen der Befehlssatz, 
+der für den Assembler die Grundlage bildet. Die CMOS-Versionen bieten
+allerdings Erweiterungen des Befehlssatzes. 
+Die Idee zu einem Cross-Assembler entstand, als ich mir einen 6502-Computer
+selbst baute und der (ebenfalls selbstgeschriebene) Assembler auf dem C64
+zu langsam wurde. Nachdem auch noch ein Atari ST bei mir rumstand, war
+die Idee schnell in die Tat umgesetzt.
+
+
+2.  Aufruf und Features
+-----------------------
+
+Der Assembler besteht nur aus dem Programm "xa". 
+Der Assembler verarbeitet eine oder mehrere Quelldateien zu einer
+Objektdatei, die direkt verwendet werden kann. Das Linken entfällt, da der
+Aufwand zu groß und die Geschwindigkeit hoch genug ist, um die 
+'Libraries' im Quelltext einzubinden. Ca. 350kByte Quelltext werden in
+1 Minute und 50 Sekunden zu einer 32kByte Objektdatei für ein EPROM 
+assembliert (naja, der 8MHz Atari war nicht schnell. Aber dafür ist der 
+Wert ziemlich gut. Mein 486DX4/100 braucht vielleicht 2 Sekunden)!
+Als Ausgabedateien werden eine Objektdatei, eine Fehlerdatei und eine
+Labeldatei geschrieben. 
+   
+Der Aufruf lautet:
+XA Quell1 [Quell2 ...] [-oObject] [-eFehler] [-lLabel] [-C] [-v] [-x]
+
+Die Angabe der Objekt-, Fehler- und Labeldatei ist optional, ohne Angabe
+wird die Endung der ersten Quelldatei auf 'obj', 'err' und 'lab' verändert,
+wenn "-x" angegeben ist. Ansonsten wird "a.o65" als Ausgabedatei verwendet
+und keine Fehler- und Labeldatei geschrieben.
+Die Option -C erzeugt Fehlermeldungen bei CMOS-Befehlen.
+Im Environment werden die Variablen XAOUTPUT und XAINPUT unterstützt.
+Falls die Quell- und Include-Dateien nicht gefunden werden, werden die in
+XAINPUT aufgeführten Pfade der Reihe nach durchgetestet. Falls XAOUTPUT
+existiert, wird dieser Pfad als Pfad für .err, .lab und .obj-Dateien
+benutzt. Die Komponenten des Pfades sind mit ',' getrennt.
+
+Die Labeldatei enthält hinterher eine Liste aller Labels mit Block-Nummer
+und Wert in dezimal in der Form: 'Label, 1,-1234' in lesbarem ASCII.
+Die Fehlerdatei enthält die Version des Assemblers, Datum und Uhrzeit des
+Assemblerlaufs, die Liste der Fehler, die Ausdrücke, die mit #echo
+und #print im Preprozessor erzeugt werden und eine Statistik über die 
+benutzten Resourcen (Speicherplatz etc.).
+Die Objektdatei wird nur durch die Quelldatei bestimmt, es wird kein Code
+vorgesetzt oder angehängt.
+Die Quelldatei muß im ASCII-Format vorliegen. 
+
+
+3.  6502 Assembler
+------------------
+
+Da dies kein 6502-Assemblerkurs werden soll, nur eine ganz kurze
+Beschreibung. Unterstützt wird der Code für alle Standard-6502 sowie
+der Code für die Rockwell 65C02-CPU. Der Prozessor hat drei Register, 
+über die die meisten Operationen laufen. Transferoperationen benötigen
+deshalb immer einen Load- und einen Store-Befehl.
+Zusätzlich gibt es das Statusregister und den Stackpointer sowie,
+natürlich, den Programmzähler. Der Stack liegt immer im Bereich $100 und
+$1ff (Hexadezimal mit vorangestelltem '$'), weshalb der Stackpointer ein
+8-Bit-Register ist. Eine besondere Behandlung durch kürzere Befehle 
+erfährt die Zeropage ($0-$ff), bei deren Adresse das Hi-Byte Null ist.
+Das Statusregister besitzt folgende Flags:
+
+N    = Negativ
+O    = Overflow
+B    = Break
+D    = Dezimal
+I    = Interrupt
+Z    = Zeroflag
+C    = Carry
+
+Befehle:
+
+LDA       lade Akkumulator
+LDX       lade X-Register
+LDY       lade Y-Register
+
+STA       speichere Akkumulator
+STX       speichere X-Register
+STY       speichere Y-Register
+STZ       speichere NULL                               (*)
+
+TAX       Kopiere Akku nach X
+TAY       Kopiere Akku nach Y
+TXA       Kopiere X nach Akku
+TYA       Kopiere Y nach Akku
+TSX       Kopiere Stackpointer nach X        
+TXS       Kopiere X nach Stackpointer
+
+ADC       Addiere zu Akku mit Übertrag (Carry)         (D)
+SBC       Subtrahiere von Akku mit Carry               (D)
+AND       Logisches Und mit Akku   
+ORA       Logisches Oder mit Akku
+EOR       Exklusiv-Oder mit Akku
+BIT       Bit-Test: Z=A&M, N=M7, O=M6
+ROL       Rotiere Links Akku oder Speicher A=A*2+C, C=A7
+ROR       Rotiere Rechts A=A/2+C*127, C=A0
+ASL       Arithmetisches Linksschieben A=A*2
+LSR       Logisches Rechtsschieben A=A/2
+INX       Erhöhe X-Register um eins
+INY              Y
+INC       Erhöhe Akku oder Speicher um eins
+DEX       Erniedrige X-Register um eins
+DEY                  Y
+DEC       Erniedrige Akku oder Speicher um eins
+
+CMP       Vergleiche mit Akku (Substraktion ohne Akku zu ver„ndern)
+CPX       Vergleiche mit X-Register
+CPY       Vergleiche mit Y-Register
+
+BNE       Verzweige falls nicht Null
+BEQ                       Null
+BMI                       Negativ
+BPL                       Positiv
+BVC                       Overflow Clear
+BVS                       Overflow Set
+BCS                       Carry Set
+BCC                       Carry Clear
+BRA       Verzweige immer                              (*)
+
+JMP       Springe an Adresse
+JSR       Springe in Unterroutine, Rcksprungadresse auf dem Stack
+RTS       Return from Subroutine
+
+CLC       Carry-Flag löschen
+SEC                  setzen
+CLD       Dezimal-Flag löschen
+SED                    setzen
+CLI       Interrupt freigeben
+SEI                 sperren
+CLV       Overflow-Flag löschen
+
+PHA       Akku auf Stack legen
+PHX       XR                                           (*)
+PHY       YR                                           (*)
+PHP       Status
+PLA       Akku vom Stack holen
+PLX       XR                                           (*)
+PLY       YR                                           (*)
+PLP       Status
+
+BRK       Löst Interrupt mit gesetztem Break-Flag aus
+RTI       Return from Interrupt
+
+NOP       No Operation
+
+TRB       Test und Reset Speicher mit Akku             (*)
+BBR       Branch on Bit Reset                          (*)
+BBS       Branch on Bit Set                            (*)
+RMB       Reset Memory Bit                             (*)
+SMB       Set Memory Bit                               (*)
+
+Die mit (*) markierten Befehle sind CMOS-Befehle. Außerdem haben einige
+der anderen Befehle zusätzliche Addressierungsarten. Die mit (D) markierten
+Befehle arbeiten im Dezimal-Mode (Dezimal-Flag gesetzt) anders, nämlich
+im BCD-Mode (eine Ziffer von 0-9 in 4 Bit).
+
+Addressierungsarten:
+
+-Immediate               LDA #$12
+-Absolute                STA $1234
+-Zeropage                EOR $10
+-Bit,ZP,REL              BBR #7,$10,label
+-Akku                    ASL
+-Implied                 TAX
+-(Indirect,x)            LDA ($10,X)
+-(Indirect),y            STA ($3e),Y
+-Zeropage,x              CMP $12,X
+-Absolut,x               LDY $4356,x
+-(Absolut,x)             jmp (jumptabelle,x)
+-Absolut,y               ORA $2345,y
+-Relative                BNE irgendwohin
+-(Indirect)              jmp (berVektor)
+-Zeropage,y              ldx $12,y
+-Bit,Zeropage            RMB #1,zeropage
+
+Bei Adressierungsarten, die in der Zeropage und Absolut existieren, wird, 
+soweit möglich die Zeropage-Adressierung angewendet. Ein vorangestelltes
+'!' erzwingt absolute Adressierung, auch bei einem Wert kleiner 256.
+Als Wert oder Adresse können arithmetische Ausdrücke mit Hierarchie und
+Klammerung verwendet werden. Der Assembler versteht folgende Operanden:
+
+     123       -Dezimal
+     $234      -Hexadezimal
+     &123      -Oktal
+     %010110   -Binär
+     *         -Programmzähler
+     "A"       -ASCII-Code
+     labelx    -Label
+     -(lab1+1) -Ausdruck
+     
+Folgende Operatoren können benutzt werden:
+
+     +         -Addition                     9
+     -         -Subtraktion                  9
+     *         -Multiplikation               10
+     /         -Integer-Division             10
+     <<        -Shift nach links             8
+     >>        -Shift nach rechts            8
+     >=,=>     -größer oder gleich           7
+     <=,=<     -kleiner oder gleich          7
+     <         -kleiner                      7
+     >         -größer                       7
+     =         -gleich                       6
+     <>,><     -ungleich                     6
+     &&        -Logisches UND                2
+     ||        -Logisches ODER               1
+     &         -Bitweises UND                5
+     |         -Bitweises ODER               3
+     ^         -Bitweises Exklusiv-Oder      4
+     
+Die Operatoren mit der höheren Priorität werden zuerst bearbeitet.
+Ein gültiger Ausdruck ist dann z.B. 
+
+     LDA       base+number*2,x
+     
+Bei Addressierungsarten, die nicht mit einer Klammer beginnen, darf
+auch im ersten Ausdruck keine Klammer am Anfang stehen:
+
+     LDX       (1+2)*2,y                ; Falsch  !
+     LDX       2*(1+2),y                ; Richtig !
+     
+Vor einem Ausdruck kann ein unärer Operator stehen:
+     
+     <         bildet Lo-Byte des Wertes
+     >         bildet Hi-Byte des Wertes
+     
+     LDA  #<adresse
+     
+Die Einzelnen Befehle werden durch ':' oder eine neue Zeile getrennt.
+Hinter jedem Befehl kann, durch ';' abgetrennt ein Kommentar stehen.
+Der Kommentar gilt bis zum nächsten Doppelpunkt oder bis zur nächsten 
+Zeile.
+
+ 
+4. Pseudo-Opcodes, Block-Struktur und Gültigkeitsbereich von Labels
+-------------------------------------------------------------------
+
+Folgende Pseudo-Opcodes stehen noch zur Verfügung:
+
+     .byt      wert1,wert2,wert3, ...
+     .word     wert1,wert2, ...
+     .asc      "text1","text2", ...
+     .dsb      länge [,füllbyte]
+     *=
+     .(
+     .)
+     
+Hierbei sind '.byt' und '.asc' identisch und legen Daten Byteweise im
+Speicher ab. '.word' legt Daten Wortweise (=2 Byte) im Speicher ab.
+'.dsb' füllt einen Speicherbereich der Länge 'länge' mit dem Wert
+'füllbyte' ab. Falls füllbyte nicht abgegeben ist, wird mit Null gefüllt.
+Die folgenden Opcodes haben keine direkte Einwirkung auf die Objektdatei.
+'*=' definiert den Programmzähler. 
+'.(' eröffnet einen neuen 'Block'. Alle Labels innerhalb eines solchen
+Blocks sind lokal. Allerdings darf vorher kein Label gleichen Namens in
+einem höheren Block definiert worden sein. '.)' schließt den Block wieder.
+Die Maximale Blockschachtelungstiefe beträgt 16 Blocks.
+
+Ein Label wird definiert dadurch, daß es kein Opcode ist:
+
+     label1    LDA #0              ; Position(=Programmzähler) des Opcodes
+     label2    =1234               ; direkte definition
+     label3 label4 label5          ; implizit Programmzähler, auch mehrere
+                                   ; Labels werden definiert
+     label6 label7 = 3		   ; label6 wird mit dem Wert des Programm-
+				   ; zählers gesetzt, label7 mit 3
+     label8:   sta label2	   ; Da Opcodes mit ':' getrennt werden,
+				   ; wird auch die übliche Schreibweise mit
+				   ; 'label:' erkannt.
+
+Dabei werden Groß- und Kleinbuchstaben unterschieden. 
+Labels, die mit vorangestelltem '+' definiert werden, sind global (Block=0),
+d.h. überall gültig. Mit vorangestellten '&' kann ein Label jeweils eine
+Hierarchiestufe höher definiert werden als ohne '&'.
+Mit vorangestelltem '-' kann ein Label umdefiniert werden:
+
+     -sysmem   +=4  ; da gibts ==, +=, -=, *=, /=, &=, |=
+     -syszp    =123
+     
+
+5. Preprozessor
+---------------
+
+Der Preprozessor ist stark an den Preprozessor der Sprache C angelehnt.
+So sind die für C typischen /* */ -Kommentare möglich.
+Ein Preprozessor-Befehl wird mit einem '#' am Beginn der Zeile eingeleitet.
+
+#include  "Dateiname"    fügt die Datei 'Dateiname' an dieser Stelle in den
+                         Quelltext ein. Beim Laden wird zuerst der Name 
+                         direkt gesucht, danach mit den Pfaden aus 
+                         XAINPUT.
+                         
+#echo  Kommentar         Gibt Kommentar in der Fehlerdatei aus.
+
+#print ausdruck          Gibt Ausdruck direkt, nach Preprzessorbehandlung
+                         und nach dem Ausrechnen aus.
+                         
+#printdef DEFINIERT      Gibt die Definition in der Fehlerdatei aus.
+
+#define   DEF  Text      Definiert DEF als Text, deshalb wird hinterher 
+                         immer DEF durch Text ersetzt
+                         
+#ifdef    DEF            Der Quelltext bis zum folgenden #endif oder #else
+                         wird nur assembliert, falls DEF vorher mit #define
+                         definiert wurde.
+                         
+#else                    else halt...
+
+#endif                   Beendet #if..-Konstrukt. Nach jedem #if.. mu!
+                         ein #endif stehen. 
+
+#ifndef  DEF             .... falls DEF nicht definiert wurde. 
+
+#if ausdruck             .... falls ausdruck ungleich null ist.
+
+#iflused label           .... falls Label schon benutzt wurde.
+
+#ifldef label            .... falls Label schon definiert wurde.
+
+Dabei beziehen sich #iflused und #ifldef auf Labels, nicht auf Preprozessor-
+Definitionen! Damit l„t sich z.B. eine Bibliotheksstruktur aufbauen:
+
+#iflused  label
+#ifldef   label
+#echo     label schon definiert, nicht aus Library
+#else
+label     lda #0
+          ....
+#endif
+#endif
+
+Die #if-Schachtelungstiefe beträgt 15.
+
+Mit #define können auch wie in C 'Funktionen' mit Parametern definiert 
+werden.
+
+#define mult(a,b)   ((a)*(b))
+
+
+Literaturangaben
+----------------
+
+-"Das Maschinensprachebuch zum Commodore 64"
+     Lothar Englisch
+     Data Becker GmbH
+-"Controller Products Data Book"
+     Rockwell International, Semiconductor Products Division
+-"Programmieren in C"
+     Kernighan, Ritchie     
+     Hanser Verlag
+

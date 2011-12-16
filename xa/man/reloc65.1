@@ -1,0 +1,68 @@
+.TH RELOC65 "1" "11 April 2006"
+
+.SH NAME
+reloc65 \- relocator for o65 object files
+
+.SH SYNOPSIS
+.B reloc65
+[\fIOPTION\fR]... \fIFILE\fR...
+
+.SH DESCRIPTION
+.B reloc65
+is a relocator for files in the
+.B o65
+object format.
+
+.SH OPTIONS
+.TP
+.B \-o filename
+Set output filename. The default is
+.BR a.o65 \&.
+.TP
+.B \-b? addr
+Relocate segment
+.B ?
+to
+.BR addr \&.
+.B ?
+should be t, d, b or z to represent the text, data, bss or zero
+segment respectively. See the
+.BR xa (1)
+man page for an explanation.
+.TP
+.B \-x? 
+Extract segment
+.B ?
+from the file instead of writing back the whole
+file. Valid arguments are t and d for the text or data segment
+respectively. Not valid for bss or zero.
+.TP
+.B \-X 
+Extract text and data segment together
+from the file instead of writing back the whole
+file. Relocating data segment to the end of the text segment
+(ignoring the \-xd option) before extracting.
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-version
+Show version of program.
+
+.SH "SEE ALSO"
+.BR file65 (1),
+.BR ldo65 (1),
+.BR printcbm (1),
+.BR uncpk (1),
+.BR dxa (1),
+.BR xa (1)
+
+.SH AUTHOR
+This manual page was written by David Weinehall <tao@acc.umu.se>
+and Cameron Kaiser <ckaiser@floodgap.com>.
+Original xa package (C)1989-1997 Andre Fachat. Additional changes
+(C)1989-2006 Andre Fachat, Jolse Maginnis, David Weinehall and
+Cameron Kaiser. The current maintainer is Cameron Kaiser.
+
+.SH WEBSITE
+http://www.floodgap.com/retrotech/xa/

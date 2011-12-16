@@ -1,0 +1,89 @@
+
+******** XASS65 1.0 ******** 15.11.89, Andre Fachat
+
+2-Pass-Assembler fr 65(C)02. von Rockwell. Der erste Pass berechnet 
+die Labels, im zweiten Pass wird assembliert. Es wird eine Block-Struktur 
+untersttzt, d.h. die Pseudo-Opcodes .( und .) verbergen dazwischenliegende 
+Labels vor Zugriffen aus anderen als darberliegenden Blocks.
+Die Quell-, Object- und Fehlerdateien mssen in der Kommandozeile angegeben
+werden.
+ 
+******** XASS 1.0 ******* 1.4.90, Andre Fachat
+
+Die Object- und Fehlerdateien werden, falls nicht anders angegeben aus
+der ersten Quelldatei durch „ndern der Extension ermittelt.
+Es gibt jetzt einen C-„hnlichen Preprozessor mit define, ifdef, include etc.
+'Funktionen' k”nnen keine definiert werden.
+
+******** XA 2.00 ******** Andre Fachat
+
+Ab jetzt wird das, was im ersten Pass schon zur Ermittelung der Opcode-
+L„nge assembliert wurde zwischengespeichert. Das verdoppelt die
+Geschwindigkeit ann„hernd. Dabei wird alles, was bekannt ist, vertokend,
+um sp„ter nicht wieder soviel suchen zu mssen.
+
+******** XA 2.02 ******** 23.9.90, Andre Fachat
+
+Labels k”nnen mit vorangestelltem '&' eine Blockstufe h”her definiert 
+werden, mit einem '-' werden sie global definiert (Block=0).
+Bei eingeschalteter Option -c werden Fehler bei CMOS-Befehlen erzeugt.
+Die Tabellen fr die Token-Erkennung sind vereinfacht und damit schneller
+gemacht.
+
+******** XA 2.03 ******** 16.6.91, Andre Fachat
+
+Jetzt wird automatisch eine Liste mit Labels erzeugt und in einer .LAB-Datei
+gespeichert. Im Preprozessor gibt es jetzt #if.
+
+******** XA 2.04 ******** 14.7.91, Andre Fachat
+
+Die Labeltabelle kann jetzt gr”er als 32kByte werden. Da ein Eintrag in der
+Label-Tabelle ohne den eigentlichen Namen 14 Byte betr„gt, sind jetzt mehr
+als 2340 Labels m”glich.
+Im Preprozessor sind jetzt auch 'Funktions'definitionen m”glich , also
+z.B. #define mult(a,b) ((a)*(b))
+ 
+******** XA 2.05 ******** 29.7.91, Andre Fachat
+
+Fr Labels, Defines und die Opcodes wird die Suche nach Hashcode durchgefhrt.
+damit werden ca. 350kByte Quelltext fr ein 32kByte EPROM nicht mehr in 
+18 sondern in ca. 3 Minuten assembliert.
+
+******** XA 2.06 ******** 18.9.91,Andre Fachat
+
+Der Preprozessor hat jetzt #ifldef und #iflused, was eigentlich heit
+'if label defined' und 'if label used'. Damit lassen sich Bibliotheks-
+„hnliche Dateien aufbauen.
+Die Umstellung auf PureC bringt ihn dazu, 350kByte (s.o.) in 2 Minuten zu
+assemblieren. Die Vergr”erung der Datei-Puffer per setvbuf() auf 4kByte
+bringt auch noch 7 Sekunden. Auerdem wird am Ende eine Statistik ber
+verbrauchte Resourcen gedruckt.
+
+******** XA 2.07 ******** 30.9.91, Andre Fachat
+
+Jetzt wird Zeit und Datum sowie die verbrauchten Sekunden in der Statistik
+gezeigt. Die Environment-Variablen XAINPUT und XAOUTPUT werden untersttzt.
+Falls die Quell- und Include-Dateien nicht gefunden werden, werden die in
+XAINPUT aufgefhrten Pfade der Reihe nach durchgetestet. Falls XAOUTPUT
+existiert, wird dieser Pfad als Pfad fr .ERR, .LAB und .OBJ-Dateien
+benutzt. Nach einem Turbo-C Referenzhandbuch sind alle Systemaufrufe
+(malloc, fopen etc.) jetzt ANSI-kompatibel. (Der C-Quellcode allerdings
+ist die Darstellung von Chaos im besten K&R-Stil...)
+
+******** 16.2.92, Andre Fachat
+
+#print und #printdef werden unterdrckt, wenn sie in der entsprechenden 
+#if-Strukur sind (war bisher im Gegensatz zu echo und include nicht so)
+
+******** XA 2.07b ******** 5.1.94, Andre Fachat
+
+Auf englisch uebersetzt, die Abhaengigkeit des Header-files von 
+stdio.h beseitigt, ebenso die Abhaengigkeit von der integer size.
+in xah.h gibt es jetzt einen Define DIRCHAR und DIRCSTRING, die
+das Verzeichnistrennzeichen definieren (DIRCHAR als '/' bzw '\\' und
+DIRCSTRING als "/" bzw. "\\")
+
+******** XA 2.0.7d ******** 96, Andre Fachat
+
+Mehr auf Englisch übersetzt. #undef kann ein define löschen.
+

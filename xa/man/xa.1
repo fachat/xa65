@@ -1,0 +1,837 @@
+.TH XA "1" "7 February 2009"
+
+.SH NAME
+xa \- 6502/R65C02/65816 cross-assembler
+
+.SH SYNOPSIS
+.B xa
+[\fIOPTION\fR]... \fIFILE\fR
+
+.SH DESCRIPTION
+.B xa
+is a multi-pass cross-assembler for the 8-bit processors in the 6502 series
+(such as
+the 6502, 65C02, 6504, 6507,
+6510, 7501, 8500, 8501 and 8502), the Rockwell R65C02, and
+the 16-bit 65816 processor. For a description of syntax, see
+.B ASSEMBLER SYNTAX
+further in this manual page.
+
+.SH OPTIONS
+.TP
+.B \-v
+Verbose output.
+.TP
+.B \-x
+Use old filename behaviour (overrides
+.BR \-o ,
+.B \-e
+and
+.BR \-l ).
+This option is now deprecated.
+.TP
+.B \-C
+No CMOS opcodes (default is to allow R65C02 opcodes)
+.TP
+.B \-W
+No 65816 opcodes (default).
+.TP
+.B \-w
+Allow 65816 opcodes.
+.TP
+.B \-B
+Show lines with block open/close (see
+.BR PSEUDO-OPS ).
+.TP
+.B \-c
+Produce o65 object files instead of executable files
+(no linking performed); files may contain undefined references.
+.TP
+.B \-o filename
+Set output filename. The default is 
+.BR a.o65 ;
+use the special filename
+.BR \-
+to output to standard output.
+.TP
+.B \-e filename
+Set errorlog filename, default is none.
+.TP
+.B \-l filename
+Set labellist filename, default is none. This is the symbol table and can
+be used by disassemblers such as
+.BR dxa (1)
+to reconstruct source.
+.TP
+.B \-r
+Add cross-reference list to labellist (requires
+.BR \-l ).
+.TP
+.B \-M
+Allow colons to appear in comments; for MASM compatibility. This does
+not affect colon interpretation elsewhere.
+.TP
+.B \-R
+Start assembler in relocating mode.
+.TP
+.B \-Llabel
+Defines
+.B label
+as an absolute (but undefined) label even when linking.
+.TP
+.B \-b? addr
+Set segment base for segment 
+.B ?
+to address
+.BR addr \&. 
+.B ?
+should be t, d, b or z for text, data, bss or zero segments, respectively.
+.TP
+.B \-A addr
+Make text segment start at an address such that when the file
+starts at address
+.BR addr ,
+relocation is not necessary. Overrides
+.BR \-bt ;
+other segments still have to be taken care of with
+.BR \-b \&.
+
+.TP
+.B \-G
+Suppress list of exported globals.
+.TP
+.B \-DDEF=TEXT
+Define a preprocessor macro on the command line (see
+.BR PREPROCESSOR ).
+.TP
+.B \-I dir
+Add directory 
+.B dir
+to the include path (before
+.BR XAINPUT ;
+see
+.BR ENVIRONMENT ).
+.TP
+.B \-O charset 
+Define the output charset for character strings. Currently supported are ASCII
+(default), PETSCII (Commodore ASCII),
+PETSCREEN (Commodore screen codes) and HIGH (set high bit on all
+characters).
+.TP
+.B \-p?
+Set the alternative preprocessor character to
+.BR ? .
+This is useful when you wish to use
+.BR cpp (1)
+and the built-in preprocessor at the same time (see
+.BR PREPROCESSOR ).
+Characters may need to be quoted for your shell (example:
+.B \-p'~'
+).
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-version
+Show version of program.
+
+.SH ASSEMBLER SYNTAX
+
+An introduction to 6502 assembly language programming and mnemonics is
+beyond the scope of this manual page. We invite you to investigate any
+number of the excellent books on the subject; one useful title is "Machine
+Language For Beginners" by Richard Mansfield (COMPUTE!), covering the Atari,
+Commodore and Apple 8-bit systems, and is widely available on the used market.
+.LP
+.B xa
+supports both the standard NMOS 6502 opcodes as well as the Rockwell
+CMOS opcodes used in the 65C02 (R65C02). With the 
+.B \-w
+option,
+.B xa
+will also accept opcodes for the 65816. NMOS 6502
+undocumented opcodes are intentionally not supported, and should be entered
+manually using the
+.B \.byte
+pseudo-op (see
+.BR PSEUDO-OPS ).
+Due to conflicts between the R65C02 and 65816 instruction sets and
+undocumented instructions on the NMOS 6502, their use is discouraged.
+.LP
+In general,
+.B xa
+accepts the more-or-less standard 6502 assembler format as popularised by
+MASM and TurboAssembler. Values and addresses
+can be expressed either as literals, or as expressions; to wit,
+.TP 10
+.B 123
+decimal value
+.TP
+.B $234
+hexadecimal value
+.TP
+.B &123
+octal
+.TP
+.B %010110
+binary
+.TP
+.B *
+current value of the program counter
+.LP
+The ASCII value of any quoted character is
+inserted directly into the program text (example:
+.B """A"""
+inserts the byte "A" into the output stream); see also the
+.B PSEUDO-OPS
+section. This is affected by the currently selected character set, if any.
+.LP
+.B Labels
+define locations within the program text, just as in other multi-pass
+assemblers. A label is defined by anything that is not an opcode; for
+example, a line such as
+.IP
+.B label1 lda #0
+.LP
+defines
+.B label1
+to be the current location of the program counter (thus the
+address of the
+.B LDA
+opcode). A label can be explicitly defined by assigning it the value of
+an expression, such as
+.IP
+.B label2 = $d000
+.LP
+which defines
+.B label2
+to be the address $d000, namely, the start of the VIC-II register block on
+Commodore 64 computers. The program counter
+.B *
+is considered to be a special kind of label, and can be assigned to with
+statements such as
+.IP
+.B * = $c000
+.LP
+which sets the program counter to decimal location 49152. With the exception
+of the program counter, labels cannot be assigned multiple times. To explicitly
+declare redefinition of a label, place a - (dash) before it, e.g.,
+.IP
+.B \-label2 = $d020
+.LP
+which sets
+.B label2
+to the Commodore 64 border colour register. The scope of a label is affected
+by the block it resides within (see
+.B PSEUDO-OPS
+for block instructions). A label may also be hard-specified with the
+.B \-L
+command line option.
+.LP
+For those instructions where the accumulator is the implied argument (such as
+.B asl 
+and
+.BR lsr ;
+.B inc
+and
+.B dec
+on R65C02; etc.), the idiom of explicitly specifying the accumulator with
+.B a
+is unnecessary as the proper form will be selected if there is no explicit
+argument. In fact, for consistency with label handing, if there is a label
+named
+.BR a ,
+this will actually generate code referencing that label as a memory
+location and not the accumulator. Otherwise, the assembler will complain.
+.LP
+Labels and opcodes may take
+.B expressions
+as their arguments to allow computed values, and may themselves reference
+other labels and/or the program counter. An expression such as
+.B lab1+1
+(which operates on the current value of label
+.B lab1
+and increments it by one) may use the following operands, given from highest
+to lowest priority:
+.TP 8
+.B *
+multiplication (priority 10)
+.TP
+.B /
+integer division (priority 10)
+.TP
+.B +
+addition (priority 9)
+.TP
+.B \-
+subtraction (9)
+.TP
+.B <<
+shift left (8)
+.TP
+.B >>
+shift right (8)
+.TP
+.B >= =>
+greater than or equal to (7)
+.TP
+.B <
+greater than (7)
+.TP
+.B <= =<
+less than or equal to (7)
+.TP
+.B <
+less than (7)
+.TP
+.B =
+equal to (6)
+.TP
+.B <> ><
+does not equal (6)
+.TP
+.B &
+bitwise AND (5)
+.TP
+.B ^
+bitwise XOR (4)
+.TP
+.B |
+bitwise OR (3)
+.TP
+.B &&
+logical AND (2)
+.TP
+.B ||
+logical OR (1)
+.LP
+Parentheses are valid. When redefining a label, combining arithmetic or
+bitwise operators with the = (equals) operator such as
+.B +=
+and so on are valid, e.g.,
+.IP
+.B \-redeflabel += (label12/4)
+.LP
+Normally,
+.B xa
+attempts to ascertain the value of the operand and (when referring to
+a memory location) use zero page,
+16-bit or (for 65816) 24-bit addressing where appropriate and where
+supported by the particular opcode. This generates smaller and faster
+code, and is almost always preferable.
+.LP
+Nevertheless, you can use these prefix operators to force a particular
+rendering of the operand. Those that generate an eight bit result can also be
+used in 8-bit addressing modes, such as immediate and zero page.
+.TP
+.B <
+low byte of expression, e.g.,
+.B lda #<vector
+.TP
+.B >
+high byte of expression
+.TP
+.B !
+in situations where the expression could be understood as either an absolute
+or zero page value, do not attempt to optimize to a zero page argument
+for those opcodes that support it (i.e., keep as 16 bit word)
+.TP
+.B @
+render as 24-bit quantity for 65816 (must specify
+.B \-w
+command-line option).
+.B This is required to specify any
+.B 24-bit quantity!
+.TP
+.B `
+force further optimization, even if the length of the instruction cannot
+be reliably determined (see
+.BR NOTES'N'BUGS )
+.LP
+Expressions can occur as arguments to opcodes or within the preprocessor
+(see 
+.B PREPROCESSOR
+for syntax). For example,
+.IP
+.B lda label2+1
+.LP
+takes the value at
+.B label2+1
+(using our previous label's value, this would be $d021), and will be assembled
+as
+.B $ad $21 $d0
+to disk. Similarly,
+.IP
+.B lda #<label2 
+.LP
+will take the lowest 8 bits of
+.B label2
+(i.e., $20), and assign them to the accumulator (assembling the instruction as
+.B $a9 $20
+to disk).
+.LP
+Comments are specified with a semicolon (;), such as
+.IP
+.B ;this is a comment
+.LP
+They can also be specified in the C language style, using
+.B /* */
+and
+.B //
+which are understood at the
+.B PREPROCESSOR
+level (q.v.).
+.LP
+Normally, the colon (:) separates statements, such as
+.IP
+.B label4 lda #0:sta $d020
+.LP
+or
+.IP
+.B label2: lda #2
+.LP
+(note the use of a colon for specifying a label, similar to some other
+assemblers, which
+.B xa
+also understands with or without the colon). This also applies to semicolon
+comments, such that
+.IP
+.B ; a comment:lda #0
+.LP
+is understood as a comment followed by an opcode. To defeat this, use the
+.B \-M
+command line option to allow colons within comments. This does not apply to
+.B /* */
+and
+.B //
+comments, which are dealt with at the preprocessor level (q.v.).
+
+.SH PSEUDO-OPS
+
+.B Pseudo-ops
+are false opcodes used by the assembler to denote meta- or inlined commands.
+Like most assemblers,
+.B xa
+has a rich set.
+.TP
+.B .byt value1,value2,value3,...
+Specifies a string of bytes to be directly placed into the assembled object.
+The arguments may be expressions. Any number of bytes can be specified.
+.TP
+.B .asc """text1""","text2",...
+Specifies a character string which will be inserted into the assembled
+object. Strings are understood according to the currently specified
+character set; for example, if ASCII is specified, they will be rendered as
+ASCII, and if PETSCII is specified, they will be translated into the equivalent
+Commodore ASCII equivalent. Other non-standard ASCIIs such as ATASCII for
+Atari computers should use the ASCII equivalent characters; graphic and
+control characters should be specified explicitly using 
+.B .byt
+for the precise character you want. Note that
+when specifying the argument of an opcode,
+.B .asc
+is not necessary; the quoted character can simply be inserted (e.g.,
+.B lda #"A"
+), and is also affected by the current character set.
+Any number of character strings can be specified.
+.LP
+.B .byt
+and
+.B .asc
+are synonymous, so you can mix things such as
+.B .byt $43, 22, """a character string"""
+and get the expected result. The string is subject to the current character
+set, but the remaining bytes are inserted wtihout modification.
+.TP
+.B .aasc """text1""","text2",...
+Specifies a character string that is
+.B always
+rendered in true ASCII regardless of the current character set. Like
+.BR .asc ,
+it is synonymous with
+.BR .byt .
+.TP
+.B .word value1,value2,value3...
+Specifies a string of 16-bit words to be placed into the assembled object in
+6502 little-endian format (that is, low-byte/high-byte). The arguments may
+be expressions. Any number of words can be specified.
+.TP
+.B .dsb length,fillbyte
+Specifies a data block; a total of
+.B length
+repetitions of
+.B fillbyte
+will be inserted into the assembled object. For example,
+.B .dsb 5,$10
+will insert five bytes, each being 16 decimal, into the object. The arguments
+may be expressions.
+.TP
+.B .bin offset,length,"filename"
+Inlines a binary file without further interpretation specified by
+.B filename
+from offset
+.B offset
+to length
+.BR length .
+This allows you to insert data such as a previously assembled object file
+or an image or other binary data structure, inlined directly into this
+file's object. If
+.B length
+is zero, then the length of
+.BR filename ,
+minus the offset, is used instead. The arguments may be expressions.
+.TP
+.B \&.(
+Opens a new block for scoping. Within a block, all labels defined are local to
+that block and any sub-blocks, and go out of scope as soon as the enclosing
+block is closed (i.e., lexically scoped). All labels defined outside of the
+block are still visible within it. To explicitly declare a global label within
+a block, precede the label with
+.B +
+or precede it with
+.B &
+to declare it within the previous level only (or globally if you are only
+one level deep). Sixteen levels of scoping are permitted.
+.TP
+.B \&.)
+Closes a block.
+.TP
+.B \.as \.al \.xs \.xl
+Only relevant in 65816 mode (with the
+.B \-w
+option specified). These pseudo-ops set what size accumulator and X/Y-register
+should be used for future instructions;
+.B .as
+and
+.B .xs
+set 8-bit operands for the accumulator and index registers, respectively, and
+.B .al
+and
+.B .xl
+set 16-bit operands. These pseudo-ops on purpose do not automatically issue
+.B sep
+and
+.B rep
+instructions to set the specified width in the CPU;
+set the processor bits as you need, or consider constructing
+a macro.
+.B \.al
+and
+.B \.xl
+generate errors if
+.B \-w
+is not specified.
+.LP
+The following pseudo-ops apply primarily to relocatable .o65 objects.
+A full discussion of the relocatable format is beyond the
+scope of this manpage, as it is currently a format in flux. Documentation
+on the proposed v1.2 format is in 
+.B doc/fileformat.txt
+within the
+.B xa
+installation directory.
+.TP
+.B .text .data .bss .zero
+These pseudo-ops switch between the different segments, .text being the actual
+code section, .data being the data segment, .bss being uninitialized label
+space for allocation and .zero being uninitialized zero page space for
+allocation. In .bss and .zero, only labels are evaluated. These pseudo-ops
+are valid in relative and absolute modes.
+.TP
+.B .align value
+Aligns the current segment to a byte boundary (2, 4 or 256) as specified by
+.B
+value
+(and places it in the header when relative mode is enabled). Other values
+generate an error.
+.TP
+.B .fopt type,value1,value2,value3,...
+Acts like
+.B .byt/.asc
+except that the values are embedded into the object file as file options.
+The argument
+.B type
+is used to specify the file option being referenced. A table of these options
+is in the relocatable o65 file format description. The remainder of the options
+are interpreted as values to insert. Any number of values may be specified,
+and may also be strings.
+
+.SH PREPROCESSOR
+
+.B xa
+implements a preprocessor very similar to that of the C-language preprocessor
+.BR cpp (1)
+and many oddiments apply to both. For example, as in C, the use of
+.B /* */
+for comment delimiters is also supported in
+.BR xa ,
+and so are comments using the double slash
+.BR // .
+The preprocessor also supports continuation lines, i.e., lines ending with
+a backslash (\\); the following line is then appended to it as if there were
+no dividing newline. This too is handled at the preprocessor level.
+.LP
+For reasons of memory and complexity, the full breadth of the
+.BR cpp (1)
+syntax is not fully supported. In particular, macro definitions may not
+be forward-defined (i.e., a macro definition can only reference a previously
+defined macro definition), except for macro functions, where recursive
+evaluation is supported; e.g., to
+.B #define WW AA
+,
+.B AA
+must have already been defined. Certain other directives are not supported,
+nor are most standard pre-defined macros, and there are other
+limits on evaluation and line length. Because the maintainers of
+.B xa
+recognize that some files will require more complicated preparsing than the
+built-in preprocessor can supply, the preprocessor will accept
+.BR cpp (1)-style
+line/filename/flags output. When these lines are seen in the input file,
+.B xa
+will treat them as
+.B cc
+would, except that flags are ignored.
+.B xa
+does not accept files on standard input for parsing reasons, so you should
+dump your
+.BR cpp (1)
+output to an intermediate temporary file, such as
+.IP
+.B cc -E test.s > test.xa
+.br
+.B xa test.xa
+.LP
+No special arguments need to be passed to
+.BR xa ;
+the presence of
+.BR cpp (1)
+output is detected automatically.
+.LP
+Note that passing your file through
+.BR cpp (1)
+may interfere with
+.BR xa 's
+own preprocessor directives. In this case, to mask directives from
+.BR cpp (1),
+use the
+.B \-p
+option to specify an alternative character instead of
+.BR # ,
+such as the tilde (e.g.,
+.B \-p'~'
+). With this option and argument specified, then instead of
+.BR #include ,
+for example, you can also use
+.BR ~include ,
+in addition to
+.B #include 
+(which will also still be accepted by the
+.B xa
+preprocessor, assuming any survive
+.BR cpp (1)).
+Any character can be used, although frankly pathologic choices may lead
+to amusing and frustrating glitches during parsing.
+You can also use this option to defer preprocessor directives that
+.BR cpp (1)
+may interpret too early until the file actually gets to
+.B xa
+itself for processing.
+.LP
+The following preprocessor directives are supported.
+
+.TP
+.B #include """filename"""
+Inserts the contents of file
+.B filename
+at this position. If the file is not found, it is searched using paths
+specified by the
+.B \-I
+command line option or the environment variable
+.B XAINPUT
+(q.v.). When inserted, the file will also be parsed for preprocessor
+directives.
+.TP
+.B #echo comment
+Inserts comment
+.B comment
+into the errorlog file, specified with the
+.B \-e
+command line option.
+.TP
+.B #print expression
+Computes the value of expression
+.B expression
+and prints it into the errorlog file.
+.TP
+.B #define DEFINE text
+Equates macro
+.B DEFINE
+with text
+.B text
+such that wherever
+.B DEFINE
+appears in the assembly source,
+.B text
+is substituted in its place (just like
+.BR cpp (1)
+would do). In addition,
+.B #define
+can specify macro functions like
+.BR cpp (1)
+such that a directive like
+.B #define mult(a,b) ((a)*(b))
+would generate the expected result wherever an expression of the form
+.B mult(a,b)
+appears in the source. This can also be specified on the command line with
+the
+.B \-D
+option. The arguments of a macro function may be recursively evaluated,
+unlike other
+.BR #define s;
+the preprocessor will attempt to re-evaluate any argument refencing
+another preprocessor definition up to ten times before complaining.
+.LP
+The following directives are conditionals. If the conditional is not
+satisfied, then the source code between the directive and its terminating
+.B #endif
+are expunged and not assembled. Up to fifteen levels of nesting are supported.
+.TP
+.B #endif
+Closes a conditional block.
+.TP
+.B #else
+Implements alternate path for a conditional block.
+.TP
+.B #ifdef DEFINE
+True only if macro
+.B DEFINE
+is defined.
+.TP
+.B #ifndef DEFINE
+The opposite; true only if macro
+.B DEFINE
+has not been previously defined.
+.TP
+.B #if expression
+True if expression
+.B expression
+evaluates to non-zero.
+.B expression
+may reference other macros.
+.TP
+.B #iflused label
+True if label
+.B label
+has been used (but not necessarily instantiated with a value).
+.I This works on labels, not macros!
+.TP
+.B #ifldef label
+True if label
+.B label
+is defined
+.I and
+assigned with a value.
+.I This works on labels, not macros!
+.LP
+Unclosed conditional blocks at the end of included files generate warnings;
+unclosed conditional blocks at the end of assembly generate an error.
+.LP
+.B #iflused
+and
+.B #ifldef
+are useful for building up a library based on labels. For example,
+you might use something like this in your library's code:
+.IP
+.B #iflused label
+.br
+.B #ifldef  label
+.br
+.B #echo    label already defined, library function label cannot be inserted
+.br
+.B #else
+.br
+.B label    /* your code */
+.br
+.B #endif
+.br
+.B #endif
+
+.SH ENVIRONMENT
+
+.B xa
+utilises the following environment variables, if they exist:
+
+.TP
+.B XAINPUT
+Include file path; components should be separated by `,'.
+.TP
+.B XAOUTPUT
+Output file path.
+
+.SH NOTES'N'BUGS
+The R65C02 instructions
+.B ina
+(often rendered
+.B inc
+.BR a )
+and
+.B dea
+.RB ( dec
+.BR a )
+must be rendered as bare
+.B inc
+and
+.B dec
+instructions respectively.
+.LP
+Forward-defined labels -- that is, labels that are defined after the current
+instruction is processed -- cannot be optimized into zero
+page instructions even if the label does end up being defined as a zero page
+location, because the assembler does not know the value of the label in
+advance during the first pass when the length of an
+instruction is computed. On the second pass, a warning will be issued when an
+instruction that could have been optimized can't be because of this limitation.
+(Obviously, this does not apply to branching or jumping instructions because
+they're not optimizable anyhow, and those instructions that can
+.I only
+take an 8-bit parameter will always be casted to an 8-bit quantity.)
+If the label cannot otherwise be defined ahead of the instruction, the backtick
+prefix
+.B `
+may be used to force further optimization no matter where the label is defined
+as long as the instruction supports it.
+Indiscriminately forcing the issue can be fraught with peril, however, and
+is not recommended; to discourage this, the assembler will complain about its
+use in addressing mode situations where no ambiguity exists, such as indirect
+indexed, branching and so on.
+.LP
+Also, as a further consequence of the way optimization is managed, we repeat
+that
+.B all
+24-bit quantities and labels that reference a 24-bit quantity in 65816 mode,
+anteriorly declared or otherwise,
+.B MUST
+be prepended with the
+.B @
+prefix. Otherwise, the assembler will attempt to optimize to 16 bits, which
+may be undesirable. 
+
+.SH "SEE ALSO"
+.BR file65 (1),
+.BR ldo65 (1),
+.BR printcbm (1),
+.BR reloc65 (1),
+.BR uncpk (1),
+.BR dxa (1)
+
+.SH AUTHOR
+This manual page was written by David Weinehall <tao@acc.umu.se>,
+Andre Fachat <fachat@web.de>
+and Cameron Kaiser <ckaiser@floodgap.com>.
+Original xa package (C)1989-1997 Andre Fachat. Additional changes
+(C)1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall,
+Cameron Kaiser. The official maintainer is Cameron Kaiser.
+
+.SH WEBSITE
+http://www.floodgap.com/retrotech/xa/

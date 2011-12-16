@@ -1,0 +1,109 @@
+
+
+mkdir xatest
+cd xatest
+echo "jsr bla: loop: jmp loop" > 1.s
+echo "bla: rts" > 2.s
+xa -R -c -o 1.o65 1.s
+xa -R -c -o 2.o65 2.s
+ldo65 -o linked.o65 1.o65 2.o65
+reloc65 -bt 32768 -xt -o t linked.o65
+hexdump -C t
+
+output:
+
+00000000 20 06 80 4c 03 8c 60 | ..L..`|
+00000007
+
+The bytes 20 06 80 are correct, it's JSR $8006. But 4c 03 8c means JMP $8c03. What's wrong here?
+Do I use it in a wrong way?
+
+Following procedure leads to the expected code:
+echo "jsr bla: loop: jmp loop: bla: rts" > 1.s
+xa -R -c -o 1.o65 1.s
+ldo65 -o linked.o65 1.o65
+reloc65 -bt 32768 -xt -o t linked.o65
+hexdump -C t
+
+I use 2.3.0, it comes with Debian Testing.
+
+==============================================================================
+Analysis:
+
+ cat 1.o65.hex
+00000000  01 00 6f 36 35 00 00 10  00 10 06 00 00 04 00 00  |..o65...........|
+00000010  00 40 00 00 04 00 00 00  00 00 00 20 00 00 4c 03  |.@......... ..L.|
+00000020  10 01 00 62 6c 61 00 02  80 00 00 03 82 00 00 01  |...bla..........|
+00000030  00 6c 6f 6f 70 00 02 03  10                       |.loop....|
+00000039
+
+file65 -V 1.o65
+1.o65: o65 version 0 object file
+ mode: 1000 =[object][16bit][byte relocation][CPU 6502][align 1]
+ text segment @ $1000 - $1006 [$0006 bytes]
+ data segment @ $0400 - $0400 [$0000 bytes]
+ bss  segment @ $4000 - $4000 [$0000 bytes]
+ zero segment @ $0004 - $0004 [$0000 bytes]
+ stack size $0000 bytes (i.e. unknown)
+Undefined Labels: 1
+bla
+Global Labels: 1
+loop (segID=2 (text), offset=1003)
+
+
+==> text segment start $1000, loop is at $1003 -> ok
+    undef'd label bla stored as zero (00 00) in opcode -> ok
+    relocation table entry: 	$1001, ADR, undef'd, label #0 -> ok
+				$1004, ADR, text segment -> ok
+
+---------------------------------------------------
+
+cat 2.o65.hex
+00000000  01 00 6f 36 35 00 00 10  00 10 01 00 00 04 00 00  |..o65...........|
+00000010  00 40 00 00 04 00 00 00  00 00 00 60 00 00 00 00  |.@.........`....|
+00000020  01 00 62 6c 61 00 02 00  10                       |..bla....|
+
+file65 -V 2.o65
+2.o65: o65 version 0 object file
+ mode: 1000 =[object][16bit][byte relocation][CPU 6502][align 1]
+ text segment @ $1000 - $1001 [$0001 bytes]
+ data segment @ $0400 - $0400 [$0000 bytes]
+ bss  segment @ $4000 - $4000 [$0000 bytes]
+ zero segment @ $0004 - $0004 [$0000 bytes]
+ stack size $0000 bytes (i.e. unknown)
+Undefined Labels: 0
+Global Labels: 1
+bla (segID=2 (text), offset=1000)
+
+=> text segment start 	$1000 -> ok
+			no relocation table entries -> ok
+			global label text segment, at $1000 -> ok
+
+---------------------------------------------------
+
+ldo65 -o linked.o65 1.o65 2.o65 
+
+linked.o65.hex
+00000000  01 00 6f 36 35 00 00 00  00 04 07 00 00 10 00 00  |..o65...........|
+00000010  00 40 00 00 02 00 00 00  00 00 00 20 06 04 4c 03  |.@......... ..L.|
+00000020  10 60 00 00 02 82 03 82  00 00 02 00 6c 6f 6f 70  |.`..........loop|
+00000030  00 02 03 04 62 6c 61 00  02 06 04                 |....bla....|
+
+ile65 -V linked.o65
+linked.o65: o65 version 0 executable file
+ mode: 0000 =[executable][16bit][byte relocation][CPU 6502][align 1]
+ text segment @ $0400 - $0407 [$0007 bytes]
+ data segment @ $1000 - $1000 [$0000 bytes]
+ bss  segment @ $4000 - $4000 [$0000 bytes]
+ zero segment @ $0002 - $0002 [$0000 bytes]
+ stack size $0000 bytes (i.e. unknown)
+Undefined Labels: 0
+Global Labels: 2
+loop (segID=2 (text), offset=0403)
+bla (segID=2 (text), offset=0406)
+
+=> text segment start $0400
+	$0400 jsr $0406 -> RTS -> ok
+	$0403 jmp $1003 >>>>>>>>>>>>>>>> wrong !!!
+					should be $0403
+

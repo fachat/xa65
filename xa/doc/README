@@ -1,0 +1,6 @@
+As of 2.3.0, the official documentation will be maintained in the ../man/
+directory. However, as the feature set is mostly mature, there is likely to
+be little difference. The 2.2.x documents are here for your interest and
+historical reference.
+
+Cameron Kaiser

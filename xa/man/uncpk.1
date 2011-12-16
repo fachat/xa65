@@ -1,0 +1,77 @@
+.TH UNCPK "1" "11 April 2006"
+
+.SH NAME
+uncpk \- manage c64 cpk archives
+
+.SH SYNOPSIS
+.B uncpk
+[\fIOPTION\fR]... \fIFILE\fR...
+
+.SH DESCRIPTION
+.B uncpk
+is an archive tool for Commodore 64 .cpk-format archives.
+
+.SH OPTIONS
+.TP
+.B c
+Create an archive.
+.TP
+.B x
+Extract from an archive.
+.TP
+.B l
+List contents of archive.
+.TP
+.B a
+Add a file to the archive.
+.TP
+.B v
+Verbose output.
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-version
+Show version of program.
+
+.SH EXAMPLES
+.TP
+.B uncpk c foo.cpk bar
+Create archive 
+.B foo.cpk
+with the single file
+.B bar
+inside it.
+.TP
+.B uncpk a foo.cpk bar
+Add file 
+.B bar
+to archive
+.B foo.cpk
+(which must already exist).
+.TP
+.B uncpk x foo.cpk
+Extract all files from archive 
+.BR foo.cpk \&.
+.TP
+.B uncpk l foo.cpk
+List contents of archive 
+.BR foo.cpk \&.
+
+.SH "SEE ALSO"
+.BR file65 (1),
+.BR ldo65 (1),
+.BR printcbm (1),
+.BR reloc65 (1),
+.BR dxa (1),
+.BR xa (1)
+
+.SH AUTHOR
+This manual page was written by David Weinehall <tao@acc.umu.se>
+and Cameron Kaiser <ckaiser@floodgap.com>.
+Original xa package (C)1989-1997 Andre Fachat. Additional changes
+(C)1989-2006 Andre Fachat, Jolse Maginnis, David Weinehall and
+Cameron Kaiser. The current maintainer is Cameron Kaiser.
+
+.SH WEBSITE
+http://www.floodgap.com/retrotech/xa/

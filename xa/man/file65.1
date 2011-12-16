@@ -1,0 +1,58 @@
+.TH FILE65 "1" "11 April 2006"
+
+.SH NAME
+file65 \- print information for o65 object files
+
+.SH SYNOPSIS
+.B file65
+[\fIOPTION\fR]... \fIFILE\fR...
+
+.SH DESCRIPTION
+.B file65
+prints file information for files in the o65 object format.
+
+.SH OPTIONS
+.TP
+.B \-V
+Print undefined and global labels.
+.TP
+.B \-P
+Print the segment end addresses (suitable for the
+.BR xa (1)
+command line parameter 
+.BR \-b ).
+.TP
+.B \-a offset
+Print
+.BR xa (1)
+"ROMmable" parameter for another file behind this one in
+the same ROM, located at the specified offset.
+.TP
+.B \-A offset
+Does the same thing as 
+.B \-a
+but only prints the starting address of the next file in the ROM.
+.TP
+.B \-\-help
+Show summary of options.
+.TP
+.B \-\-version
+Show version of program.
+
+.SH "SEE ALSO"
+.BR ldo65 (1),
+.BR printcbm (1),
+.BR reloc65 (1),
+.BR uncpk (1),
+.BR xa (1),
+.BR dxa (1)
+
+.SH AUTHOR
+This manual page was written by David Weinehall <tao@acc.umu.se>
+and Cameron Kaiser <ckaiser@floodgap.com>.
+Original xa package (C)1989-1997 Andre Fachat. Additional changes
+(C)1989-2006 Andre Fachat, Jolse Maginnis, David Weinehall and
+Cameron Kaiser. The current maintainer is Cameron Kaiser.
+
+.SH WEBSITE
+http://www.floodgap.com/retrotech/xa/
