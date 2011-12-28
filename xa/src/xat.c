@@ -492,14 +492,14 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
                if(!(er=a_term(t+1,&tmp /*&pc[SEG_ABS]*/,&l,pc[segment],&afl,&label,0)))
                {
                     i=1;
-                    wval(i,tmp /*pc[SEG_ABS]*/, 0);
+                    wval(i,tmp /*pc[SEG_ABS]*/, 0);	/* writes T_VALUE, 3 bytes value, plus one byte */
                     t[i++]=T_END;
-                    *ll=6;
+                    *ll=7;
                     er=E_OKDEF;
 /*printf("set pc=%04x, oldsegment=%d, pc[segm]=%04x, ", 
 				pc[SEG_ABS], segment, pc[segment]);
-printf(" wrote %02x %02x %02x %02x %02x %02x\n",
-				t[0],t[1],t[2],t[3],t[4],t[5]);*/
+printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
+				t[0],t[1],t[2],t[3],t[4],t[5],t[6],t[7]);*/
 		    if(segment==SEG_TEXT) {
 		      pc[SEG_ABS] = tmp;
 		      r_mode(RMODE_ABS);
@@ -2482,7 +2482,9 @@ void list_filename(char *fname) {
 		list_last_lineno = 0;
 
 		/* Hack */
-		fprintf(listfp, "\n%s\n\n", fname);
+		if (listfp != NULL) {
+			fprintf(listfp, "\n%s\n\n", fname);
+		}
 	}
 }
 

@@ -894,6 +894,7 @@ static void usage(int default816, FILE *fp)
 	fprintf(fp,
 	    " -e filename  sets errorlog filename, default is none\n"
 	    " -l filename  sets labellist filename, default is none\n"
+	    " -P filename  sets filename for listing, default is none, '-' is stdout\n"
 	    " -r           adds crossreference list to labellist (if `-l' given)\n"
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"
@@ -901,6 +902,7 @@ static void usage(int default816, FILE *fp)
 	    " -R           start assembler in relocating mode\n");
 	fprintf(fp,
 	    " -Llabel      defines `label' as absolute, undefined label even when linking\n"
+	    " -p<c>        replace preprocessor char '#' with custom, e.g. '-p%' replaces it with '%'\n"
 	    " -b? addr     set segment base address to integer value addr\n"
 	    "                `?' stands for t(ext), d(ata), b(ss) and z(ero) segment\n"
 	    "                (address can be given more than once, last one is used)\n");

@@ -206,10 +206,18 @@ static int get_op(signed char *s, int *o)
 
      *o=s[pp];
 
-     if(*o<1 || *o>17)
+     if(*o<1 || *o>17) {
+/*
+	printf("*o=%d, pp=%d, s=%s\n", *o, pp, s);
+	for (int i=0; i< 10; i++) {
+		printf(" %02x", s[i]);
+	}
+	printf("\n");
+*/
           er=E_SYNTAX;
-     else
+     } else {
           er=E_OK;
+     }
 
      return(er);
 }
