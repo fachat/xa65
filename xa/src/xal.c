@@ -48,13 +48,21 @@ static int b_fget(int*,int);
 static int b_ltest(int,int);
 static int b_get(int*);
 static int b_test(int);
-static int ll_def(char *s, int *n, int b);     
+static int ll_def(char *s, int *n, int b, label_t ltype);     
+static int b_link(int);
 
 static int b_new(void);
+
 static void cll_init();
 static int cll_get();
 static void cll_clear();
 static int cll_getcur();
+
+/*
+static void unn_init();
+static int unn_get();
+static void unn_clear();
+*/
 
 /* local variables */
 
@@ -76,6 +84,7 @@ static Labtab *ltp;
 int l_init(void)
 {
 	cll_init();
+	//unn_init();
 	return 0;
 #if 0
      int er;
@@ -180,6 +189,41 @@ int cll_getcur() {
 	return cll_current;
 }
 
+/**********************************************************************************
+ * unnamed labels
+ */
+#if 0
+static int unn_current = 0;	/* the current cheap local labels block */
+
+/**
+ * init the cheap local labels
+ */
+void unn_init() {
+	unn_current = 0;
+}
+
+/**
+ * get the block number for a new cheap local label block
+ */
+int unn_get() {
+	if (unn_current == 0) {
+		unn_current = b_new();
+	}
+	return unn_current;
+}
+
+/**
+ * clear the local labels
+ */
+void unn_clear() {
+	unn_current = 0;
+}
+
+int unn_getcur() {
+	return cll_current;
+}
+#endif
+
 /**********************************************************************************/
 
 /**
@@ -188,12 +232,12 @@ int cll_getcur() {
 int lg_set(char *s ) {
 	int n, er;
 
-	er = ll_search(s,&n, 0);
+	er = ll_search(s,&n, STD);
 
 	if(er==E_OK) {
 	  fprintf(stderr,"Warning: global label doubly defined!\n");
 	} else {
-          if(!(er=ll_def(s,&n,0))) {
+          if(!(er=ll_def(s,&n,0, STD))) {
 	    return lg_import(n);
 	  }
       	}
@@ -235,14 +279,21 @@ int lg_importzp(int n) {
 int l_def(char *s, int *l, int *x, int *f)
 {     
      int n,er,b,i=0;
-     int cll_fl;
+     label_t cll_fl;
  
      *f=0;	/* flag (given as param) that the label is to be re-defined and the 
 		   "label defined error" is to be skipped */
      b=0;	/* block level on block stack, resp. block number */
      n=0;	/* flag, when set, b is absolute block number and not being translated */
-     cll_fl=0;	/* when set, clear the cheap local label block */
+     cll_fl=STD;	/* when 0, clear the cheap local label block */
 
+     if(s[0]==':') {
+	// ca65 unnamed label
+	i++;
+        //n++;		/* block number b is absolute */
+	//b=unn_get();	/* current (possibly newly allocated) unnamed label block */
+	cll_fl = UNNAMED;	// keep the cheap local label block
+     } else
      if(s[0]=='-')
      {
           *f+=1;	/* label is being redefined */
@@ -253,7 +304,7 @@ int l_def(char *s, int *l, int *x, int *f)
 	  i++;
           n++;		/* block number b is absolute */
 	  b=cll_get();	/* current (possibly newly allocated) cheap label block */
-	  cll_fl=1;	/* do not clear the cll block again... */
+	  cll_fl=CHEAP;	/* do not clear the cll block again... */
      } else
      if(s[0]=='+')
      {
@@ -273,16 +324,20 @@ int l_def(char *s, int *l, int *x, int *f)
           b_fget(&b,b);
      }
 
-     if(!cll_fl) {
+     if(cll_fl == STD) {
 	/* clear cheap local labels */
 	cll_clear();
      }
 
-     if(!isalpha(s[i]) && s[i]!='_' && !(ca65 && isdigit(s[i]) ) )
+     if((!isalpha(s[i])) && (s[i]!='_') && !(ca65 && ((cll_fl == UNNAMED) || isdigit(s[i])) ) ) {
+	  //printf("SYNTAX cll_fl=%d, i=%d, s[i]=%02x (%c)\n", cll_fl, i, s[i], s[i]);
           er=E_SYNTAX;
-     else
+     } else
      {
-          er=ll_search(s+i,&n, cll_fl);
+	  er = E_NODEF;
+	  if (cll_fl != UNNAMED) {
+	          er=ll_search(s+i,&n, cll_fl);
+	  }
                
           if(er==E_OK)
           {
@@ -308,7 +363,8 @@ int l_def(char *s, int *l, int *x, int *f)
           } else
           if(er==E_NODEF)
           {
-               if(!(er=ll_def(s+i,&n,b))) /* store the label in the table of labels */
+
+               if(!(er=ll_def(s+i,&n,b, cll_fl) )) /* store the label in the table of labels */
                {
                     ltp=afile->la.lt+n;
                     *l=ltp->len+i;
@@ -325,23 +381,31 @@ int l_def(char *s, int *l, int *x, int *f)
 int l_search(char *s, int *l, int *x, int *v, int *afl)
 {
      int n,er,b;
-     int cll_fl;
+     label_t cll_fl;
 
      *afl=0;
 
      /* check cheap local label */
-     cll_fl=0;
+     cll_fl=STD;
      if (s[0]=='@') {
-	cll_fl=1;	/* also used as offset to the label length, so must be 1 */
+	cll_fl=CHEAP;
+	s++;
+     } else
+     if (s[0]==':') {
+	cll_fl = UNNAMED_DEF;
 	s++;
      }
+    
+     er = E_NODEF;
+     if (cll_fl != UNNAMED_DEF) { 
+     	er=ll_search(s,&n, cll_fl);
+     }
 
-     er=ll_search(s,&n, cll_fl);
-/*printf("l_search: lab=%s(l=%d, afl=%d, er=%d, n=%d, cll_fl=%d, cll_cur=%d)\n",s,*l, *afl,er,n, cll_fl, cll_getcur());*/
+//printf("l_search: lab=%s(afl=%d, er=%d, cll_fl=%d, cll_cur=%d)\n",s,*afl,er, cll_fl, cll_getcur());
      if(er==E_OK)
      {
           ltp=afile->la.lt+n;
-          *l=ltp->len + cll_fl;
+          *l=ltp->len + ((cll_fl == STD) ? 0 : 1);
           if(ltp->fl == 1)
           {
                l_get(n,v,afl);/*               *v=lt[n].val;*/
@@ -355,18 +419,22 @@ int l_search(char *s, int *l, int *x, int *v, int *afl)
      }
      else
      {
-	  if(cll_fl) {
+	  if(cll_fl == CHEAP) {
 		b=cll_get();
+	  } else
+	  if(cll_fl == UNNAMED_DEF) {
+		b_get(&b); // b=unn_get();
 	  } else {
           	b_get(&b);
 	  }
 	  
-          er=ll_def(s,x,b); /* ll_def(...,*v); */
+          er=ll_def(s,x,b, cll_fl); /* ll_def(...,*v); */
 
           ltp=afile->la.lt+(*x);
           ltp->is_cll = cll_fl;
 
-          *l=ltp->len + cll_fl;
+          *l=ltp->len + ((cll_fl == STD) ? 0 : 1);
+          //*l=ltp->len + cll_fl;
 
           if(!er) 
           {
@@ -414,7 +482,7 @@ void l_addocc(int n, int *v, int *afl) {
 }
 
 /* for the list functionality */
-char *l_get_name(int n, int *is_cll) {
+char *l_get_name(int n, label_t *is_cll) {
      ltp=afile->la.lt+n;
      *is_cll = ltp->is_cll;
      return ltp->n;
@@ -424,7 +492,32 @@ int l_get(int n, int *v, int *afl)
 {
      if(crossref) l_addocc(n,v,afl);
 
-     ltp=afile->la.lt+n;
+     ltp = afile->la.lt+n;
+
+     if (ltp->is_cll == UNNAMED_DEF) {
+	// need to count up/down in the linkd label list for the block
+	char *namep = ltp->n;
+	//printf("::: unnamed_def: %s, n=%d\n", namep, n);
+	while ((*namep == '+') || (*namep == '-')) {
+		char c = *namep;
+		int nextp = -1;
+		if (c == '+') {
+			nextp = ltp->blknext;
+		} else
+		if (c == '-') {
+			nextp = ltp->blkprev;
+		}
+		//printf("::: nextp=%d\n", nextp);
+		if (nextp == -1) {
+			return E_NODEF;
+		}
+		ltp = afile->la.lt+nextp;
+		//printf("::: leads to: %s, nextp=%d\n", ltp->n, nextp);
+		if (ltp->is_cll == UNNAMED) {
+			namep++;
+		}
+	} 
+     } 
      (*v)=ltp->val;
      lz=ltp->n;
      *afl = ltp->afl;
@@ -452,19 +545,23 @@ static void ll_exblk(int a, int b)
      }
 }
 
-static int ll_def(char *s, int *n, int b)          /* definiert naechstes Label  nr->n     */     
+/* defines next label, returns new label number in out param n  */     
+static int ll_def(char *s, int *n, int b, label_t ltype)          
 {
      int j=0,er=E_NOMEM,hash;
-     char *s2;
+     char *s2 = NULL;
 
-/*printf("ll_def: s=%s\n",s);    */
+//printf("ll_def: s=%s, ltype=%d, no_name=%d\n",s, ltype, no_name);    
 
+     // label table for the file ...
      if(!afile->la.lt) {
+	// ... does not exist yet, so malloc it
 	afile->la.lti = 0;
 	afile->la.ltm = 1000;
 	afile->la.lt = malloc(afile->la.ltm * sizeof(Labtab));
      } 
      if(afile->la.lti>=afile->la.ltm) {
+	// ... or is at its capacity limit, so realloc it
 	afile->la.ltm *= 1.5;
 	afile->la.lt = realloc(afile->la.lt, afile->la.ltm * sizeof(Labtab));
      }
@@ -472,50 +569,51 @@ static int ll_def(char *s, int *n, int b)          /* definiert naechstes Label 
 	fprintf(stderr, "Oops: no memory!\n");
 	exit(1);
      }
-#if 0
-     if((lti<ANZLAB) /*&&(lni<(long)(LABMEM-MAXLAB))*/)
-     {
-#endif
-          ltp=afile->la.lt+afile->la.lti;
-/*          
-          s2=ltp->n=ln+lni;
 
-          while((j<MAXLAB-1) && (s[j]!='\0') && (isalnum(s[j]) || s[j]=='_'))
-          {
-               s2[j]=s[j];
-               j++;
-          }
-*/
-	  while((s[j]!='\0') && (isalnum(s[j]) || (s[j]=='_'))) j++;
-	  s2 = malloc(j+1);
-	  if(!s2) {
+	  // current pointer in label table
+          ltp = afile->la.lt + afile->la.lti;
+
+	  if (ltype != UNNAMED) {
+	  	// alloc space and copy over name
+		if (ltype == UNNAMED_DEF) {
+			// unnamed lables are like ":--" or ":+" with variable length
+	  		while((s[j]!='\0') && (s[j]=='+' || s[j]=='-')) j++;
+		} else {
+			// standard (and cheap) labels are normal text
+	  		while((s[j]!='\0') && (isalnum(s[j]) || (s[j]=='_'))) j++;
+		}
+	  	s2 = malloc(j+1);
+	  	if(!s2) {
 		fprintf(stderr,"Oops: no memory!\n");
 		exit(1);
+	  	}
+	  	strncpy(s2,s,j);
+	  	s2[j]=0;
 	  }
-	  strncpy(s2,s,j);
-	  s2[j]=0;
-/*
-          if(j<MAXLAB)
-          {
-*/
+
+	  // init new entry in label table
                er=E_OK;
-               ltp->len=j;
-	       ltp->n = s2;
-               ltp->blk=b;
+               ltp->len=j;		// length of label
+	       ltp->n = s2;		// name of label (char*)
+               ltp->blk=b;		// block number
                ltp->fl=0;
                ltp->afl=0;
-               ltp->is_cll=0;
-               ltp->occlist=NULL;
-               hash=hashcode(s,j); 
-               ltp->nextindex=afile->la.hashindex[hash];
-               afile->la.hashindex[hash]=afile->la.lti;
-               *n=afile->la.lti;
-               afile->la.lti++;
-/*               lni+=j+1;*/
-/*          }
-     }
-*/
-/*printf("ll_def return: %d\n",er);*/
+               ltp->is_cll=ltype;	// STD, CHEAP, or UNNAMED label
+               ltp->occlist=NULL;	
+               hash=hashcode(s,j); 	// compute hashcode
+               ltp->nextindex=afile->la.hashindex[hash];	// and link in before last entry with same hashcode
+               afile->la.hashindex[hash]=afile->la.lti;		// set as start of list for that hashcode
+
+	// TODO: does not work across files!
+	ltp->blknext = -1;	// no next block
+	ltp->blkprev = b_link( afile->la.lti );	// previous block, linked within block
+
+	ltp = afile->la.lt + ltp->blkprev;
+	ltp->blknext = afile->la.lti;
+
+               *n=afile->la.lti;	// return the list index for that file in the out parameter n
+               afile->la.lti++;		// increase last index in lable table
+
      return(er);
 }
 
@@ -525,8 +623,10 @@ static int ll_def(char *s, int *n, int b)          /* definiert naechstes Label 
  * set of blocks (in the block stack)
  *
  * If cll_fl is set, the label is also searched in the local cheap label scope
+ *
+ * Do not define the label (as is done in l_search()!)
  */
-int ll_search(char *s, int *n, int cll_fl)          /* search Label in Tabelle ,nr->n    */
+int ll_search(char *s, int *n, label_t cll_fl)          /* search Label in Tabelle ,nr->n    */
 {
      int i,j=0,k,er=E_NODEF,hash;
 
@@ -545,11 +645,14 @@ int ll_search(char *s, int *n, int cll_fl)          /* search Label in Tabelle ,
           {
                for (k=0;(k<j)&&(ltp->n[k]==s[k]);k++);
 
-	       if (cll_fl) {
+	       if (cll_fl == CHEAP) {
 			if (ltp->blk == cll_getcur()) {
 				er=E_OK;
 				break;
 			}
+	       } else
+	       if (cll_fl == UNNAMED) {
+			// TODO
 	       } else {
 		       /* check if the found label is in any of the blocks in the
  			  current block stack */
@@ -584,7 +687,7 @@ int ll_pdef(char *t)
 {
 	int n;
 	
-	if(ll_search(t,&n, 0)==E_OK)
+	if(ll_search(t,&n, STD)==E_OK)
 	{
 		ltp=afile->la.lt+n;
 		if(ltp->fl)
@@ -643,6 +746,7 @@ int l_write(FILE *fp)
  * a specific block number is contained in the current block stack.
  */
 static int bt[MAXBLK];	/* block stack */
+static int labind[MAXBLK];	/* last allocated label (as index) for the current block, -1 none yet alloc'd */
 static int bi;		/* length of the block stack (minus 1, i.e. bi[bi] has the innermost block) */
 static int blk;		/* current block number for allocation */
 
@@ -651,6 +755,7 @@ int b_init(void)
      blk =0;
      bi =0;
      bt[bi]=blk;
+     labind[bi]=-1;
 
      return(E_OK);
 }     
@@ -679,7 +784,9 @@ int b_open(void)
 
      if(bi<MAXBLK-1)
      {
-          bt[++bi]=b_new();
+	  bi++;
+          bt[bi]=b_new();
+	  labind[bi] = -1;
           
           er=E_OK;  
      }
@@ -700,6 +807,7 @@ int b_close(void)
 	  return E_BLOCK;
      }
      cll_clear();
+     //unn_clear();
      return(E_OK);
 }
 
@@ -761,5 +869,12 @@ static int b_ltest(int a, int b)    /* testet ob bt^-1(b) in intervall [0,bt^-1(
           }
      }
      return(er);
+}
+
+int b_link(int newlab) {
+	int tmp = labind[bi];
+	//printf("b_link: old was %d, set to %d\n", tmp, newlab);
+	labind[bi] = newlab;
+	return tmp;
 }
 

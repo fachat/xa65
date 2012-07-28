@@ -804,14 +804,12 @@ fprintf(stderr, "offset = %i length = %i fstart = %i flen = %i charo = %c\n",
 static int pass1(void)
 {
      signed char o[2*MAXLINE];	/* doubled for token listing */
-     int l,er,temp_er,al;
+     int l,er,al;
 
      memode=0;
      xmode=0;
      tlen=0;
      ner=0;
-
-	temp_er = 0;
 
 /*FIXIT*/
      while(!(er=getline(s)))
@@ -825,7 +823,7 @@ static int pass1(void)
 	    case SEG_ZERO: zlen += al; break;
 	  }
 
-          /*printf(": er= %d, l=%d, tmpz=%d\n",er,l,tmpz); */
+          //printf(": er= %d, l=%d\n",er,l);
 
           if(l)
           {
@@ -902,7 +900,7 @@ static void usage(int default816, FILE *fp)
 	    " -R           start assembler in relocating mode\n");
 	fprintf(fp,
 	    " -Llabel      defines `label' as absolute, undefined label even when linking\n"
-	    " -p<c>        replace preprocessor char '#' with custom, e.g. '-p%' replaces it with '%'\n"
+	    " -p<c>        replace preprocessor char '#' with custom, e.g. '-p!' replaces it with '!'\n"
 	    " -b? addr     set segment base address to integer value addr\n"
 	    "                `?' stands for t(ext), d(ata), b(ss) and z(ero) segment\n"
 	    "                (address can be given more than once, last one is used)\n");
@@ -1108,19 +1106,27 @@ static int getline(char *s)
      gl=0;
      if(!ec || ec==E_EOF)
      {
+	int startofline = 1;
           do {
                c=s[j]=l[i++];
 
-               if (c=='\"')
+               	if (c=='\"') {
                     hkfl^=1;
-		if (c==';' && !hkfl)
+		}
+		if (c==';' && !hkfl) {
+			// start of comment
 			comcom = 1;
-               if (c=='\0') 
-                    break;	/* hkfl = comcom = 0 */
+		}
+               	if (c=='\0') {
+			// end of line
+                    	break;	/* hkfl = comcom = 0 */
+		}
 		if (c==':' && !hkfl) {
 			/* if the next char is a "=" - so that we have a ":=" - and we
  			   we have ca65 compatibility, we ignore the colon */
-			if (l[i]!='=' || !ca65 || comcom) {
+			// also check for ":+" and ":-"
+			
+			if (((!startofline) && l[i]!='=' && l[i]!='+' && l[i]!='-') || !ca65 || comcom) {
 				/* but otherwise we check if it is in a comment and we have
  				   MASM or CA65 compatibility, then we ignore the colon as well */
 				if(!comcom || !(masm || ca65)) {
@@ -1131,7 +1137,10 @@ static int getline(char *s)
                     			break;
 				}
 			}
-               }
+               	}
+		if (!isspace(c)) {
+			startofline = 0;
+		}
                j++;
           } while (c!='\0' && j<MAXLINE-1 && i<MAXLINE-1);
      

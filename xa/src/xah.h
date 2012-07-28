@@ -35,7 +35,14 @@
 #define MAXLINE		2048
 #define MAXPP		40000L
 #define ANZDEF		2340	/* multiplied by sizeof(List) -> Byte, ANZDEF * 20 < 32768 */
-#define TMPMEM		200000L	/* temporary memory buffer from Pass1 to Pass 2 */
+#define TMPMEM		2000000L	/* temporary memory buffer from Pass1 to Pass 2 (includes all source, thus enlarged) */
+
+typedef enum {
+        STD = 0,
+        CHEAP = 1,
+        UNNAMED = 2,
+        UNNAMED_DEF = 3
+} label_t;
 
 typedef struct LabOcc {
 	struct LabOcc *next;
@@ -43,6 +50,9 @@ typedef struct LabOcc {
 	char *fname;
 } LabOcc;
 
+/**
+ * struct that defines a label, after it has been parsed
+ */
 typedef struct {
 	int blk;
 	int val;
@@ -53,9 +63,14 @@ typedef struct {
 			 */
 	int afl;	/* 0 = no address (no relocation), 1 = address label */
 	int nextindex;
-	int is_cll;	/* 0 is normal label, 1 is cheap local label (used for listing) */
+	label_t is_cll;	/* 0 is normal label, 1 is cheap local label (used for listing) */
 	char *n;
 	struct LabOcc *occlist;
+	// within a block, make a linked list for the unnamed label counting
+	// use indexes, as the label table can be re-alloced (so pointers change)
+	// -1 is the "undef'd" end of list
+	int blknext;
+	int blkprev;
 } Labtab;
 
 typedef struct {

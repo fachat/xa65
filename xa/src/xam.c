@@ -53,9 +53,12 @@ FILE *xfopen(const char *fn,const char *mode)
 	  return NULL;
 	}
 
+	// copy to xname by replacing windows backslashes with the proper DIRCHAR
 	for(i=0;i<l+1;i++) {
 	  xname[i]=((fn[i]=='\\')?DIRCHAR:fn[i]);
 	}
+
+	//printf("name=%s, xname=%s, mode=%s\n",fn,xname, mode); 
 
 	if(mode[0]=='r')
 	{
@@ -68,7 +71,6 @@ FILE *xfopen(const char *fn,const char *mode)
 		  strcpy(n2,n);
 		  strcat(n2,xname);
 		  strcat(n,fn);
-/* printf("name=%s,n2=%s,mode=%s\n",n,n2,mode); */
 		  file=fopen(n,mode);
 		  if(!file) file=fopen(n2,mode);
 		}
@@ -87,7 +89,6 @@ FILE *xfopen(const char *fn,const char *mode)
 					strcpy(n2,n);
 					strcat(n2,xname);
 					strcat(n,fn);
-/* printf("name=%s,n2=%s,mode=%s\n",n,n2,mode); */
 					file=fopen(n,mode);
 					if(!file) file=fopen(n2,mode);
 				}

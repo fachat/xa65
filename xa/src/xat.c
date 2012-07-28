@@ -53,6 +53,8 @@ static void tg_bin(signed char*,int*,int*);
 static int t_p2(signed char *t, int *ll, int fl, int *al);
 static void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
 
+void list_setbytes(int number_of_bytes_per_line);
+
 /* assembly mnemonics and pseudo-op tokens */
 /* ina and dea don't work yet */
 /* Note AF 20110624: added some ca65 compatibility pseudo opcodes,
@@ -91,7 +93,7 @@ static char *kt[] ={
      ".zero",".fopt", ".byte", ".end", ".list", ".xlist", ".dupb", ".blkb", ".db", ".dw",
      ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code",
      ".include", ".import", ".importzp", ".proc", ".endproc",
-     ".zeropage", ".org", ".reloc"
+     ".zeropage", ".org", ".reloc", ".listbytes"
 
 };
 
@@ -158,9 +160,10 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 #define	  Kzeropage Lastbef+36	/* mapped to Kzero */
 #define	  Korg      Lastbef+37	/* mapped to Kpcdef - with parameter equivalent to "*=$abcd" */
 #define	  Krelocx   Lastbef+38	/* mapped to Kpcdef - without parameter equivalent to "*=" */
+#define	  Klistbytes (Lastbef+39-256)
 
 /* last valid token+1 */
-#define	  Anzkey    Lastbef+39	/* define last valid token number; last define above plus one */
+#define	  Anzkey    Lastbef+40	/* define last valid token number; last define above plus one */
 
 
 #define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
@@ -434,7 +437,7 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 #if 0
      printf("t_conv (er=%d):",er);
      for(i=0;i<l;i++)
-          printf("%02x,",t[i]);
+          printf("%02x,",t[i] & 0xff);
      printf("\n");
 #endif
 
@@ -444,7 +447,6 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
        afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
        romable=1;
      }
-
      if(!er)
      {
 
@@ -453,7 +455,9 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
  * pseudo-op dispatch (except .byt, .asc)
  *
  */
-          n=t[0];
+	  // fix sign
+          n=t[0]; // & 0xff;
+
 	  /* TODO: make that a big switch statement... */
 	  /* maybe later. Cameron */
 
@@ -486,6 +490,17 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 	    set_fopt(l,t,nk+1-na1+na2);
 	    *ll = 0;
 	  } else
+          if(n==Klistbytes) {
+	    int p = 0;
+            if(!(er=a_term(t+1,&p,&l,pc[segment],&afl,&label,0))) {
+                er=E_OKDEF;
+	    }
+	    *ll = 3;
+	    t[0] = Klistbytes;
+	    t[1] = p & 0xff;
+	    t[2] = (p >> 8) & 0xff;
+	    //printf("Klistbytes p1: er=%d, l=%d\n", er, l);
+          } else
           if(n==Kpcdef)
           {
 	       int tmp;
@@ -636,7 +651,6 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 		char binfnam[255];
 		int offset;
 		int length;
-		int fstart;
 
 		i = 1;
 		j = 0;
@@ -672,7 +686,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 		if (!er) {
 		   int k;
 		
-		   fstart = i;
+		   //fstart = i;
 		   if(t[i]=='\"') {
 			i++;
 			k=t[i]+i+1;
@@ -1065,6 +1079,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
      static int rlt[3];	/* relocation table */
      static int lab[3];	/* undef. label table */
 
+
      er=E_OK;
      bl=0;
      if(*ll<0) /* <0 when E_OK, >0 when E_OKDEF     */
@@ -1359,6 +1374,14 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 	       r_mode(RMODE_RELOC);
 	       pc[segment] = npc;
 /*printf("Kreloc: newsegment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
+	  } else
+	  if(n==Klistbytes) {
+	       int nbytes = (t[1] & 0xff) + (t[2] << 8);
+	       //printf("Klistbytes --> er=%d, nbytes=%d\n", er, nbytes);
+	       list_setbytes(nbytes);
+	       l = 2;
+	       *ll=0;
+	       bl =0;
 	  } else
 	  if(n==Ksegment) {
 	       segment = t[1];
@@ -1832,7 +1855,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      int p,q,ll,mk,er;
      int ud;	/* counts undefined labels */
      int n;	/* label number to be passed between l_def (definition) and l_set (set the value) */
-     int m, byte;
+     int byte;
      int uz;	/* unused at the moment */
      /*static unsigned char cast;*/
 
@@ -1854,7 +1877,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      fl=0;          /* 1 = pass text thru */
      afl=0;         /* pointer flag for label */
 
-     while(s[p]==' ') p++;
+     while(isspace(s[p])) p++;
 
      n=T_END;
      /*cast='\0';*/
@@ -1863,7 +1886,28 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      {
           while(s[p]!='\0' && s[p]!=';')
           {
+		//printf("CONV: %s\n", s);
 
+	       if (s[p] == ':') {
+			// this is a ca65 unnamed label
+			if ((er = l_def((char*)s+p, &ll, &n, &f)))
+				break;
+                    	l_set(n,pc,segment);        /* set as address value */
+		    	t[q++]=T_DEFINE;
+		    	t[q++]=n&255;
+		    	t[q++]=(n>>8)&255;
+                    	n=0;
+
+			p+=ll;
+
+               		while(isspace(s[p])) p++;
+
+			// end of line
+			if (s[p] == 0 || s[p] == ';') {
+				break;
+			}
+	       }
+			
 		/* is keyword? */
                if(!(er=t_keyword(s+p,&ll,&n)))
                     break;
@@ -1872,13 +1916,14 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                if(er && er!=E_NOKEY)
                     break;
 
-		/* if so, try to understand as label */
+		// if so, try to understand as label 
+		// it returns the label number in n
                if((er=l_def((char*)s+p,&ll,&n,&f)))
                     break;
 
                p+=ll;
 
-               while(s[p]==' ') p++;
+               while(isspace(s[p])) p++;
 
                if(s[p]=='=')
                {
@@ -2010,11 +2055,29 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     {
                          t[q++]=s[p++];
                     } else
-		/* maybe it's a label 
+		    /* maybe it's a label 
  			Note that for ca65 cheap local labels, we check for "@" */
-                    if(isalpha(s[p]) || s[p]=='_' || (s[p]=='@' && ca65))
+                    if(isalpha(s[p]) || s[p]=='_' || ((s[p]==':' || s[p]=='@') && ca65))
                     {
-                         m=n;
+                       
+			int p2 = 0; 
+			if (n == (Klistbytes & 0xff)) {
+				// check for "unlimited"
+				// Note: this could be done by a more general "constants" handling,
+				// where in appropriate places (like the one here), constants are
+				// replaced by a pointer to a predefined constants info, e.g. using 
+				// a T_CONSTANT. Which would also fix the listing of this constant
+				// (which is currently listed as "0")
+				static char *unlimited = "unlimited";
+				while (s[p+p2] != 0 && unlimited[p2] != 0 && s[p+p2] == unlimited[p2]) p2++;
+			} 
+			if (p2 == 9) {	// length of "unlimited"
+				er = E_OK;
+				// found constant
+                       		wval(q, 0, 'd');
+				p += p2;
+			} else {
+			 //m=n;
                          er=l_search((char*)s+p,&ll,&n,&v,&afl);
 /*
                          if(m==Kglobl || m==Kextzero) {
@@ -2058,6 +2121,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                               er=E_OK;
                          }
                          p+=ll;
+			}
                     }
                     else
                     if(s[p]<='9' && s[p]>='0')
@@ -2213,6 +2277,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                }
           }
      }
+//printf("er=%d, ud=%d\n", er, ud);
      if(!er)
      {
 /*
@@ -2260,20 +2325,28 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
      return(er);
 }
 
-/*********************************************************************************************/
+/*********************************************************************************************
+ * identifies a keyword in s, if it is found, starting with s[0]
+ * A keyword is either a mnemonic, or a pseudo-opcode
+ */
 static int t_keyword(signed char *s, int *l, int *n)
 {
-     int i = 0, j = 0, hash;
+     int i = 0;		// index into keywords
+     int j = 0;
+     int hash;
 
+     // keywords either start with a character, a "." or "*"
      if(!isalpha(s[0]) && s[0]!='.' && s[0]!='*' )
           return(E_NOKEY);
 
+     // if first char is a character, use it as hash...
      if(isalpha(s[0]))
           hash=tolower(s[0])-'a';
      else
           hash=26;
      
 
+     // check for "*="
      if(s[0]=='*') {
  	j=1;
 	while(s[j] && isspace(s[j])) j++;
@@ -2282,9 +2355,14 @@ static int t_keyword(signed char *s, int *l, int *n)
 	  j++;
 	}
      } 
+
+     // no keyword yet found?
      if(!i) {    
+       // get sub-table from hash code, and compare with table content
+       // (temporarily) redefine i as start index in opcode table, and hash as end index
        i=ktp[hash];
        hash=ktp[hash+1];
+       // check all entries in opcode table from start to end for that hash code
        while(i<hash)
        {
           j=0;
@@ -2457,6 +2535,8 @@ static int list_lineno = 1;		/* current line number */
 static int list_last_lineno = 0;	/* current line number */
 static char *list_filenamep = NULL;	/* current file name pointer */
 
+static int list_numbytes = 8;
+
 static int list_string(char *buf, char *string);
 static int list_tokens(char *buf, signed char *input, int len);
 static int list_value(char *buf, int val, signed char format);
@@ -2468,6 +2548,11 @@ static int list_word_f(char *buf, int outword, signed char format);
 static int list_byte(char *buf, int outbyte);
 static int list_byte_f(char *buf, int outbyte, signed char format);
 static int list_nibble_f(char *buf, int outnib, signed char format);
+
+// set number of bytes per line displayed as hex
+void list_setbytes(int number_of_bytes_per_line) {
+	list_numbytes = number_of_bytes_per_line;
+}
 
 /* set line number for the coming listing output */
 void list_line(int l) {
@@ -2552,8 +2637,8 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
 	n_hexb = bincode_len;
-	if (n_hexb >= 8) {
-		n_hexb = 7;
+	if (list_numbytes != 0 && n_hexb >= list_numbytes) {
+		n_hexb = list_numbytes-1;
 	}
 	for (i = 0; i < n_hexb; i++) {
 		buf = buf + list_byte(buf, bincode[i]);
@@ -2593,7 +2678,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 	int tmp;
 	char *name;
 	signed char c;
-	int is_cll;
+	label_t is_cll;
 	int tabval;
 	signed char format;
 
@@ -2607,10 +2692,17 @@ int list_tokens(char *buf, signed char *input, int len) {
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 /*printf("define: len=%d, inp=%d, tmp=%d\n", len, inp, tmp);*/
 			name=l_get_name(tmp, &is_cll);
-			if (is_cll) outp += list_char(buf+outp, '@');
-			tmp = list_string(buf+outp, name);
-			tabval += tmp + 1 + is_cll;
-			outp += tmp;
+			if (is_cll == CHEAP) {
+				outp += list_char(buf+outp, '@');
+			} else
+			if (is_cll == UNNAMED_DEF || is_cll == UNNAMED) {
+				outp += list_char(buf+outp, ':');
+			}
+			if (is_cll != UNNAMED) {
+				tmp = list_string(buf+outp, name);
+				tabval += tmp + 1 + is_cll;
+				outp += tmp;
+			}
 			outp += list_char(buf+outp, ' ');
 			inp += 3;
 			tmp = input[inp] & 255;
@@ -2668,8 +2760,15 @@ int list_tokens(char *buf, signed char *input, int len) {
 			/* 16 bit label number */
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 			name=l_get_name(tmp, &is_cll);
-			if (is_cll) outp += list_char(buf+outp, '@');
-			outp += list_string(buf+outp, name);
+			if (is_cll == CHEAP) {
+				outp += list_char(buf+outp, '@');
+			} else
+			if (is_cll == UNNAMED || is_cll == UNNAMED_DEF) {
+				outp += list_char(buf+outp, ':');
+			}
+			if (is_cll != UNNAMED) {
+				outp += list_string(buf+outp, name);
+			}
 			inp += 3;
 			operator = 1;	/* check if arithmetic operator follows */
 			break;

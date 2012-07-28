@@ -27,6 +27,7 @@
  */
 extern char *lz;
 
+
 int l_init(void);
 int ga_lab(void);
 int gm_lab(void);
@@ -46,10 +47,10 @@ int ga_blk(void);
 int l_def(char *s, int* l, int *x, int *f);
 int l_search(char *s, int *l, int *x, int *v, int *afl);
 void l_set(int n, int v, int afl);
-char* l_get_name(int n, int *is_cll);
+char* l_get_name(int n, label_t *is_cll);
 int l_get(int n, int *v, int *afl);
 int l_vget(int n, int *v, char **s);
-int ll_search(char *s, int *n, int cll_fl);
+int ll_search(char *s, int *n, label_t labeltype);
 int ll_pdef(char *t);
 
 int b_open(void);
