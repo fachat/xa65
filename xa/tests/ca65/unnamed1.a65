@@ -1,0 +1,14 @@
+
+// test of unnamed labels
+
+start	*=$4000
+
+	lda #$00
+:	iny		; first
+	bne :-		; go to first
+	beq :++		; go to third
+:			; second
+	jmp :-		; go to second
+:	ldy #1		; third
+	nop
+
