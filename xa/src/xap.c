@@ -935,7 +935,7 @@ int pgetline(char *t)
 /*************************************************************************/
 
 /* this is the most disgusting code I have ever written, but Andre drove me
-to it because I can't think of any other F$%Y#*U(%&Y##^#KING way to fix the
+to it because I can't think of any other way to fix the
 last line bug ... a very irritated Cameron */
 
 /* however, it also solved the problem of open #ifdefs not bugging out */
