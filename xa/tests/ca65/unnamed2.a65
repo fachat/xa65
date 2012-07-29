@@ -1,16 +1,17 @@
 
-// test of unnamed labels
+; test of unnamed labels
 
-start	*=$4000
+start:	.org $4000
 
 	lda #$00
 :	iny		; first
 	bne :-		; go to first
 	beq :++		; go to third
-	.block
+	.scope
 :			; second
 	jmp :-		; go to second
+	jmp :++
 :	ldy #1		; third
-	.bend
-	nop
+	.endscope
+:	nop
 
