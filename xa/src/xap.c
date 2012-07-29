@@ -753,14 +753,16 @@ int pp_open(char *name)
 
      fp=xfopen(name,"r");
 
+     int l = strlen(name);
+
      /* we have to alloc it dynamically to make the name survive another
  	pp_open - it's used in the cross-reference list */	
-     flist[0].fname = malloc(strlen(name)+1);
+     flist[0].fname = malloc(l+1);
      if(!flist[0].fname) {
 	fprintf(stderr,"Oops, no more memory!\n");
 	exit(1);
      }	
-     (void)strcpy(flist[0].fname,name);
+     (void)strncpy(flist[0].fname,name,l+1);
      flist[0].fline=0;
      flist[0].bdepth=b_depth();
      flist[0].filep=fp;
@@ -827,14 +829,17 @@ int icl_open(char *tt)
 	
      fsp++;
 
+     char *namep = s+i;
+     int len = strlen(namep);
+
      /* we have to alloc it dynamically to make the name survive another
         pp_open - it's used in the cross-reference list */
-     flist[fsp].fname = malloc(strlen(s+i)+1);
+     flist[fsp].fname = malloc(len+1);
      if(!flist[fsp].fname) {
         fprintf(stderr,"Oops, no more memory!\n");
         exit(1);
      }
-     strcpy(flist[fsp].fname,s+i);
+     strncpy(flist[fsp].fname,namep, len+1);
      flist[fsp].fline=0;
      flist[fsp].bdepth=b_depth();
      flist[fsp].flinep=NULL;

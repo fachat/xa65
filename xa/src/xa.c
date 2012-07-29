@@ -676,21 +676,15 @@ static int pass2(void)
                } else
                if(afile->mn.tmp[afile->mn.tmpe]==T_FILE)
                {
+		    // copy the current line number from the current file descriptor
                     datei.fline=(afile->mn.tmp[afile->mn.tmpe+1]&255)+(afile->mn.tmp[afile->mn.tmpe+2]<<8);
-
+		    // copy the pointer to the file name in the current file descriptor
+		    // Note: the filename in the current file descriptor is separately malloc'd and
+		    // thus save to store the pointer
 		    memcpy(&datei.fname, afile->mn.tmp+afile->mn.tmpe+3, sizeof(datei.fname));
                     afile->mn.tmpe+=3+sizeof(datei.fname);
 
 		    list_filename(datei.fname);	/* set file name of next listing output */
-/*
-		    datei.fname = malloc(strlen((char*) afile->mn.tmp+afile->mn.tmpe+3)+1);
-		    if(!datei.fname) {
-			fprintf(stderr,"Oops, no more memory\n");
-			exit(1);
-		    }
-                    strcpy(datei.fname,(char*) afile->mn.tmp+afile->mn.tmpe+3);
-                    afile->mn.tmpe+=3+strlen(datei.fname);
-*/
                }
           } else
           {
@@ -1083,7 +1077,7 @@ static int getline(char *s)
                     puttmp(T_LINE);
                     puttmp((filep->fline)&255);
                     puttmp(((filep->fline)>>8)&255);
-		ec=E_OK;
+		    ec=E_OK;
 
                }
 		else
@@ -1094,10 +1088,6 @@ static int getline(char *s)
                     puttmp((filep->fline)&255);
                     puttmp(((filep->fline)>>8)&255);
 		    puttmps((signed char*)&(filep->fname), sizeof(filep->fname));
-/*
-                    puttmps((signed char*)filep->fname,
-					1+(int)strlen(filep->fname));
-*/
                     ec=E_OK;
                }
           } while(!ec && l[i]=='\0');

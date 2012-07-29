@@ -221,8 +221,11 @@ typedef struct File {
 	int base[SEG_MAX];
 	int len[SEG_MAX];
 	struct {
+		// temporary memory between pass1 and pass2
 		signed char *tmp;
+		// write pointer
 		unsigned long tmpz;
+		// read pointer
 		unsigned long tmpe;
 	} mn;
 	struct {
