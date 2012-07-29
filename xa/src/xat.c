@@ -93,7 +93,8 @@ static char *kt[] ={
      ".zero",".fopt", ".byte", ".end", ".list", ".xlist", ".dupb", ".blkb", ".db", ".dw",
      ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code",
      ".include", ".import", ".importzp", ".proc", ".endproc",
-     ".zeropage", ".org", ".reloc", ".listbytes"
+     ".zeropage", ".org", ".reloc", ".listbytes",
+     ".scope", ".endscope"
 
 };
 
@@ -161,9 +162,11 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 #define	  Korg      Lastbef+37	/* mapped to Kpcdef - with parameter equivalent to "*=$abcd" */
 #define	  Krelocx   Lastbef+38	/* mapped to Kpcdef - without parameter equivalent to "*=" */
 #define	  Klistbytes (Lastbef+39-256)
+#define	  Kscope    (Lastbef+40) /* mapped to Kopen */
+#define	  Kendscope (Lastbef+41) /* mapped to Kclose */
 
 /* last valid token+1 */
-#define	  Anzkey    Lastbef+40	/* define last valid token number; last define above plus one */
+#define	  Anzkey    Lastbef+42	/* define last valid token number; last define above plus one */
 
 
 #define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
@@ -2382,8 +2385,8 @@ static int t_keyword(signed char *s, int *l, int *n)
      if(i==Kblock) i=Kopen;
      if(i==Kbend) i=Kclose;
      if(i==Kcode) i=Ktext;
-     if(i==Kproc) i=Kopen;
-     if(i==Kendproc) i=Kclose;
+     if(i==Kproc || i==Kscope) i=Kopen;
+     if(i==Kendproc || i==Kendscope) i=Kclose;
      if(i==Kzeropage) i=Kzero;
      if(i==Korg) i=Kpcdef;
      if(i==Krelocx) i=Kpcdef;
@@ -2464,7 +2467,7 @@ fprintf(stderr, "tg_asc token = %i\n", n);
 	/* do NOT convert for Kbin or Kaasc, or for initial parse */
 	  if (!n || n == Kbin || n == Kaasc) {
 		t[j++]=s[i];
-          } else if(s[i]!='^') { 	/* no escape code "^" */
+          } else if(ca65 || s[i]!='^') { 	/* no escape code "^" - TODO: does ca65 has an escape code */
                t[j++]=convert_char(s[i]);
           } else { 		/* escape code */
 		  signed char payload = s[i+1];
