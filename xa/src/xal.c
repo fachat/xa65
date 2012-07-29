@@ -608,8 +608,10 @@ static int ll_def(char *s, int *n, int b, label_t ltype)
 	ltp->blknext = -1;	// no next block
 	ltp->blkprev = b_link( afile->la.lti );	// previous block, linked within block
 
-	ltp = afile->la.lt + ltp->blkprev;
-	ltp->blknext = afile->la.lti;
+	if (ltp->blkprev != -1) {
+		ltp = afile->la.lt + ltp->blkprev;
+		ltp->blknext = afile->la.lti;
+	}
 
                *n=afile->la.lti;	// return the list index for that file in the out parameter n
                afile->la.lti++;		// increase last index in lable table
