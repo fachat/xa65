@@ -2583,6 +2583,32 @@ void list_setfile(FILE *fp) {
 	listfp = fp;
 }
 
+char *list_preamble(char *buf, int lineno, int seg, int pc) {
+	/* line number in file */
+	snprintf(buf, 10, "% 5d", lineno);
+	int i = strlen(buf);
+	buf += i;
+	buf += list_char(buf, ' ');
+
+	char c = '?';
+	/* preamble <segment>':'<address>' ' */
+	switch(seg) {
+	case SEG_ABS:	c='A'; break;
+	case SEG_TEXT:	c='T'; break;
+	case SEG_BSS:	c='B'; break;
+	case SEG_DATA:	c='D'; break;
+	case SEG_UNDEF:	c='U'; break;
+	case SEG_ZERO:	c='Z'; break;
+	}
+	buf = buf + list_char(buf, c);
+	buf = buf + list_char(buf, ':');
+	buf = buf + list_word(buf, pc);
+	buf = buf + list_nchar(buf, ' ', 2);
+
+	return buf;
+}
+
+
 /**
  * listing/listing_len give the buffer address and length respectively that contains
  * 	the token as they are produced by the tokenizer. 
@@ -2601,8 +2627,6 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	int lst_seg = listing[0];
 	int lst_pc = (listing[2]<<8) | (listing[1] & 255);
 
-	signed char c = '?';
-
 	/* no output file (not even stdout) */
 	if (listfp == NULL) return;
 
@@ -2618,43 +2642,59 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	}
 	list_last_lineno = list_lineno;
 
-	/* line number in file */
-	snprintf(buf, 10, "% 5d", list_lineno);
-	i = strlen(buf);
-	buf += i;
-	buf += list_char(buf, ' ');
+	buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
 
-	/* preamble <segment>':'<address>' ' */
-	switch(lst_seg) {
-	case SEG_ABS:	c='A'; break;
-	case SEG_TEXT:	c='T'; break;
-	case SEG_BSS:	c='B'; break;
-	case SEG_DATA:	c='D'; break;
-	case SEG_UNDEF:	c='U'; break;
-	case SEG_ZERO:	c='Z'; break;
+	// check if we have labels, so we can adjust the max printable number of 
+	// bytes in the last line
+	int num_last_line = 11;
+	int tmp = listing[3] & 255;
+	if (tmp == (T_DEFINE & 255)) {
+		// we have label definition
+		num_last_line = 8;
 	}
-	buf = buf + list_char(buf, c);
-	buf = buf + list_char(buf, ':');
-	buf = buf + list_word(buf, lst_pc);
-	buf = buf + list_nchar(buf, ' ', 2);
+	int overflow = 0;
 
 	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
 	n_hexb = bincode_len;
 	if (list_numbytes != 0 && n_hexb >= list_numbytes) {
 		n_hexb = list_numbytes-1;
+		overflow = 1;
 	}
 	for (i = 0; i < n_hexb; i++) {
 		buf = buf + list_byte(buf, bincode[i]);
 		buf = buf + list_sp(buf);
-	}
-	if ((n_hexb == 7) && (bincode_len > 7)) {
-		buf = buf + list_nchar(buf, '.', 3);
-	} else {
-		/* can move loop into nchar ... */
-		for (; i < 8; i++) {
-			buf = buf + list_nchar(buf, ' ', 3);
+		if ( (i%16) == 15) {
+			// make a break
+			buf[0] = 0;
+			fprintf(listfp, "%s\n", outline);
+			buf = outline;
+			buf = list_preamble(buf, list_lineno, lst_seg, lst_pc + i + 1);
 		}
 	}
+	if (overflow) {
+		// are we at the last byte?
+		if (n_hexb + 1 == bincode_len) {
+			// just print the last byte
+			buf = buf + list_byte(buf, bincode[i]);
+			buf = buf + list_sp(buf);
+		} else {
+			// display "..."
+			buf = buf + list_nchar(buf, '.', 3);
+		}
+		n_hexb++;
+	}
+	i = n_hexb % 16;
+	if (i > num_last_line) {
+		// make a break (Note: with original PC, as now the assembler text follows
+		buf[0] = 0;
+		fprintf(listfp, "%s\n", outline);
+		buf = outline;
+		buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
+		i = 0;
+	} 
+	i = num_last_line - i;
+	buf = buf + list_nchar(buf, ' ', i * 3);
+
 	buf = buf + list_sp(buf);
 
 	buf += list_tokens(buf, listing + 3, listing_len - 3);
@@ -2715,7 +2755,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 		}
 	} else {
 		if (tmp >= 0 && tmp < Anzkey) {
-			outp += list_string(buf+outp, "          ");
+			outp += list_string(buf+outp, " ");
 		}
 	}
 
@@ -2819,6 +2859,18 @@ int list_tokens(char *buf, signed char *input, int len) {
 			*/
 			inp += 6;
 			operator = 1;	/* check if arithmetic operator follows */
+			break;
+		case '"':
+			// string display
+			inp++;
+			outp += list_char(buf+outp, '"');
+			int len = input[inp] & 0xff;
+			for (int i = 0; i < len; i++) {
+				inp++;
+				outp += list_char(buf+outp, input[inp]);
+			}
+			inp++;
+			outp += list_char(buf+outp, '"');
 			break;
 		default:
 			c = input[inp];
