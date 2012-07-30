@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 AndrÃ© Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#ifndef __XA65_XAT_H__
-#define __XA65_XAT_H__
+#ifndef __XA65_XALISTING_H__
+#define __XA65_XALISTING_H__
 
-extern int dsb_len;
+void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
 
-void list_setfile(FILE *fp);
-int t_p1(signed char *s, signed char *t, int *ll, int *al);
-int t_p2_l(signed char *t, int *ll, int *al);
-int b_term(char *s, int *v, int *l, int pc);
-
-void list_line(int l);		/* set line number for the coming listing output */
-void list_filename(char *fname);/* set file name for the coming listing output */
-
-extern char *kt[];		// table of key words, needed for listing
-extern char *arith_ops[];	// table of arithmetic operators, needed for listing
-extern int number_of_valid_tokens; // as it says, in the "kt" table
-
-#endif /* __XA65_XAT_H__ */
+#endif /* __XA65_XALISTING_H__ */

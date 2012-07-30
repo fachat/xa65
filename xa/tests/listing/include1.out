@@ -1,0 +1,23 @@
+
+include1.a65
+
+
+    2 A:1000                                     *= $1000
+
+include1a.a65
+
+
+    2 A:1000  a9 00                              lda #$00
+
+include1.a65
+
+
+    6 A:1002                                     .include "include1a.a65"
+
+include1a.a65
+
+
+    2 A:1002  a9 00                              lda #$00
+
+include1.a65
+
