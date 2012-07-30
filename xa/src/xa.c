@@ -45,6 +45,7 @@
 #include "xar.h"
 #include "xat.h"
 #include "xacharset.h"
+#include "xalisting.h"
 
 #include "version.h"
 
@@ -115,6 +116,8 @@ int main(int argc,char *argv[])
      int er=1,i;
      signed char *s=NULL;
      char *tmpp;
+
+     char *listformat = NULL;
 
      int mifiles = 5;
      int nifiles = 0;
@@ -305,6 +308,13 @@ int main(int argc,char *argv[])
 		  printfile=argv[++i];
 		} else {
 		  printfile=argv[i]+2;
+		}
+		break;
+	  case 'F':
+		if (argv[i][2]==0) {
+		  listformat = argv[++i];
+		} else {
+		  listformat = argv[i]+2;
 		}
 		break;
 	  case 'o':
@@ -499,6 +509,8 @@ int main(int argc,char *argv[])
                {
                     if(verbose) logout("xAss65: Pass 2:\n");
 
+		    list_start(listformat);
+
 		    seg_pass2();
 
 	            if(!relmode) {
@@ -508,6 +520,8 @@ int main(int argc,char *argv[])
 		      segment = SEG_TEXT;
 	            }
                     er=pass2();
+
+		    list_end();
                } 
 
                if(fplab) printllist(fplab);
@@ -887,6 +901,8 @@ static void usage(int default816, FILE *fp)
 	    " -e filename  sets errorlog filename, default is none\n"
 	    " -l filename  sets labellist filename, default is none\n"
 	    " -P filename  sets filename for listing, default is none, '-' is stdout\n"
+	    " -F format    sets format for listing, default is plain, 'html' is current only other\n"
+	    "              supported format\n"
 	    " -r           adds crossreference list to labellist (if `-l' given)\n"
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"

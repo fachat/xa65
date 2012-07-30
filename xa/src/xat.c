@@ -40,6 +40,7 @@
 #include "xao.h"
 #include "xap.h"
 #include "xacharset.h"
+#include "xalisting.h"
 
 int dsb_len = 0;
 

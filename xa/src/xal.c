@@ -453,19 +453,16 @@ char *l_get_name(int n, label_t *is_cll) {
      return ltp->n;
 }
 
-int l_get(int n, int *v, int *afl)
-{
-     if(crossref) l_addocc(n,v,afl);
-
-     ltp = afile->la.lt+n;
-
-     if (ltp->is_cll == UNNAMED_DEF) {
+// works on the static(!) ltp "label table pointer"
+// also returns the actual index in the table of the current ltp
+static int resolve_unnamed() {
 	// need to count up/down in the linkd label list for the block
 	char *namep = ltp->n;
+	int nextp = -1;
 	//printf("::: unnamed_def: %s, n=%d\n", namep, n);
 	while ((*namep == '+') || (*namep == '-')) {
 		char c = *namep;
-		int nextp = -1;
+		nextp = -1;
 		if (c == '+') {
 			nextp = ltp->blknext;
 		} else
@@ -474,7 +471,7 @@ int l_get(int n, int *v, int *afl)
 		}
 		//printf("::: nextp=%d\n", nextp);
 		if (nextp == -1) {
-			return E_NODEF;
+			return -1;	// E_NODEF
 		}
 		ltp = afile->la.lt+nextp;
 		//printf("::: leads to: %s, nextp=%d\n", ltp->n, nextp);
@@ -482,7 +479,50 @@ int l_get(int n, int *v, int *afl)
 			namep++;
 		}
 	} 
-     } 
+	return nextp;
+}
+
+/* for the listing, esp. html links; returns a pointer to a static buffer, available till next call */
+char *l_get_unique_name(int n) {
+     static char buf[MAXLINE];
+     ltp=afile->la.lt+n;
+   
+     if (ltp->is_cll == CHEAP || ltp->is_cll == STD) { 
+     	sprintf(buf, "%d%c%s", ltp->blk,
+		(ltp->is_cll == CHEAP) ? 'C' : '_',
+		ltp->n);
+     } else
+     if (ltp->is_cll == UNNAMED) {
+	// definition of unnamed label - name is NULL
+	// so use the actual index
+	sprintf(buf, "%dU%d", ltp->blk, n);
+     } else
+     if (ltp->is_cll == UNNAMED_DEF) {
+	// we actually need to find the correct label from the "+" and "-" 
+	// in the name
+	int tmp = resolve_unnamed();
+	if (tmp >= 0) {
+		sprintf(buf, "%dU%d", ltp->blk, tmp);
+	} else {
+		sprintf(buf, "__%d", tmp);
+	}
+     } else {
+	buf[0] = 0;	// no value
+     }
+     return buf;
+}
+
+int l_get(int n, int *v, int *afl)
+{
+     if(crossref) l_addocc(n,v,afl);
+
+     ltp = afile->la.lt+n;
+
+     if (ltp->is_cll == UNNAMED_DEF) {
+	int tmp = resolve_unnamed();
+	if (tmp == -1) return E_NODEF;
+	// now ltp is set to the actual label
+     }
      (*v)=ltp->val;
      lz=ltp->n;
      *afl = ltp->afl;

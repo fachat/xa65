@@ -3,7 +3,7 @@
  * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
  * maintained by Cameron Kaiser
  *
- * Core tokenizing module/pass 1 and pass 2
+ * Assembler listing
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,6 +58,131 @@ static int list_word_f(char *buf, int outword, signed char format);
 static int list_byte(char *buf, int outbyte);
 static int list_byte_f(char *buf, int outbyte, signed char format);
 static int list_nibble_f(char *buf, int outnib, signed char format);
+
+/*********************************************************************************************/
+
+// formatter
+typedef struct {
+	void	(*start_listing)(char *name);
+	void	(*start_line)();
+	int	(*set_anchor)(char *buf, char *name); 	// returns number of bytes added to buf
+	int	(*start_label)(char *buf, char *name);	// returns number of bytes added to buf
+	int	(*end_label)(char *buf);
+	void	(*end_line)();
+	void	(*end_listing)();
+	char*	(*escape)(char *toescape);	// returns pointer to static buffer, valid until next call
+	char*	(*escape_char)(char toescape);	// returns pointer to static buffer, valid until next call
+} formatter_t;
+
+static char *def_escape(char *toescape) {
+	return toescape;
+}
+
+static char *def_escape_char(char toescape) {
+	static char buf[2];
+	buf[0] = toescape;
+	buf[1] = 0;
+	return buf;
+}
+
+static formatter_t def_format = { 
+	NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL,
+	def_escape, def_escape_char
+};
+
+static void html_start_listing(char *name) {
+	// really short version for now
+	fprintf(listfp, "<html><head><title>%s</title></head><body><pre>\n", 
+		(name == NULL) ? "(null)" : name);
+}
+
+static int html_set_anchor(char *buf, char *name) {
+	sprintf(buf, "<a name=\"%s\"> </a>", name);
+	return strlen(buf);
+}
+
+static int html_start_label(char *buf, char *name) {
+	sprintf(buf, "<a href=\"#%s\">", name);
+	return strlen(buf);
+}
+
+static int html_end_label(char *buf) {
+	sprintf(buf, "</a>");
+	return strlen(buf);
+}
+
+static void html_end_listing() {
+	fprintf(listfp, "</pre></body></html>\n");
+}
+
+static char *html_escape(char *toescape) {
+	static char buf[MAXLINE];
+	
+	char *p = toescape;
+	char *q = buf;
+
+	while (*p != 0) {
+		if (*p == '<') {
+			strcpy(q, "&lt;");
+			q+=4;
+			p++;
+		} else
+		if (*p == '&') {
+			strcpy(q, "&amp;");
+			q+=5;
+			p++;
+		} else {
+			*q = *p;
+			q++;
+			p++;
+		}
+	}
+	*q = 0;	// string terminator
+	return buf;
+}
+
+static char *html_escape_char(char toescape) {
+	static char buf[2];
+	
+	buf[0] = toescape;
+	buf[1] = 0;
+
+	return html_escape(buf);
+}
+
+static formatter_t html_format = {
+	html_start_listing, 
+	NULL, 
+	html_set_anchor,
+	html_start_label,
+	html_end_label,
+	NULL, 
+	html_end_listing,
+	html_escape, html_escape_char
+};
+
+static formatter_t *formatp = &def_format;
+
+/*********************************************************************************************/
+
+void list_start(const char *formatname) {
+	formatp = &def_format;
+
+	if (formatname != NULL && strcmp("html", formatname) == 0) {
+		formatp = &html_format;
+	}
+
+	if (listfp != NULL) {
+		if (formatp->start_listing != NULL) formatp->start_listing(list_filenamep);
+	}
+}
+
+void list_end() {
+	if (listfp != NULL) {
+		if (formatp->end_listing != NULL) formatp->end_listing();
+	}
+}
 
 // set number of bytes per line displayed as hex
 void list_setbytes(int number_of_bytes_per_line) {
@@ -137,6 +262,7 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	/* no output file (not even stdout) */
 	if (listfp == NULL) return;
 
+
 	/*printf("do_listing: listing=%p (%d), bincode=%p (%d)\n", listing, listing_len, bincode, bincode_len);*/
 
 	if (bincode_len < 0) bincode_len = -bincode_len;
@@ -148,6 +274,9 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 		fprintf(listfp, "\n");
 	}
 	list_last_lineno = list_lineno;
+
+	// could be extended to include the preamble...
+	if (formatp->start_line != NULL) formatp->start_line();
 
 	buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
 
@@ -174,6 +303,8 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 			// make a break
 			buf[0] = 0;
 			fprintf(listfp, "%s\n", outline);
+			if (formatp->end_line != NULL) formatp->end_line();
+			if (formatp->start_line != NULL) formatp->start_line();
 			buf = outline;
 			buf = list_preamble(buf, list_lineno, lst_seg, lst_pc + i + 1);
 		}
@@ -195,6 +326,8 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 		// make a break (Note: with original PC, as now the assembler text follows
 		buf[0] = 0;
 		fprintf(listfp, "%s\n", outline);
+		if (formatp->end_line != NULL) formatp->end_line();
+		if (formatp->start_line != NULL) formatp->start_line();
 		buf = outline;
 		buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
 		i = 0;
@@ -220,6 +353,8 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	buf[0] = 0;
 	
 	fprintf(listfp, "%s\n", outline);
+
+	if (formatp->end_line != NULL) formatp->end_line();
 }
 
 int list_tokens(char *buf, signed char *input, int len) {
@@ -242,6 +377,12 @@ int list_tokens(char *buf, signed char *input, int len) {
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 /*printf("define: len=%d, inp=%d, tmp=%d\n", len, inp, tmp);*/
 			name=l_get_name(tmp, &is_cll);
+
+			// duplicate anchor names?
+			if (formatp->set_anchor != NULL) {
+				outp += formatp->set_anchor(buf+outp, l_get_unique_name(tmp));
+			}
+
 			if (is_cll == CHEAP) {
 				outp += list_char(buf+outp, '@');
 			} else
@@ -295,7 +436,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 
 		switch(input[inp]) {
 		case T_CAST:
-			outp += list_char(buf+outp, input[inp+1]);
+			outp += list_string(buf+outp, formatp->escape_char(input[inp+1]));
 			break;
 		case T_VALUE:
 			/*outp += list_char(buf+outp, 'V');*/
@@ -311,6 +452,11 @@ int list_tokens(char *buf, signed char *input, int len) {
 			/* 16 bit label number */
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 			name=l_get_name(tmp, &is_cll);
+
+			// duplicate label name
+			if (formatp->start_label != NULL) {
+				outp += formatp->start_label(buf+outp, l_get_unique_name(tmp));
+			}
 			if (is_cll == CHEAP) {
 				outp += list_char(buf+outp, '@');
 			} else
@@ -320,6 +466,9 @@ int list_tokens(char *buf, signed char *input, int len) {
 			if (is_cll != UNNAMED) {
 				outp += list_string(buf+outp, name);
 			}
+
+			if (formatp->end_label != NULL) outp += formatp->end_label(buf+outp);
+
 			inp += 3;
 			operator = 1;	/* check if arithmetic operator follows */
 			break;
@@ -327,6 +476,12 @@ int list_tokens(char *buf, signed char *input, int len) {
 			/* label arithmetic operation; inp[3] is operation like '=' or '+' */
 			tmp = ((input[inp+2]&255)<<8) | (input[inp+1]&255);
 			name=l_get_name(tmp, &is_cll);
+			if (input[inp+3] == '=') {
+				// label definition
+				if (formatp->set_anchor != NULL) {
+					outp += formatp->set_anchor(buf+outp, l_get_unique_name(tmp));
+				}
+			}
 			if (is_cll) outp += list_char(buf+outp, '@');
 			outp += list_string(buf+outp, name);
 			outp += list_char(buf+outp, input[inp+3]);
@@ -357,8 +512,13 @@ int list_tokens(char *buf, signed char *input, int len) {
 			/* what is this? It's actually resolved during token conversion */
 			tmp = ((input[inp+5]&255)<<8) | (input[inp+4]&255);
 			name=l_get_name(tmp, &is_cll);
+			if (formatp->start_label != NULL) {
+				outp += formatp->start_label(buf+outp, l_get_unique_name(tmp));
+			}
 			if (is_cll) outp += list_char(buf+outp, '@');
 			outp += list_string(buf+outp, name);
+
+			if (formatp->end_label != NULL) outp += formatp->end_label(buf+outp);
 			/*
 			outp += list_byte(buf+outp, input[inp+1]);
 			outp += list_char(buf+outp, '#');
@@ -383,7 +543,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 		default:
 			c = input[inp];
 			if (c > 31) {
-				outp += list_char(buf+outp, input[inp]);
+				outp += list_string(buf+outp, formatp->escape_char(input[inp]));
 			} else {
 				outp += list_char(buf+outp, '\'');
 				outp += list_byte(buf+outp, input[inp]);
@@ -395,7 +555,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 		if (operator && inp < len) {
 			signed char op = input[inp];
 			if (op > 0 && op <= 17) {
-				outp += list_string(buf+outp, arith_ops[op]);
+				outp += list_string(buf+outp, formatp->escape(arith_ops[op]));
 				inp += 1;
 			}
 			operator = 0;

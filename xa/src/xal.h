@@ -48,6 +48,7 @@ int l_def(char *s, int* l, int *x, int *f);
 int l_search(char *s, int *l, int *x, int *v, int *afl);
 void l_set(int n, int v, int afl);
 char* l_get_name(int n, label_t *is_cll);
+char* l_get_unique_name(int n);
 int l_get(int n, int *v, int *afl);
 int l_vget(int n, int *v, char **s);
 int ll_search(char *s, int *n, label_t labeltype);

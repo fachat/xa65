@@ -21,13 +21,9 @@
 
 extern int dsb_len;
 
-void list_setfile(FILE *fp);
 int t_p1(signed char *s, signed char *t, int *ll, int *al);
 int t_p2_l(signed char *t, int *ll, int *al);
 int b_term(char *s, int *v, int *l, int pc);
-
-void list_line(int l);		/* set line number for the coming listing output */
-void list_filename(char *fname);/* set file name for the coming listing output */
 
 extern char *kt[];		// table of key words, needed for listing
 extern char *arith_ops[];	// table of arithmetic operators, needed for listing
