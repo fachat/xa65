@@ -189,41 +189,6 @@ int cll_getcur() {
 	return cll_current;
 }
 
-/**********************************************************************************
- * unnamed labels
- */
-#if 0
-static int unn_current = 0;	/* the current cheap local labels block */
-
-/**
- * init the cheap local labels
- */
-void unn_init() {
-	unn_current = 0;
-}
-
-/**
- * get the block number for a new cheap local label block
- */
-int unn_get() {
-	if (unn_current == 0) {
-		unn_current = b_new();
-	}
-	return unn_current;
-}
-
-/**
- * clear the local labels
- */
-void unn_clear() {
-	unn_current = 0;
-}
-
-int unn_getcur() {
-	return cll_current;
-}
-#endif
-
 /**********************************************************************************/
 
 /**
@@ -748,7 +713,7 @@ int l_write(FILE *fp)
  * a specific block number is contained in the current block stack.
  */
 static int bt[MAXBLK];	/* block stack */
-static int labind[MAXBLK];	/* last allocated label (as index) for the current block, -1 none yet alloc'd */
+static int labind;	/* last allocated label, -1 none yet alloc'd - used for linking to find unnamed labels */
 static int bi;		/* length of the block stack (minus 1, i.e. bi[bi] has the innermost block) */
 static int blk;		/* current block number for allocation */
 
@@ -757,7 +722,7 @@ int b_init(void)
      blk =0;
      bi =0;
      bt[bi]=blk;
-     labind[bi]=-1;
+     labind=-1;
 
      return(E_OK);
 }     
@@ -788,7 +753,6 @@ int b_open(void)
      {
 	  bi++;
           bt[bi]=b_new();
-	  labind[bi] = -1;
           
           er=E_OK;  
      }
@@ -874,9 +838,9 @@ static int b_ltest(int a, int b)    /* testet ob bt^-1(b) in intervall [0,bt^-1(
 }
 
 int b_link(int newlab) {
-	int tmp = labind[bi];
+	int tmp = labind;
 	//printf("b_link: old was %d, set to %d\n", tmp, newlab);
-	labind[bi] = newlab;
+	labind = newlab;
 	return tmp;
 }
 

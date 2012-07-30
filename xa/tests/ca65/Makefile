@@ -18,7 +18,7 @@ unnamed1: unnamed1.a65
 unnamed2: unnamed2.a65
 	#${CA65} $<; ${LD65} -t none -o unnamed2.ca65 unnamed2.o; rm unnamed2.o
 	${XA} -XCA65 $< 2>a.err || true
-	cmp unnamed2.err a.err
+	cmp unnamed2.ca65 a.o65
 
 escape1: escape1.a65
 	${XA} $<
