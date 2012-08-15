@@ -708,14 +708,24 @@ int pp_replace(char *to, char *ti, int a,int b)
      if(rlist)
      {
        // loop over the whole input
-       while(t[0]!='\0')
+       while(t[0]!='\0' && t[0] != ';')
        {
 	  // skip over the whitespace
+          char quotefl = 0;
           while(!isalpha(t[0]) && t[0]!='_') {
-               if(t[0]=='\0')
+               if(t[0]=='\0' || (t[0] == ';' && !quotefl))
                     break;    /*return(E_OK);*/
                else
                {
+		    if (quotefl) {
+			// ignore other quotes within a quote
+			if (t[0] == quotefl) {
+				quotefl = 0;
+			}
+		    } else
+		    if (t[0] == '"' || t[0] == '\'') {
+			quotefl = t[0];
+		    }
                     t++;
                     ti++;
                }
@@ -725,9 +735,9 @@ int pp_replace(char *to, char *ti, int a,int b)
           for(l=0;isalnum(t[l])||t[l]=='_';l++);
 	  // store in ld
           ld=l;
-/*          
-          if(flag) printf("l=%d,a=%d,t=%s\n",l,a,t);
-*/       
+          
+          //printf("l=%d,a=%d,t=%s\n",l,a,t);
+       
 	  // the following if() is executed when being called from an 
 	  // 'external' context, i.e. not from a recursion 
           if(a<0)
