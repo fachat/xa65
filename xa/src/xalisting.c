@@ -339,15 +339,21 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	buf += list_tokens(buf, listing + 3, listing_len - 3);
 
-#ifdef LISTING_DEBUG
+#if 1 //def LISTING_DEBUG
 	/* for now only do a hex dump so we see what actually happens */
-	i = buf - outline;
-	if (i<80) buf += list_nchar(buf, ' ', 80-i);
+	{
+	    char valbuf[32];
+	    i = buf - outline;
+	    if (i<80) buf += list_nchar(buf, ' ', 80-i);
 		
-	buf += list_string(buf, " >>");
-	for (i = 3; i < listing_len; i++) {
+	    buf += list_string(buf, " >>");
+	    sprintf(valbuf, "%p", listing+3);
+	    buf += list_string(buf, valbuf);
+	    buf += list_sp(buf);
+	    for (i = 3; i < listing_len; i++) {
 		buf = buf + list_byte(buf, listing[i]);
 		buf = buf + list_sp(buf);
+	    }
 	}
 #endif
 	buf[0] = 0;
@@ -464,7 +470,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 				outp += list_char(buf+outp, ':');
 			}
 			if (is_cll != UNNAMED) {
-				outp += list_string(buf+outp, name);
+				outp += list_string(buf+outp, name == NULL ? "<null>" : name);
 			}
 
 			if (formatp->end_label != NULL) outp += formatp->end_label(buf+outp);
@@ -566,6 +572,12 @@ end:
 }
 
 int list_string(char *buf, char *string) {
+	if (buf == NULL || string == NULL) {
+		fprintf(stderr, "NULL pointer: buf=%p, string=%p\n", buf, string);
+		fflush(stderr);
+		exit(1);
+	}
+
 	int p = 0;
 	while (string[p] != 0) {
 		buf[p] = string[p];

@@ -448,6 +448,10 @@ void l_addocc(int n, int *v, int *afl) {
 
 /* for the list functionality */
 char *l_get_name(int n, label_t *is_cll) {
+     if (n > afile->la.ltm) {
+	fprintf(stderr, "Corrupted structures! n=%d, but max=%d\n", n, afile->la.ltm);
+	exit(1);
+     }
      ltp=afile->la.lt+n;
      *is_cll = ltp->is_cll;
      return ltp->n;

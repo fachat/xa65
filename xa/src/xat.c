@@ -430,6 +430,15 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
      }
      /* copy the buffer */
      memcpy(t+tlen, t+6+inp, l-inp);
+
+#if 0
+     printf("t_conv (er=%d, t=%p, tlen=%d, inp=%d):",er, t, tlen, inp);
+     for(i=0;i<l+6;i++)
+          printf("%02x,",t[i] & 0xff);
+     printf("\n");
+#endif
+
+     // update pointers
      t=t+tlen;
      l-=inp;
      /* the result of this is that we always have a Klisting entry in the buffer
@@ -439,13 +448,6 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 
      /* return length default is input length */
      *ll=l;
-
-#if 0
-     printf("t_conv (er=%d):",er);
-     for(i=0;i<l;i++)
-          printf("%02x,",t[i] & 0xff);
-     printf("\n");
-#endif
 
      /* if text/data produced, then no more fopt allowed in romable mode */
      /* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
@@ -1008,6 +1010,14 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
      if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
 
      /* adjust length by token listing buffer length */
+#if 0
+     printf("converted: (er=%d, t=%p, ll=%d):",er, t, *ll);
+     for(i=0;i<*ll;i++)
+          printf("%02x,",t[i] & 0xff);
+     printf("\n");
+     printf("adjusted len=%d\n", *ll+tlen);
+#endif
+
      *ll = *ll + tlen;
      return(er);
 }
@@ -1034,32 +1044,48 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
  * *t	is the input token list
  * *ll	is the input length of the token list,
  * 	and the output of how many bytes of the buffer are to be taken
- * 	into the file
+ * 	into the file; note that for .dsb and .bin, this does NOT match
+ * 	the length in the internal data structures!
  */
 int t_p2_l(signed char *t, int *ll, int *al)
 {
 	int er = E_OK;
+	int l = *ll;
+
+	if (l < 0) l = -l;
+
+#if 0
+     {
+        printf("t_p2_l (ll=%d, t=%p):", *ll, t);
+        for(int i=0;i<l;i++)
+          printf("%02x,",t[i] & 0xff);
+        printf("\n");
+     }
+#endif
+
 
 	if (t[0] == T_LISTING) {
-	  int tlen;
-	  tlen=((t[2]&255)<<8) | (t[1]&255);
-	  if (*ll<0) {
-	    *ll=(*ll) + tlen;
-	  } else {
-	    *ll=(*ll) - tlen;
-	  }
+	    int tlen;
+	    tlen=((t[2]&255)<<8) | (t[1]&255);
+	    if (*ll<0) {
+	    	*ll=(*ll) + tlen;
+	    } else {
+	    	*ll=(*ll) - tlen;
+	    }
 
-	  if (*ll != 0) {
-  	    er = t_p2(t+tlen, ll, 1, al);
-	  }
+	    if (*ll != 0) {
+  	    	er = t_p2(t+tlen, ll, 1, al);
+	    }
 
-	  /* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
-	  do_listing(t+3, tlen-3, t+tlen, *ll);
+	    /* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
+	    do_listing(t+3, tlen-3, t+tlen, *ll);
 
-	  /* adapt back, i.e. remove token listing */
-	  if (*ll != 0) {
-	  	memmove(t, t+tlen, abs(*ll));
-	  }
+	    // adapt back, i.e. remove token listing 
+	    // Use the input token length as delimiter.
+	    if (*ll != 0) {
+	 	memmove(t, t+tlen, l-tlen);
+	    }
+
 	} else {
 	  er = t_p2(t, ll, 1, al);
 	}

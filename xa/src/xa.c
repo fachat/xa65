@@ -681,6 +681,8 @@ static int pass2(void)
           l=afile->mn.tmp[afile->mn.tmpe++];
           ll=l;
 
+	  // printf("%p: l=%d first=%02x\n", afile->mn.tmp+afile->mn.tmpe-1, l, 0xff & afile->mn.tmp[afile->mn.tmpe]);
+
           if(!l)
           {
                if(afile->mn.tmp[afile->mn.tmpe]==T_LINE)
@@ -1041,7 +1043,9 @@ static int x_init(void)
 static int puttmp(int c)
 {
      int er=E_NOMEM;
-/*printf("puttmp: afile=%p, tmp=%p, tmpz=%d\n",afile, afile?afile->mn.tmp:0, afile?afile->mn.tmpz:0);*/
+
+     //printf("puttmp: %02x -> %p \n",0xff & c, afile->mn.tmp+afile->mn.tmpz);
+ 
      if(afile->mn.tmpz<TMPMEM)
      {
           afile->mn.tmp[afile->mn.tmpz++]=c;
@@ -1053,14 +1057,19 @@ static int puttmp(int c)
 static int puttmps(signed char *s, int l)
 {
      int i=0,er=E_NOMEM;
-     
+    
+     // printf("puttmps %d bytes from %p to %p:", l, s, afile->mn.tmp+afile->mn.tmpz);
+ 
      if(afile->mn.tmpz+l<TMPMEM)
      {
-          while(i<l)
-               afile->mn.tmp[afile->mn.tmpz++]=s[i++];
+          while(i<l) {
+		//printf(" %02x", 0xff & s[i]);
+               	afile->mn.tmp[afile->mn.tmpz++]=s[i++];
+	  }
 
           er=E_OK;
      }
+     // printf("\n");
      return(er);
 }
 

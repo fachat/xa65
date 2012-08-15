@@ -41,6 +41,7 @@
 
 /* define this for recursive evaluation output */
 #undef DEBUG_RECMAC
+#undef DEBUG_REPLACE
 
 char s[MAXLINE];
 Datei *filep;
@@ -975,11 +976,11 @@ int pgetline(char *t)
      er= (er==1) ? E_OK : er ;
 
      if(!er) {
-#ifdef DEBUG_RECMAC
-	  printf("<<<: %s\n", in_line);
+#ifdef DEBUG_REPLACE
+//	  printf("<<<: %s\n", in_line);
 #endif
           er=pp_replace(t,in_line,-1,rlist);
-#ifdef DEBUG_RECMAC
+#ifdef DEBUG_REPLACE
 	  printf(">>>: %s\n", t);
 #endif
      }
