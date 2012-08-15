@@ -1,0 +1,32 @@
+
+#define	macro1()	\
+	lda #0
+
+#define	macro2(a)	\
+	lda #(a)
+
+#define	macro3(a,b)	\
+	lda #(a):	\
+	ldy #(b)
+
+#define	const1		$40
+
+#define	func1(a)	(a) | $20
+
+	*=$c000
+	
+	macro1()
+
+	macro2(2)
+
+	macro3(2,3)
+
+	lda #(2) | $20
+	lda #func1(2)
+
+	macro2(func1(3))
+
+	macro3(const1, func1(5))
+
+	macro3(func1(const1), func1(func1(const1)))
+
