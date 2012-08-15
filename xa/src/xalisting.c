@@ -339,7 +339,7 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	buf += list_tokens(buf, listing + 3, listing_len - 3);
 
-#if 1 //def LISTING_DEBUG
+#ifdef LISTING_DEBUG
 	/* for now only do a hex dump so we see what actually happens */
 	{
 	    char valbuf[32];
