@@ -40,7 +40,7 @@
 #include  "xap.h"
 
 /* define this for recursive evaluation output */
-/* #define DEBUG_RECMAC */
+#undef DEBUG_RECMAC
 
 char s[MAXLINE];
 Datei *filep;
@@ -434,78 +434,85 @@ int tcompare(char s[],char *v[], int n)
      return((i==n)? -1 : i);
 }
 
-int pp_replace(char *to, char *ti, int a,int b)
+static int check_name(char *t, int n) {
+	
+                    int i=0;
+		    { 
+                        char *x=liste[n].search;
+                        while(t[i]==*x++ && t[i])
+                            i++;
+		    }
+
+		    return i == liste[n].s_len;
+}
+
+/**
+ * this is a break out of the original pp_replace code, as this code
+ * was basically duplicated for initial and recursive calls.
+ */
+static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int *l, int blist) 
 {
-     char *t=to,c,*x,*y,*mx,*rs;
-     int i,l,n,sl,d,ld,er=E_OK,hkfl,klfl;
-     char fti[MAXLINE],fto[MAXLINE];
-/*
-     int flag=!strncmp(ti,"TOUT",4);
-     if(flag) printf("flag=%d\n",flag);
-*/   
-     (void)strcpy(t,ti);
+	int er = E_OK;
 
-     if(rlist)
-     {
-       while(t[0]!='\0')
-       {
-          while(!isalpha(t[0]) && t[0]!='_')
-               if(t[0]=='\0')
-                    break;    /*return(E_OK);*/
-               else
-               {
-                    t++;
-                    ti++;
-               }
-         
-          for(l=0;isalnum(t[l])||t[l]=='_';l++);
-          ld=l;
-/*          
-          if(flag) printf("l=%d,a=%d,t=%s\n",l,a,t);
-*/        
-          if(a<0)
-          {
-            n=hashindex[hashcode(t,l)];
-            
-            do      
-            {
-               sl=liste[n].s_len;
-          
-               if(sl && (sl==l))
-               {
-                    i=0;
-                    x=liste[n].search;
-                    while(t[i]==*x++ && t[i])
-                         i++;
+	// save mem, to restore it when we don't need the pseudo replacements anymore
+	// Note: in a real version, that should probably be a parameter, and not fiddling
+	// with global variables...
+	char *saved_mem = mem;
 
-                    if(i==sl)
-                    {     
-                         rs=liste[n].replace;
-                         
+			 // yes, mark replacement string
+                         char *rs=liste[n].replace;
+                        
+			 // does it have parameters? 
                          if(liste[n].p_anz)        
                          {
+			      // yes, we have parameters, so we need to pp_replace them
+			      // as well.
+     			      char fti[MAXLINE],fto[MAXLINE];
+
+			      // copy replacement into temp buffer
                               (void)strcpy(fti,liste[n].replace);
 
-                              if(rlist+liste[n].p_anz>=ANZDEF || memfre<MAXLINE*2)
+			      // boundary checks ...
+                              if(blist+liste[n].p_anz>=ANZDEF || memfre<MAXLINE*2)
                                    er=E_NOMEM;
                               else
                               {
-                                   y=t+sl;
-                                   x=liste[n].search+sl+1;
-                                   if(*y!='(')
+				   // ... passed
+				   // y points to the char behind the input name (i.e. the '(')
+                                   char *y=t+sl; 
+				   // x points into the pp definition, with the parameter definition names
+				   // following the definition name, separated by \0. Starts here behind the 
+				   // name - i.e. now points to the name of the first parameter
+                                   char *x=liste[n].search+sl+1;
+				   // does the input actually have a '(' as parameter marker?
+                                   if(*y!='(') {
+					// no. Should probably get an own error (E_PARAMETER_EXPECTED)
                                         er=E_SYNTAX;
+				   }
                                    else
                                    {
-                                        mx=mem-1;
-                                        for(i=0;i<liste[n].p_anz;i++)
+					// mx now points to next free memory (mem current pointer in text table)
+                                        char *mx=mem-1;
+					// walk through the pp parameters
+					// by creating "fake" preprocessor definitions at the end
+					// of the current definition list, i.e. in liste[] after index
+					// rlist.
+                                        for(int i=0;i<liste[n].p_anz;i++)
                                         {
-                                             liste[rlist+i].search=x;
-                                             liste[rlist+i].s_len=(int)strlen(x);
+					     // create new replacement entry
+                                             liste[blist+i].search=x;
+                                             liste[blist+i].s_len=(int)strlen(x);
+                                             liste[blist+i].p_anz=0;
+                                             liste[blist+i].replace=mx+1;
+					     // move x over to the next parameter name
                                              x+=strlen(x)+1;
-                                             liste[rlist+i].p_anz=0;
-                                             liste[rlist+i].replace=mx+1;
-                                             c=*(++mx)=*(++y);
-                                             hkfl=klfl=0;
+					     // points to first char of the parameter name in the input
+					     // copy over first char into text memory (note that the position
+					     // is already stored in liste[].replace above)
+                                             char c=*(++mx)=*(++y);
+                                             int hkfl=0;	// quote flag
+					     int klfl=0;	// brackets counter
+					     // copy over the other characters
                                              while(c!='\0' 
                                                   && ((hkfl!=0 
                                                        || klfl!=0) 
@@ -524,50 +531,101 @@ int pp_replace(char *to, char *ti, int a,int b)
                                                             klfl--;
                                                   }     
                                                   c=*(++mx)=*(++y);
-                                             }
+                                             } 
+                                             // zero-terminate stored string
                                              *mx='\0';
+					     // if i is for the last parameter, then check if the
+					     // last copied char was ')', otherwise it should be ','
+					     // as separator for the next parameter
                                              if(c!=((i==liste[n].p_anz-1) ? ')' : ','))
                                              {
                                                   er=E_ANZPAR;
+						  // note: this break only exits the innermost loop!
                                                   break;
                                              }
-                                        }   
+                                        }
+					// at this point we have "augmented" the pp definitions
+					// with a list of new definitions for the macro parameters
+					// so that when pp_replace'ing them recursively the macro parameters
+					// will automatically be replaced.   
+					
+					// if we ran into an error, report so
+					if (er != E_OK) {
+						return (er);
+					}
+
+					// let mx point to first free (and not last non-free) byte
+					mx++;
+	
+					// before we use the parameter replacements, we need to 
+					// recursively evaluate and replace them as well.
+					
 #ifdef DEBUG_RECMAC
-     printf("replace:\n");
+     printf("replace (er=%d):\n", er);
      printf("%s=%s\n",liste[n].search,liste[n].replace);
 #endif
-     for(i=0;i<liste[n].p_anz;i++) {
+     // loop over all arguments
+     for(int i=0;i<liste[n].p_anz;i++) {
 /* recursively evaluate arguments */
 	char nfto[MAXLINE];
 	char nfwas[MAXLINE];
-	int j = 0;
-	int k;
+	//int j = 0;
+	//int k = 0;
 
+	// copy over the replacement string into a buffer nfwas
 	(void)strcpy(nfwas, liste[rlist+i].replace);
-	if (!er)
-		er=pp_replace(nfto,nfwas,-1,rlist);
+	if (!er) {
+		// replace the tokens in the parameter, adding possible pseudo params
+		// on top of the liste[] into nfto
+		er=pp_replace(nfto,nfwas,-1,blist+liste[n].p_anz);
+	}
 #ifdef DEBUG_RECMAC
         printf("-%s=%s\n",liste[rlist+i].search,liste[rlist+i].replace);
 	printf("SUBB: -%s=%s\n", nfwas, nfto);
 #endif
+#if 0
+	// as long as the strings don't match, loop...
 	while ((k = strcmp(nfto, nfwas))) {
+		// copy original from nfwas back to nfto
 		(void)strcpy(nfto, nfwas);
-		if (!er)
+		if (!er) {
+			// save-guard our replacement strings in global memory for the
+			// recursive pp_replace call. Note: is cleaned up after return, 
+			// so need to restore mem only at the end of this function.
+			mem = mx;
+			// replace tokens
 			er=pp_replace(nfto,nfwas,-1,rlist);
+		}
+		// and copy result into input buffer
 		(void)strcpy(nfwas, nfto);
 #ifdef DEBUG_RECMAC
 		printf("SUBB2 (%i): -%s=%s\n", k, liste[rlist+i].replace, nfto);
 #endif
-		if (++j>10)
+		if (++j>10) {
+			// we ran into 10 recursions deep - that does not look sound, bail out
 			errout(E_ORECMAC);
+		}
 	}
-	(void)strcpy(liste[rlist+i].replace, nfto);
+#endif
+	// copy over the replacement string into free memory (using mx as pointer)
+	(void)strcpy(mx, nfto);
+	// replace the pointer to the (now obsolete) old replacement with the one we just created
+	// Note that due to the nature of the (more or less static) memory allocation, this is not
+	// being freed. Oh well...
+	liste[blist+i].replace = mx;
+	mx += strlen(mx)+1;
+
 #ifdef DEBUG_RECMAC
         printf("FINAL: -%s=%s\n",liste[rlist+i].search,liste[rlist+i].replace);
 #endif
     }
-                                        if(!er)
-                                             er=pp_replace(fto,fti,rlist,rlist+i);
+
+                                        if(!er) {
+					     // safe-guard our memory allocations
+					     mem = mx;
+					     // only change (of two) from recursive: rlist is 0 there
+                                             er=pp_replace(fto,fti,recursive ? 0 : blist,blist+liste[n].p_anz);
+					}
 /*               if(flag) printf("sl=%d,",sl);*/
                                         sl=(int)((long)y+1L-(long)t);
 /*               if(flag) printf("sl=%d\n",sl);*/
@@ -575,14 +633,18 @@ int pp_replace(char *to, char *ti, int a,int b)
 /*     printf("->%s\n",fto);*/
                                    }    
                               }
-                              if(er)
+                              if(er) {
+				   mem = saved_mem;
                                    return(er);     
+			      }
                          }
 
-                         d=(int)strlen(rs)-sl;
+                         int d=(int)strlen(rs)-sl;
 
-                         if(strlen(to)+d>=MAXLINE)
+                         if(strlen(to)+d>=MAXLINE) {
+			      mem = saved_mem;
                               return(E_NOMEM);
+			 }
 
 /*
                          if(d<0)
@@ -597,129 +659,125 @@ int pp_replace(char *to, char *ti, int a,int b)
                                    t[ll+d]=t[ll];
                          }
 */
-                         if(d)
-                              (void)strcpy(t+sl+d,ti+sl);
+                         if(d) {
+			      // d can be positive or negative, so strcpy cannot be used, use memmove instead
+                              (void)memmove(t+sl+d,t+sl, strlen(t) - sl + 1);
+			 }
 
-                         i=0;
+                         int i=0;
+			 char c;
                          while((c=rs[i]))
                               t[i++]=c;
-                         l=sl+d;/*=0;*/
-                         break;
-                    }
+			 // other change from recursive. there sl is missing from add
+                         *l=(recursive ? 0 : sl) + d;/*=0;*/
+
+	mem = saved_mem;
+
+	return (er);
+}
+
+/**
+ * copy the input string pointed to by ti into
+ * an output string buffer pointed to by to, replacing all
+ * preprocessor definitions in the process.
+ *
+ * Note: this method is called recursively, with "a" being -1
+ * when called from the "outside" respectively in a new context
+ * (like macro parameters)
+ *
+ * The "b" parameter denotes the index in the list from which on
+ * pseudo replacement entries are being created for replacement
+ * parameters
+ *
+ */
+int pp_replace(char *to, char *ti, int a,int b)
+{
+     char *t=to;
+     int l,n,sl,er=E_OK;
+     int ld; 	// length of name/token to analyse
+/*
+     int flag=!strncmp(ti,"TOUT",4);
+     if(flag) printf("flag=%d\n",flag);
+*/   
+     // t points to to, so copy input to output 1:1
+     // then below work on the copy in-place
+     (void)strcpy(t,ti);
+
+     // if there are replacements in the list of replacements
+     if(rlist)
+     {
+       // loop over the whole input
+       while(t[0]!='\0')
+       {
+	  // skip over the whitespace
+          while(!isalpha(t[0]) && t[0]!='_') {
+               if(t[0]=='\0')
+                    break;    /*return(E_OK);*/
+               else
+               {
+                    t++;
+                    ti++;
+               }
+	  }
+        
+	  // determine the length of the name 
+          for(l=0;isalnum(t[l])||t[l]=='_';l++);
+	  // store in ld
+          ld=l;
+/*          
+          if(flag) printf("l=%d,a=%d,t=%s\n",l,a,t);
+*/       
+	  // the following if() is executed when being called from an 
+	  // 'external' context, i.e. not from a recursion 
+          if(a<0)
+          {
+	    // when called from an external context, not by recursion
+
+	    // compute hashcode for the name for the search index entry (liste[n])
+            n=hashindex[hashcode(t,l)];
+            
+	    // loop over all entries in linked list for hash code (think: hash collisions)
+            do  // while(1); 
+            {
+	       // length of name of pp definition
+               sl=liste[n].s_len;
+
+	       // does pp definition match what we have found?
+               if(sl && (sl==l) && check_name(t, n))
+               {
+			er = pp_replace_part(to, t, n, sl, 0, &l, b);
+                        break;
                }
                if(!n)
                     break;
-                    
+                   
+	       // next index in linked list for given hash code 
                n=liste[n].nextindex;
                
             } while(1);
           } else
           {
+	    // called when in recursive call
+	    // loop over all the replacement entries from the given b down to 0
+	    // that allows to replace the parameters first (as they were added at
+	    // the end of the list)
             for(n=b-1;n>=a;n--)
             {
                sl=liste[n].s_len;
           
-               if(sl && (sl==l))
+               if(sl && (sl==l) && check_name(t, n))
                {
-                    i=0;
-                    x=liste[n].search;
-                    while(t[i]==*x++ && t[i])
-                         i++;
-
-                    if(i==sl)
-                    {     
-                         rs=liste[n].replace;
-                         if(liste[n].p_anz)        
-                         {
-                              (void)strcpy(fti,liste[n].replace);
-                              if(rlist+liste[n].p_anz>=ANZDEF || memfre<MAXLINE*2)
-                                   er=E_NOMEM;
-                              else
-                              {
-                                   y=t+sl;
-                                   x=liste[n].search+sl+1;
-                                   if(*y!='(')
-                                        er=E_SYNTAX;
-                                   else
-                                   {
-                                        mx=mem-1;
-                                        for(i=0;i<liste[n].p_anz;i++)
-                                        {
-                                             liste[rlist+i].search=x;
-                                             liste[rlist+i].s_len=strlen(x);
-                                             x+=strlen(x)+1;
-                                             liste[rlist+i].p_anz=0;
-                                             liste[rlist+i].replace=mx+1;
-                                             c=*(++mx)=*(++y);
-                                             hkfl=klfl=0;
-                                             while(c!='\0' 
-                                                  && ((hkfl!=0 
-                                                       || klfl!=0) 
-                                                       || (c!=',' 
-                                                       && c!=')') 
-                                                       )
-                                                  )
-                                             {
-                                                  if(c=='\"')
-                                                       hkfl=hkfl^1;
-                                                  if(!hkfl)
-                                                  {
-                                                       if(c=='(')
-                                                            klfl++;
-                                                       if(c==')')
-                                                            klfl--;
-                                                  }     
-                                                  c=*(++mx)=*(++y);
-                                             }
-                                             *mx='\0';
-                                             if(c!=((i==liste[n].p_anz-1) ? ')' : ','))
-                                             {
-                                                  er=E_ANZPAR;
-                                                  break;
-                                             }  
-                                        }   
-                                        if(!er)
-                                             er=pp_replace(fto,fti,0,rlist+i);
-                                        sl=(int)((long)y+1L-(long)t);
-                                        rs=fto;
-                                   }    
-                              }
-                              if(er)
-                                   return(er);     
-                         }
-                         d=(int)strlen(rs)-sl;
-
-                         if(strlen(to)+d>=MAXLINE)
-                              return(E_NOMEM);
-/*
-                         if(d<0)
-                         {
-                              y=t+sl+d;
-                              x=t+sl;
-                              while(*y++=*x++);
-                         }
-                         if(d>0)
-                         {
-                              for(ll=strlen(t);ll>=sl;ll--)
-                                   t[ll+d]=t[ll];
-                         }
-*/
-                         if(d)
-                              (void)strcpy(t+sl+d,ti+sl);
-                              
-                         i=0;
-                         while((c=rs[i]))
-                              t[i++]=c;
-                         l+=d;/*0;*/
-                         break;
-                    }
+			er = pp_replace_part(to, t, n, sl, 1, &l, b); 
+                        break;
                }
             }
           }
+	  // advance input by length of name
           ti+=ld;
+	  // advance output by l
           t+=l;
-       }
-     }
+       } /* end while(t[0] != 0) */
+     }  /* end if(rlist) */
      return(E_OK);
 }
 
@@ -916,8 +974,15 @@ int pgetline(char *t)
 
      er= (er==1) ? E_OK : er ;
 
-     if(!er)
+     if(!er) {
+#ifdef DEBUG_RECMAC
+	  printf("<<<: %s\n", in_line);
+#endif
           er=pp_replace(t,in_line,-1,rlist);
+#ifdef DEBUG_RECMAC
+	  printf(">>>: %s\n", t);
+#endif
+     }
 
      if(!er && nff)
           er=E_NEWFILE;
