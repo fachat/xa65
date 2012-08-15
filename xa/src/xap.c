@@ -355,7 +355,10 @@ int pp_define(char *k)
           {
                i++;
                liste[rl].p_anz++;
-               for(j=0; t[i+j]!=')' && t[i+j]!=',' && t[i+j]!='\0';j++);
+	       // skip whitespace before parameter name
+	       while(isspace(t[i])) i++;
+	       // find length
+               for(j=0; (!isspace(t[i+j])) && t[i+j]!=')' && t[i+j]!=',' && t[i+j]!='\0';j++);
                if(j<memfre)
                {
                     strncpy(mem,t+i,j);
@@ -364,6 +367,8 @@ int pp_define(char *k)
                     memfre-=j+1;
                }
                i+=j;
+	       // skip trailing whitespace after parameter name
+	       while(isspace(t[i])) i++;
           }
           if(t[i]==')')
                i++;
@@ -436,14 +441,17 @@ int tcompare(char s[],char *v[], int n)
 }
 
 static int check_name(char *t, int n) {
-	
+
                     int i=0;
 		    { 
                         char *x=liste[n].search;
-                        while(t[i]==*x++ && t[i])
+                        while(t[i]==*x++ && t[i] && (isalnum(t[i]) || t[i]=='_'))
                             i++;
 		    }
 
+#ifdef DEBUG_RECMAC	
+	printf("check name with n=%d, name='%s' ->i=%d, len=%d\n", n, liste[n].search,i, liste[n].s_len);
+#endif
 		    return i == liste[n].s_len;
 }
 
@@ -459,6 +467,10 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 	// Note: in a real version, that should probably be a parameter, and not fiddling
 	// with global variables...
 	char *saved_mem = mem;
+
+#ifdef DEBUG_RECMAC
+	printf("replace part: n=%d, sl=%d, rec=%d, %s\n", n, sl, recursive, t);
+#endif
 
 			 // yes, mark replacement string
                          char *rs=liste[n].replace;
@@ -574,7 +586,7 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 	//int k = 0;
 
 	// copy over the replacement string into a buffer nfwas
-	(void)strcpy(nfwas, liste[rlist+i].replace);
+	(void)strcpy(nfwas, liste[blist+i].replace);
 	if (!er) {
 		// replace the tokens in the parameter, adding possible pseudo params
 		// on top of the liste[] into nfto
@@ -625,13 +637,22 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 					     // safe-guard our memory allocations
 					     mem = mx;
 					     // only change (of two) from recursive: rlist is 0 there
+#ifdef DEBUG_RECMAC
+	printf("replace macro: recursive=%d, blist=%d, -> b=%d\n", recursive, blist, blist+liste[n].p_anz);
+	printf("         from: %s\n", fti);					    
+#endif
                                              er=pp_replace(fto,fti,recursive ? 0 : blist,blist+liste[n].p_anz);
+#ifdef DEBUG_RECMAC
+	printf("           to: %s\n", fto);					    
+#endif
 					}
 /*               if(flag) printf("sl=%d,",sl);*/
                                         sl=(int)((long)y+1L-(long)t);
 /*               if(flag) printf("sl=%d\n",sl);*/
                                         rs=fto;
-/*     printf("->%s\n",fto);*/
+#ifdef DEBUG_RECMAC
+     printf("->%s\n",fto);
+#endif
                                    }    
                               }
                               if(er) {
@@ -747,8 +768,9 @@ int pp_replace(char *to, char *ti, int a,int b)
           for(l=0;isalnum(t[l])||t[l]=='_';l++);
 	  // store in ld
           ld=l;
-          
-          //printf("l=%d,a=%d,t=%s\n",l,a,t);
+#ifdef DEBUG_RECMAC          
+          printf("l=%d,a=%d,b=%d, t=%s\n",l,a, b ,t);
+#endif
        
 	  // the following if() is executed when being called from an 
 	  // 'external' context, i.e. not from a recursion 

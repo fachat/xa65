@@ -14,7 +14,7 @@
 #define	func1(a)	(a) | $20
 
 	*=$c000
-	
+
 	macro1()
 
 	macro2(2)
