@@ -61,8 +61,12 @@
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
+
+/* compatibility flags */
 int masm = 0;
 int ppinstr = 0;
+int ctypes = 0;	/* C compatibility, like "0xab" types */
+
 int nolink = 0;
 int romable = 0;
 int romaddr = 0;
@@ -233,6 +237,9 @@ int main(int argc,char *argv[])
 		romable = 2;
 		if(argv[i][2]==0) romaddr = atoi(argv[++i]);
 		else romaddr = atoi(argv[i]+2);
+		break;
+	  case 'N':		/* C style numerals */
+		ctypes = 1;
 		break;
 	  case 'G':
 		noglob = 1;
@@ -861,6 +868,8 @@ static void usage(int default816, FILE *fp)
 	    "                Other segments must be specified with `-b?'\n"
 	    " -G           suppress list of exported globals\n");
 	fprintf(fp,
+	    " -N           Allow C-style numerals (starting with '0' digit)\n");
+	fprintf(fp,
 	    " -p?          set preprocessor character to ?, default is #\n"
 	    " -DDEF=TEXT   defines a preprocessor replacement\n"
 	    " -Ocharset    set output charset (PETSCII, ASCII, etc.), case-sensitive\n"
@@ -1140,4 +1149,34 @@ void logout(char *s)
      if(fperr)
           fprintf(fperr,"%s",s);
 }
+
+#if 0
+/*****************************************************************/
+
+typedef struct {
+        char *name;
+        int *flag;
+} compat_set;
+
+static compat_set compat_sets[] = {
+        { "MASM", &masm },
+        { "CA65", &ca65 },
+        { "C", &ctypes },
+        { NULL, NULL }
+};
+
+int set_compat(char *compat_name) {
+        int i = 0;
+        while (compat_sets[i].name != NULL) {
+                if (strcmp(compat_sets[i].name, compat_name) == 0) {
+			/* set appropriate compatibility flag */
+			(*compat_sets[i].flag) = 1;
+                        return 0;
+                }
+                i++;
+        }
+        return -1;
+}
+
+#endif
 
