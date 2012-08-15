@@ -95,20 +95,20 @@ typedef struct {
 
 #define	BUFSIZE		4096	/* File-Puffegroesse (wg Festplatte) */
 
-#define E_OK		 0	/* Fehlernummern */
-#define E_SYNTAX	-1	/* Syntax Fehler */
-#define E_LABDEF	-2	/* Label definiert */
-#define E_NODEF		-3	/* Label nicht definiert */
-#define E_LABFULL	-4	/* Labeltabelle voll */
-#define E_LABEXP	-5	/* Label erwartet */
-#define E_NOMEM		-6	/* kein Speicher mehr */
-#define E_ILLCODE	-7	/* Illegaler Opcode */
-#define E_ADRESS	-8	/* Illegale Adressierung */
+#define E_OK		 0	/* No error */
+#define E_SYNTAX	-1	/* Syntax error */
+#define E_LABDEF	-2	/* Label already defined (duplicate label definition) */
+#define E_NODEF		-3	/* Label not defined */
+#define E_LABFULL	-4	/* Label table full */
+#define E_LABEXP	-5	/* Label expected but not found */
+#define E_NOMEM		-6	/* out of memory */
+#define E_ILLCODE	-7	/* Illegal Opcode */
+#define E_ADRESS	-8	/* Illegal Addressing mode */
 #define E_RANGE		-9	/* Branch out of range */
-#define E_OVERFLOW	-10	/* Ueberlauf */
-#define E_DIV		-11	/* Division durch Null */
-#define E_PSOEXP	-12	/* Pseudo-Opcode erwartet */
-#define E_BLKOVR	-13	/* Block-Stack Uebergelaufen */
+#define E_OVERFLOW	-10	/* overflow */
+#define E_DIV		-11	/* Division by zero */
+#define E_PSOEXP	-12	/* Pseudo-Opcode expected but not found */
+#define E_BLKOVR	-13	/* Block-Stack overflow */
 #define E_FNF		-14	/* File not found (pp) */
 #define E_EOF		-15	/* End of File */
 #define E_BLOCK		-16	/* Block inkonsistent */

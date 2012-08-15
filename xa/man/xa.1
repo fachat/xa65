@@ -83,8 +83,11 @@ Add cross-reference list to labellist (requires
 Enables compatibility settings to become more (not fully!) compatible with other 6502 assemblers.
 Currently supported are compatibility set "MASM" and "CA65".
 "MASM" allows colons to appear in comments. This does not affect colon interpretation elsewhere.
-"CA65" allows the ":=" label definition (instead of "="), and also the "cheap local labels" using
+"CA65" allows the ":=" label definition (instead of "="), It adds the "unnamed labels" and also the 
+"cheap local labels" using
 the "@" character. This, however, disables the "@" 24-bit enforcement.
+"C" enables the usage of "0xHEX" and "0OCTAL" C-style number encodings. Note that you can combine
+compatibility sets e.g. with "-XCA65 -XC".
 .TP
 .B \-M
 Allow colons to appear in comments; for MASM compatibility. This does

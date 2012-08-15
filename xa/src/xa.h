@@ -27,6 +27,7 @@ extern int noglob;
 extern int showblk;
 extern int relmode;
 extern int crossref;
+extern int ctypes;
 extern char altppchar;
 
 extern int tlen, tbase;

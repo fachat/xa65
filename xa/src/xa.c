@@ -65,6 +65,7 @@ int ncmos, cmosfl, w65816, n65816;
 /* compatibility flags */
 int masm = 0;	/* MASM */
 int ca65 = 0;	/* CA65 */
+int ctypes = 0;	/* C compatibility, like "0xab" types */
 
 int nolink = 0;
 int romable = 0;
@@ -1222,6 +1223,7 @@ typedef struct {
 static compat_set compat_sets[] = {
         { "MASM", &masm },
         { "CA65", &ca65 },
+        { "C", &ctypes },
         { NULL, NULL }
 };
 

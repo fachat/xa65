@@ -2130,16 +2130,30 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
 			}
                     }
                     else
-                    if(s[p]<='9' && s[p]>='0')
+                    if(s[p]<='9' && (s[p]>'0' || (s[p] == '0' && !ctypes)))
                     {
                          tg_dez(s+p,&ll,&v);
                          p+=ll;
                          wval(q,v, 'd');
                     }
                     else
-
-		/* handle encodings: hex, binary, octal, quoted strings */
+		    /* handle encodings: hex, binary, octal, quoted strings */
                     switch(s[p]) {
+                    case '0':
+			 // only gets here when "ctypes" is set, and starts with 0
+			 // we here check for the C stype "0xHEX" and "0OCTAL" encodings
+			 if ('x' == tolower(s[p+1])) {
+				// c-style hex
+				tg_hex(s+p+2, &ll, &v);
+				p+=2+ll;
+				wval(q, v, '$');
+			 } else {
+				// c-style octal
+                         	tg_oct(s+p+1,&ll,&v);
+                         	p+=1+ll;
+                         	wval(q,v, '&');
+			 }
+			 break;
                     case '$':
                          tg_hex(s+p+1,&ll,&v);
                          p+=1+ll;
