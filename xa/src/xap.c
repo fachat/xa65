@@ -711,12 +711,24 @@ int pp_replace(char *to, char *ti, int a,int b)
        while(t[0]!='\0' && t[0] != ';')
        {
 	  // skip over the whitespace
+	  // comment handling is NASTY NASTY NASTY
+	  // but I currently don't see another way, as comments and colons
+	  // can (and do) appear in preprocessor replacements
           char quotefl = 0;
-          while(!isalpha(t[0]) && t[0]!='_') {
-               if(t[0]=='\0' || (t[0] == ';' && !quotefl))
+	  char commentfl = 0;
+          while((t[0] != 0) && (commentfl || ((!isalpha(t[0]) && t[0]!='_')))) {
+               	if (t[0]=='\0') {
                     break;    /*return(E_OK);*/
-               else
-               {
+	       	} else 
+               	{
+	       	    if (t[0] == ';' && !quotefl) {
+			commentfl = 1;
+		    }
+		    if (t[0] == ':' && !quotefl && !ca65 && !masm) {
+			// note that both ca65 and masm allow colons in comments
+			// so in these cases we cannot reset the comment handling here
+			commentfl = 0;
+		    }
 		    if (quotefl) {
 			// ignore other quotes within a quote
 			if (t[0] == quotefl) {
@@ -728,7 +740,7 @@ int pp_replace(char *to, char *ti, int a,int b)
 		    }
                     t++;
                     ti++;
-               }
+               	}
 	  }
         
 	  // determine the length of the name 

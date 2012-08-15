@@ -92,6 +92,7 @@ static int x_init(void);
 static int pass1(void);
 static int pass2(void);
 static int puttmp(int);
+static int puttmpw(int);
 static int puttmps(signed char *, int);
 static void chrput(int);
 static int getline(char *);
@@ -457,7 +458,7 @@ int main(int argc,char *argv[])
                  if(verbose) logout(out);
 
                  er=pp_open(ifile);
-                    puttmp(0);
+                    puttmpw(0);
                     puttmp(T_FILE);
                     puttmp(0);
                     puttmp(0);
@@ -678,7 +679,9 @@ static int pass2(void)
 
      while((ner_max==0 || ner<ner_max) && afile->mn.tmpe<afile->mn.tmpz)
      {
-          l=afile->mn.tmp[afile->mn.tmpe++];
+	  // get the length of the entry (now two byte - need to handle the sign)
+          l = afile->mn.tmp[afile->mn.tmpe++];
+	  l |= afile->mn.tmp[afile->mn.tmpe++] << 8; 
           ll=l;
 
 	  // printf("%p: l=%d first=%02x\n", afile->mn.tmp+afile->mn.tmpe-1, l, 0xff & afile->mn.tmp[afile->mn.tmpe]);
@@ -842,14 +845,14 @@ static int pass1(void)
             {
                if(er==E_OKDEF)
                {
-                    if(!(er=puttmp(l)))
+                    if(!(er=puttmpw(l)))
                          er=puttmps(o,l);
                } else
                if(er==E_NOLINE)
                     er=E_OK;
             } else
             {
-               if(!(er=puttmp(-l)))
+               if(!(er=puttmpw(-l)))
                     er=puttmps(o,l);
             }
           }
@@ -1054,6 +1057,21 @@ static int puttmp(int c)
      return(er);
 }
 
+static int puttmpw(int c)
+{
+     int er=E_NOMEM;
+
+     //printf("puttmp: %02x -> %p \n",0xff & c, afile->mn.tmp+afile->mn.tmpz);
+ 
+     if(afile->mn.tmpz<TMPMEM-1)
+     {
+          afile->mn.tmp[afile->mn.tmpz++]= c & 0xff;
+          afile->mn.tmp[afile->mn.tmpz++]= (c >> 8) & 0xff;
+          er=E_OK;
+     }
+     return(er);
+}
+
 static int puttmps(signed char *s, int l)
 {
      int i=0,er=E_NOMEM;
@@ -1099,20 +1117,18 @@ static int getline(char *s)
 
                if(ec==E_NEWLINE)
                {
-                    puttmp(0);
+                    puttmpw(0);
                     puttmp(T_LINE);
-                    puttmp((filep->fline)&255);
-                    puttmp(((filep->fline)>>8)&255);
+                    puttmpw(filep->fline);
 		    ec=E_OK;
 
                }
 		else
                if(ec==E_NEWFILE)
                {
-                    puttmp(0);
+                    puttmpw(0);
                     puttmp(T_FILE);
-                    puttmp((filep->fline)&255);
-                    puttmp(((filep->fline)>>8)&255);
+                    puttmpw(filep->fline);
 		    puttmps((signed char*)&(filep->fname), sizeof(filep->fname));
                     ec=E_OK;
                }

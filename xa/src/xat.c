@@ -23,6 +23,7 @@
 /* enable this to turn on (copious) optimization output */
 /* #define DEBUG_AM */
 #undef LISTING_DEBUG
+#undef DEBUG_CONV
 
 #include <ctype.h>
 #include <stdio.h>
@@ -431,7 +432,8 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
      /* copy the buffer */
      memcpy(t+tlen, t+6+inp, l-inp);
 
-#if 0
+#ifdef DEBUG_CONV
+     printf("t_conv s:%s\n",s);
      printf("t_conv (er=%d, t=%p, tlen=%d, inp=%d):",er, t, tlen, inp);
      for(i=0;i<l+6;i++)
           printf("%02x,",t[i] & 0xff);
@@ -1010,7 +1012,7 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
      if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
 
      /* adjust length by token listing buffer length */
-#if 0
+#ifdef DEBUG_CONV 
      printf("converted: (er=%d, t=%p, ll=%d):",er, t, *ll);
      for(i=0;i<*ll;i++)
           printf("%02x,",t[i] & 0xff);
@@ -1072,6 +1074,15 @@ int t_p2_l(signed char *t, int *ll, int *al)
 	    } else {
 	    	*ll=(*ll) - tlen;
 	    }
+
+	    if (tlen > l) 
+     	    {
+		// that is corrupt data and should not happen
+        	printf("t_p2_l (ll=%d, t=%p):", *ll, t);
+        	for(int i=0;i<l;i++)
+          	printf("%02x,",t[i] & 0xff);
+        	printf("\n");
+     	    }
 
 	    if (*ll != 0) {
   	    	er = t_p2(t+tlen, ll, 1, al);
