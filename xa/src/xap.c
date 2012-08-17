@@ -377,7 +377,7 @@ int pp_define(char *k)
           i++;
      t+=i;
      
-     pp_replace(h,t,-1,0);
+     pp_replace(h,t,-1,rlist);
 
      t=h;     
 
@@ -659,7 +659,7 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 				   mem = saved_mem;
                                    return(er);     
 			      }
-                         }
+                         }  // end if(liste[n].p_anz), i.e. if it has parameters
 
                          int d=(int)strlen(rs)-sl;
 
@@ -688,10 +688,12 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 
                          int i=0;
 			 char c;
-                         while((c=rs[i]))
+                         while((c=rs[i])) {
                               t[i++]=c;
+			 }
 			 // other change from recursive. there sl is missing from add
-                         *l=(recursive ? 0 : sl) + d;/*=0;*/
+                         //*l=(recursive ? 0 : sl) + d;/*=0;*/
+                         *l=sl + d;/*=0;*/
 
 	mem = saved_mem;
 
@@ -791,6 +793,9 @@ int pp_replace(char *to, char *ti, int a,int b)
                if(sl && (sl==l) && check_name(t, n))
                {
 			er = pp_replace_part(to, t, n, sl, 0, &l, b);
+			if (er != E_OK) {
+				return er;
+			}
                         break;
                }
                if(!n)
