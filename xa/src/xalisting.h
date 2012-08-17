@@ -22,6 +22,8 @@
 void list_start(char *formatname);	//either NULL or "html"
 void list_end();
 
+void list_flush();			// debug helper
+
 void list_setfile(FILE *fp);
 void list_line(int l);          /* set line number for the coming listing output */
 void list_filename(char *fname);/* set file name for the coming listing output */

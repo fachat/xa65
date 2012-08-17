@@ -1013,7 +1013,7 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
 
      /* adjust length by token listing buffer length */
 #ifdef DEBUG_CONV 
-     printf("converted: (er=%d, t=%p, ll=%d):",er, t, *ll);
+     printf("converted: (er=%d, t=%p, ll=%d, tlen=%d):",er, t, *ll, tlen);
      for(i=0;i<*ll;i++)
           printf("%02x,",t[i] & 0xff);
      printf("\n");
@@ -1078,7 +1078,8 @@ int t_p2_l(signed char *t, int *ll, int *al)
 	    if (tlen > l) 
      	    {
 		// that is corrupt data and should not happen
-        	printf("t_p2_l (ll=%d, t=%p):", *ll, t);
+		list_flush();
+        	printf("corrupt: t_p2_l (l=%d, tlen=%d, ll=%d, t=%p):", l, tlen, *ll, t);
         	for(int i=0;i<l;i++)
           	printf("%02x,",t[i] & 0xff);
         	printf("\n");

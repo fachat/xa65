@@ -166,6 +166,12 @@ static formatter_t *formatp = &def_format;
 
 /*********************************************************************************************/
 
+void list_flush() {
+	if (listfp != NULL) {
+		fflush(listfp);
+	}
+}
+
 void list_start(const char *formatname) {
 	formatp = &def_format;
 

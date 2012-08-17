@@ -680,11 +680,11 @@ static int pass2(void)
      while((ner_max==0 || ner<ner_max) && afile->mn.tmpe<afile->mn.tmpz)
      {
 	  // get the length of the entry (now two byte - need to handle the sign)
-          l = afile->mn.tmp[afile->mn.tmpe++];
+          l = 255 & afile->mn.tmp[afile->mn.tmpe++];
 	  l |= afile->mn.tmp[afile->mn.tmpe++] << 8; 
           ll=l;
 
-	  // printf("%p: l=%d first=%02x\n", afile->mn.tmp+afile->mn.tmpe-1, l, 0xff & afile->mn.tmp[afile->mn.tmpe]);
+	  //printf("%p: l=%d first=%02x\n", afile->mn.tmp+afile->mn.tmpe-1, l, 0xff & afile->mn.tmp[afile->mn.tmpe]);
 
           if(!l)
           {
@@ -712,7 +712,6 @@ static int pass2(void)
 	       
 	       /* t_p2_l() includes the listing call to do_listing() */
                er=t_p2_l(afile->mn.tmp+afile->mn.tmpe,&ll,&al);
-
                if(er==E_NOLINE)
                {
                } else
