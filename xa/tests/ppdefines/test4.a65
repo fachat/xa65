@@ -1,0 +1,13 @@
+
+	; same as test3, only there is a colon in the "//" comment
+
+#define GD_DEVICE               0x01    // Get device descriptor: Device
+#define GD_CONFIGURATION        0x02    // Get device descriptor: Configuration
+#define GD_STRING               0x03    // Get device descriptor: String
+
+	*=$c000
+
+	lda #GD_DEVICE		; test
+
+	lda #GD_CONFIGURATION+$10
+

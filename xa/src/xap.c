@@ -952,6 +952,51 @@ int icl_open(char *tt)
      return(0);
 }
 
+/*
+ * parses the current line for double-slash comments,
+ * handling single- and double-quotes appropriately
+ * shortens the line if a comment is found, returns
+ * the new line length.
+ */
+int double_slash_comments(char *line) {
+	int p = 0;
+	int qfl = 0;	// if set, contains the current quote char (others are then ignored)
+	char c;
+
+	while (line[p] != 0) {
+		c = line[p];
+		if (c == qfl) {
+			// always in quote, c==0 not possible due to loop condition
+			// found matching quote char, so end of quote
+			qfl = 0;
+		} else 
+		if ((c == '\'' || c == '"') && !qfl) {
+			// not in quote, but finding quote char
+			qfl = c;
+		}
+		if (c == '^' && qfl) {
+			// xa65 escape character in strings (quoted)
+			if (line[p+1] != 0) {
+				// skip the next char in test
+				p++;
+			}
+		}
+		if (c == '/' && !qfl) {
+			// found '/' outside quote
+			if (line[p+1] == '/') {
+				// gotcha
+				//printf("shorten at %d: %s\n", p, line);
+				// shorten line
+				line[p] = 0;
+				// return new length
+				return p;
+			}
+		}
+		p++;
+	}
+	return p;
+}
+
 int pgetline(char *t)
 {
      int c,er=E_OK;
@@ -963,15 +1008,25 @@ int pgetline(char *t)
      filep =flist+fsp;
 
      do {
-          c=fgetline(in_line, MAXLINE, &rlen, flist[fsp].filep);
-	  /* continuation lines */
-	  tlen = rlen;
-	  while(c=='\n' && tlen && in_line[tlen-1]=='\\') {
-	    c=fgetline(in_line + tlen-1, MAXLINE-tlen, &rlen, flist[fsp].filep);
-	    tlen += rlen-1;
+	int is_continuation = 0;
+  	tlen = 0;	// start of current line in in_line[]
+	do {
+          c=fgetline(in_line + tlen, MAXLINE, &rlen, flist[fsp].filep);
+
+	  /* check for continuation lines */
+	  is_continuation = ((c == '\n') && (rlen > 0) && (in_line[tlen + rlen - 1]=='\\'));
+	  if (is_continuation) {
+		// cut off the continuation character
+		rlen--;
+		in_line[tlen + rlen] = 0;
 	  }
-          if(in_line[0]=='#' || in_line[0] == altppchar)
-          {
+	  rlen = double_slash_comments(in_line + tlen);
+
+	  tlen += rlen;
+	} while (is_continuation);
+
+        if(in_line[0]=='#' || in_line[0] == altppchar)
+        {
 		if (in_line[1]==' ') { /* cpp comment -- pp_comand doesn't
 					handle this right */
 			er=pp_cpp(in_line+1);
@@ -985,10 +1040,10 @@ int pgetline(char *t)
                     }
                }
 		}
-          } else
+        } else
                er=1;
 
-          if(c==EOF) {
+        if(c==EOF) {
 		if (loopfl && fsp) {
 			char bletch[MAXLINE];
 			sprintf(bletch, 
@@ -1004,14 +1059,6 @@ int pgetline(char *t)
 	if (loopfl) {
 		errout(E_OPENPP);
 	}
-
-     /* handle the double-slash comment (like in C++) */
-     p = strchr(in_line, '/');
-     if (p != NULL) {
-	if (p[1] == '/') {
-	    *p = 0;	/* terminate string */
-	}
-     }
 
      if(!er || loopfl) {
           in_line[0]='\0';
@@ -1112,6 +1159,11 @@ int rgetc(FILE *fp)
      return(c-'\t'?c:' ');
 }
 
+/**
+ * Note that the line returned is always zero-terminated,
+ * the rlen out parameter is just convenience, so that
+ * a further strlen() can be saved
+ */
 int fgetline(char *t, int len, int *rlen, FILE *fp)
 {
      static int c,i;
