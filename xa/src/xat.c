@@ -2185,11 +2185,17 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
 				tg_hex(s+p+2, &ll, &v);
 				p+=2+ll;
 				wval(q, v, '$');
-			 } else {
-				// c-style octal
+			 } else 
+			 if (isdigit(s[p+1])) {
+				// c-style octal if digit follows
                          	tg_oct(s+p+1,&ll,&v);
                          	p+=1+ll;
                          	wval(q,v, '&');
+			 } else {
+				// else use decimal (0)
+                         	tg_dez(s+p,&ll,&v);
+                         	p+=ll;
+                         	wval(q,v, 'd');
 			 }
 			 break;
                     case '$':
