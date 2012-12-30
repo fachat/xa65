@@ -56,7 +56,7 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.5"
+#define progversion	"v2.3.5+af"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
 #define copyright	"Copyright (C) 1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
@@ -73,6 +73,7 @@ int romaddr = 0;
 int noglob = 0;
 int showblk = 0;
 int crossref = 0;
+int noundef = 0;	// overrides -R acceptance of undefined labels
 char altppchar;
 
 /* local variables */
@@ -269,6 +270,9 @@ int main(int argc,char *argv[])
 		break;
 	  case 'R':
 		relmode = 1;
+		break;
+	  case 'U':
+		noundef = 1;
 		break;
 	  case 'D':
 		s = (signed char*)strstr(argv[i]+2,"=");
@@ -912,7 +916,8 @@ static void usage(int default816, FILE *fp)
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"
 	    "              MASM, CA65\n"
-	    " -R           start assembler in relocating mode\n");
+	    " -R           start assembler in relocating mode\n"
+	    " -U           do not allow undefined labels in relocating mode\n");
 	fprintf(fp,
 	    " -Llabel      defines `label' as absolute, undefined label even when linking\n"
 	    " -p<c>        replace preprocessor char '#' with custom, e.g. '-p!' replaces it with '!'\n"

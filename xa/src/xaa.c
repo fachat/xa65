@@ -122,7 +122,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 	  //printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
 	  //		er, segment, afl, nolink, fundef); 
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( nolink || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
+	    if( (nolink && !noundef) || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
 	      *v = 0;
 	      if(afl!=SEG_UNDEFZP) {

@@ -2161,7 +2161,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
 /*
                               if(afl==SEG_ZEROUNDEF) uz++;
 */
-                              ud++;
+                              ud++;	// number of undefined labels
                               er=E_OK;
                          }
                          p+=ll;
