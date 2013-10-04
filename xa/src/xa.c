@@ -87,7 +87,7 @@ static int pass2(void);
 static int puttmp(int);
 static int puttmps(signed char *, int);
 static void chrput(int);
-static int getline(char *);
+static int xagetline(char *);
 static void lineout(void);
 static long ga_p1(void);
 static long gm_p1(void);
@@ -763,7 +763,7 @@ static int pass1(void)
 	temp_er = 0;
 
 /*FIXIT*/
-     while(!(er=getline(s)))
+     while(!(er=xagetline(s)))
      {         
           er=t_p1((signed char*)s,o,&l,&al);
 	  switch(segment) {
@@ -1002,7 +1002,7 @@ static int puttmps(signed char *s, int l)
 
 static char l[MAXLINE];
 
-static int getline(char *s)
+static int xagetline(char *s)
 {
      static int ec;
 
