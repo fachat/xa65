@@ -581,7 +581,8 @@ int list_string(char *buf, char *string) {
 	if (buf == NULL || string == NULL) {
 		fprintf(stderr, "NULL pointer: buf=%p, string=%p\n", buf, string);
 		fflush(stderr);
-		exit(1);
+		//exit(1);
+		return 0;
 	}
 
 	int p = 0;
