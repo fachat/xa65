@@ -1691,9 +1691,12 @@ fprintf(stderr,
 /* terrible KLUDGE!!!! OH NOES!!!1!
    due to the way this is constructed, you must absolutely always specify @ to
    get an absolute long or it will absolutely always be optimized down */
-
-                    if(bl && am>16 &&
-			!er && !(vv[0]&0xff0000) && opt[am]>=0)
+/* now also checks for negative overflow, resp. not-overflow */
+                    if(bl 
+			&& am>16 
+			&& !er 
+			&& (((vv[0]&0xff8000)==0xff8000) || !(vv[0]&0xff0000)) 
+			&& opt[am]>=0)
                          if(ct[n][opt[am]]>=0)
                               am=opt[am];
 #ifdef DEBUG_AM
@@ -1746,8 +1749,10 @@ fprintf(stderr, "byte length is now %d\n", bl);
                                   er=E_CMOS;
                          } else {
                               n65816++;
-                              if(!w65816)
+                              if(!w65816) {
+fprintf(stderr,"n=%d, am=%d\n", n, am);
                                   er=E_65816;
+			      }
                          }
                     }
                     if(am!=0)

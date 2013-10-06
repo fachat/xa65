@@ -1,0 +1,18 @@
+
+	.text
+
+l1	lda l1
+
+	*=$2000
+
+l2	lda l2
+
+	.data
+
+l3	.word l3
+
+	.text
+
+l4 	lda l4
+
+
