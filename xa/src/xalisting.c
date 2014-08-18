@@ -449,7 +449,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 		switch(input[inp]) {
 		case T_CAST:
 			outp += list_string(buf+outp, formatp->escape_char(input[inp+1]));
-			inp++;
+			inp+=2;
 			break;
 		case T_VALUE:
 			/*outp += list_char(buf+outp, 'V');*/
