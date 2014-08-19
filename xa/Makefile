@@ -2,7 +2,7 @@
 #
 CC = gcc
 LD = gcc
-CFLAGS = -O2 -W -Wall -pedantic -ansi
+CFLAGS = -O2 -W -Wall -pedantic -std=c99 -g
 LDFLAGS = -lc
 
 # for DOS?

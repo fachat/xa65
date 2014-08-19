@@ -216,13 +216,20 @@ int pp_endif(char *t)
 /* stub for handling CPP directives */
 int pp_cpp(char *t) {
 
-	if(sscanf(t, " %d \"%s\"", &filep->fline, filep->fname) == 2) {
+	char *fname = NULL;
+	if(sscanf(t, " %d \"%ms\"", &filep->fline, &fname) == 2) {
 		/* massage it into our parameters and drop last quote */
 		char *u = "";
 
 		filep->fline--;
-		if((u = (char *)strrchr(filep->fname, '"')))
+		if((u = (char *)strrchr(fname, '"')))
 			*u = '\0';
+
+		// overwrite the original filename
+		// this may create a memory leak, but we do not know
+		// whether the file name has already been used in the cross
+		// reference list. So we just accept that...
+		filep->fname = fname;
 		return (0);
 	} else {
 		return(E_SYNTAX);
