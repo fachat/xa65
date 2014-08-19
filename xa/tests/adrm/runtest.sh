@@ -8,8 +8,24 @@ THISDIR=`pwd`
 echo "0=$0"
 echo "THISDIR=$THISDIR"
 
+declare -A opts
+#opts=([816.asm]="-w")
+opts[02.asm]="-C"
+opts[816.asm]="-w"
+opts[zab.asm]="-w"
+opts[zpa.asm]="-w"
+
+#ASMFLAGS=-v
+ASMFLAGS=
+
+# exclude filter from *.asm if no explicit file is given
 EXCLUDE=
-TESTFILES=
+
+# test files used
+TESTFILES="bip.inc bip2.inc"
+
+# files to compare afterwards, against <file>-<script>
+COMPAREFILES=a.out
 
 XA=$THISDIR/../../xa
 
@@ -172,7 +188,7 @@ else
         done;
 fi;
 
-echo "TESTSCRIPTS=$TESTSCRIPTS"
+#echo "TESTSCRIPTS=$TESTSCRIPTS"
 
 ########################
 # tmp names
@@ -207,6 +223,14 @@ for script in $TESTSCRIPTS; do
 
         echo "Run script $script"
 
+	AFLAGS="${ASMFLAGS} ${opts[$script]}"
+
+	ALOG=
+        if test "x$LOGFILE" = "x"; then
+		ALOG="-P $script.log"
+	else
+		ALOG="-P $LOGFILE"
+	fi
 
         # overwrite test files in each iteration, just in case
         for i in $TESTFILES; do
@@ -221,12 +245,8 @@ for script in $TESTSCRIPTS; do
                 ############################################
                 # simply do assemble
 
-                echo "Run assembler:" $XA $VERBOSE $script $TMPDIR 
-                if test "x$LOGFILE" = "x"; then
-			(cd $TMPDIR; $XA -o a.out -P $script.log $script)
-		else
-			(cd $TMPDIR; $XA -o a.out -P $LOGFILE $script)
-		fi
+                echo "Run assembler:" $XA $AFLAGS $script 
+		(cd $TMPDIR; $XA -o a.out $ALOG $AFLAGS $script)
                 RESULT=$?
 
                 if test $RESULT -eq 0; then
@@ -240,7 +260,7 @@ for script in $TESTSCRIPTS; do
                 for i in $DEBUG; do
                         echo "break $i" >> $DEBUGFILE
                 done;
-                gdb -x $DEBUGFILE -ex "run -o a.out -P $LOGFILE $script.asm" $XA
+               	gdb -x $DEBUGFILE -ex "run -o $TMPDIR/a.out $ALOG $AFLAGS $script" $XA
         fi;
 
         #echo "Killing server (pid $SERVERPID)"
@@ -272,6 +292,7 @@ for script in $TESTSCRIPTS; do
         if test $CLEAN -ge 1; then
                 rm -f $DEBUGFILE;
                 rm -f $TMPDIR/$script;
+                rm -f $TMPDIR/a.out;
         fi
 done;
 
