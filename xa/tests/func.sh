@@ -2,7 +2,7 @@
 
 
 function usage() {
-        echo "Assemble *.asm test files"
+        echo "Assemble *.asm or *.a65 test files"
         echo "  $0 [options] [frs_scripts]"
         echo "Options:"
         echo "       -v                      verbose log"
@@ -126,7 +126,8 @@ fi
 
 # scripts to run
 if [ "x$*" = "x" ]; then
-        SCRIPTS=$THISDIR/*${FILTER}*.asm
+	shopt -s extglob
+        SCRIPTS=$THISDIR/*${FILTER}*.a[s6][m5]
         SCRIPTS=`basename -a $SCRIPTS`;
 
         TESTSCRIPTS=""
@@ -149,7 +150,11 @@ else
                if test -f "$i".asm ; then
                         TESTSCRIPTS="$TESTSCRIPTS $i.asm";
                else
-                        TESTSCRIPTS="$TESTSCRIPTS $i";
+               		if test -f "$i".a65 ; then
+                        	TESTSCRIPTS="$TESTSCRIPTS $i.a65";
+			else
+                       	 	TESTSCRIPTS="$TESTSCRIPTS $i";
+			fi
                fi
         done;
 fi;
@@ -234,6 +239,9 @@ for script in $TESTSCRIPTS; do
 
         if test "x$COMPAREFILES" != "x"; then
                 testname=`basename $script .asm`
+		if [ "$script" = "$testname" ]; then
+                	testname=`basename $script .a65`
+		fi
                 for i in $COMPAREFILES; do
                         NAME="${THISDIR}/${i}-${testname}"
                         if test -f ${NAME}; then
