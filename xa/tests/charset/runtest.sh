@@ -5,8 +5,8 @@
 #THISDIR=`dirname $0`
 THISDIR=`pwd`
 
-echo "0=$0"
-echo "THISDIR=$THISDIR"
+#echo "0=$0"
+#echo "THISDIR=$THISDIR"
 
 declare -A opts
 #opts=([816.asm]="-w")

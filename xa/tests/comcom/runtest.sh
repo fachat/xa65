@@ -10,7 +10,8 @@ THISDIR=`pwd`
 
 declare -A opts
 #opts=([816.asm]="-w")
-#opts[02.asm]="-C"
+opts[comcom2.asm]="-M"
+opts[scomcom.asm]="-M"
 
 #ASMFLAGS=-v
 ASMFLAGS=
