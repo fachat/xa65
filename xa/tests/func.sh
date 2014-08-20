@@ -1,5 +1,8 @@
 #!/bin/bash
 
+declare -A errs
+declare -A opts
+
 
 function usage() {
         echo "Assemble *.asm or *.a65 test files"
@@ -172,10 +175,12 @@ DEBUGFILE="$TMPDIR"/gdb.ex
 
 # remember stdout for summary output
 exec 5>&1
+exec 6>&2
 
 # redirect log when quiet
 if test $QUIET -ge 1 ; then
        exec 1>$TMPDIR/stdout.log
+       exec 2>$TMPDIR/stderr.log
 fi
 
 ########################
@@ -221,6 +226,15 @@ for script in $TESTSCRIPTS; do
 		(cd $TMPDIR; $XA -o a.out $ALOG $AFLAGS $script)
                 RESULT=$?
 
+		# check if we actually expected an error
+		#echo "errs=${errs[$script]}"
+		if [ "x${errs[$script]}" != "x" ]; then
+			if [ "$RESULT" = ${errs[$script]} ]; then
+				echo "override error because was expected"
+				RESULT=0
+			fi
+		fi
+
                 if test $RESULT -eq 0; then
                         echo "$script: Ok" >&5
                 else
@@ -237,6 +251,11 @@ for script in $TESTSCRIPTS; do
 
         #echo "Killing server (pid $SERVERPID)"
         #kill -TERM $SERVERPID
+
+	if [ -f "${THISDIR}/$script.err" ]; then
+	        echo "Comparing file ${script}.err"
+        	hexdiff ${THISDIR}/$script.err ${TMPDIR}/$script.err
+	fi
 
         if test "x$COMPAREFILES" != "x"; then
                 testname=`basename $script .asm`
@@ -285,6 +304,7 @@ if test $CLEAN -ge 2; then
         done;
 
         rm -f $TMPDIR/stdout.log
+        rm -f $TMPDIR/stderr.log
 
         # only remove work dir if we own it (see option -R)
         if test $OWNDIR -ge 1; then

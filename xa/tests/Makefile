@@ -1,8 +1,7 @@
 
+TESTS=adrm binclude chardelimiter charset comcom fordef
+
 tests:
-	(cd adrm; make tests)
-	(cd binclude; make tests)
-	(cd chardelimiter; make tests)
-	(cd charset; make tests)
-	(cd comcom; make tests)
+	for i in $(TESTS); do (cd $$i; make tests); done
+
 

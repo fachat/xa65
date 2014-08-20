@@ -11,6 +11,8 @@ THISDIR=`pwd`
 declare -A opts
 #opts=([816.asm]="-w")
 #opts[02.asm]="-C"
+declare -A errs
+errs[test4.asm]=1
 
 #ASMFLAGS=-v
 ASMFLAGS=
