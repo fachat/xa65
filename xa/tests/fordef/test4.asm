@@ -3,13 +3,10 @@
 
 /* define this if you want to crash and burn */
 
-#ifdef FAIL
 	jmp `forward3
 	bne `forward3
 	lda (`forward1),y
 	lda (`forward3),y
-#echo congrats, you have FAILED!
-#endif
 
 	sta `forward3
 

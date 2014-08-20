@@ -16,5 +16,5 @@ t1	lda `forward1
 	sta `forward2
 	rts
 
-#include "test2.asm"
+#include "test2.s"
 

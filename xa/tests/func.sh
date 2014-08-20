@@ -202,6 +202,7 @@ for script in $TESTSCRIPTS; do
 	else
 		ALOG="-P $LOGFILE"
 	fi
+	ALOG="$ALOG -e $script.err"
 
         # overwrite test files in each iteration, just in case
         for i in $TESTFILES; do
@@ -275,6 +276,7 @@ if test $CLEAN -ge 2; then
 
         for script in $TESTSCRIPTS; do
                 rm -f $TMPDIR/$script.log
+                rm -f $TMPDIR/$script.err
         done;
 
         # gzipped test files are unzipped
