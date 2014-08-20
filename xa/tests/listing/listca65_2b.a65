@@ -1,0 +1,7 @@
+
+	; to be included in listca65_2.a65
+	; to check HTML linkage of unnamed labels across files
+
+:	iny
+	bne :-
+

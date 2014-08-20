@@ -30,6 +30,9 @@ void pp_end(void);
 int pgetline(char *t);
 Datei *pp_getidat(void);
 
+/* needed for .include pseudo opcode */
+int icl_open(char*);
+
 int ga_pp(void);
 int gm_pp(void);
 long gm_ppm(void);

@@ -27,6 +27,8 @@ incerr/		1) .xl/.al should error without -w 2) error should be in
 binclude/	Binary include code with some weird casing
 chppch/		Changing preprocessor characters (-p)
 charset/	Tests of when charsets should be honoured and when not
+cc65/		Compatibility tests for ca65 compatibility
+relmode/	tests concerning switches between segments and absolute mode
 
 Cameron Kaiser, André Fachat
 

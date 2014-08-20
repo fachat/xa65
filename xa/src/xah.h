@@ -20,15 +20,29 @@
 #ifndef __XA65_XAH_H__
 #define __XA65_XAH_H__
 
-#define ANZLAB		5000	/* mal 14 -> Byte */
+/* 
+ * Note: the computations to get the number of bytes necessary to allocate are
+ * a historic remnant of the Atari ST (the original platform) not being able to efficiently allocate small chunks
+ * of memory so I had to allocate a large chunk myself and manage the tables myself.
+ * This has changed and some parts of xa65 are modified to just do a malloc() now.
+ * These fixed numbers should actually go away. AF 20110623
+ */
+#define ANZLAB		5000	/* multiplied by sizeof(Labtab) -> Byte */
 #define LABMEM		40000L
 #define MAXLAB		32
 #define MAXBLK		16
 #define MAXFILE		7
 #define MAXLINE		2048
 #define MAXPP		40000L
-#define ANZDEF		2340	/* mal 14 -> Byte, ANZDEF * 14 < 32768 */
-#define TMPMEM		200000L	/* Zwischenspeicher von Pass1 nach Pass 2 */
+#define ANZDEF		2340	/* multiplied by sizeof(List) -> Byte, ANZDEF * 20 < 32768 */
+#define TMPMEM		2000000L	/* temporary memory buffer from Pass1 to Pass 2 (includes all source, thus enlarged) */
+
+typedef enum {
+        STD = 0,
+        CHEAP = 1,
+        UNNAMED = 2,
+        UNNAMED_DEF = 3
+} label_t;
 
 typedef struct LabOcc {
 	struct LabOcc *next;
@@ -36,17 +50,27 @@ typedef struct LabOcc {
 	char *fname;
 } LabOcc;
 
+/**
+ * struct that defines a label, after it has been parsed
+ */
 typedef struct {
 	int blk;
 	int val;
 	int len;
 	int fl;		/* 0 = label value not valid/known,
 			 * 1 = label value known
+			 * 2 = label value not known, external global label (imported on link)
 			 */
 	int afl;	/* 0 = no address (no relocation), 1 = address label */
 	int nextindex;
+	label_t is_cll;	/* 0 is normal label, 1 is cheap local label (used for listing) */
 	char *n;
 	struct LabOcc *occlist;
+	// within a block, make a linked list for the unnamed label counting
+	// use indexes, as the label table can be re-alloced (so pointers change)
+	// -1 is the "undef'd" end of list
+	int blknext;
+	int blkprev;
 } Labtab;
 
 typedef struct {
@@ -71,20 +95,20 @@ typedef struct {
 
 #define	BUFSIZE		4096	/* File-Puffegroesse (wg Festplatte) */
 
-#define E_OK		 0	/* Fehlernummern */
-#define E_SYNTAX	-1	/* Syntax Fehler */
-#define E_LABDEF	-2	/* Label definiert */
-#define E_NODEF		-3	/* Label nicht definiert */
-#define E_LABFULL	-4	/* Labeltabelle voll */
-#define E_LABEXP	-5	/* Label erwartet */
-#define E_NOMEM		-6	/* kein Speicher mehr */
-#define E_ILLCODE	-7	/* Illegaler Opcode */
-#define E_ADRESS	-8	/* Illegale Adressierung */
+#define E_OK		 0	/* No error */
+#define E_SYNTAX	-1	/* Syntax error */
+#define E_LABDEF	-2	/* Label already defined (duplicate label definition) */
+#define E_NODEF		-3	/* Label not defined */
+#define E_LABFULL	-4	/* Label table full */
+#define E_LABEXP	-5	/* Label expected but not found */
+#define E_NOMEM		-6	/* out of memory */
+#define E_ILLCODE	-7	/* Illegal Opcode */
+#define E_ADRESS	-8	/* Illegal Addressing mode */
 #define E_RANGE		-9	/* Branch out of range */
-#define E_OVERFLOW	-10	/* Ueberlauf */
-#define E_DIV		-11	/* Division durch Null */
-#define E_PSOEXP	-12	/* Pseudo-Opcode erwartet */
-#define E_BLKOVR	-13	/* Block-Stack Uebergelaufen */
+#define E_OVERFLOW	-10	/* overflow */
+#define E_DIV		-11	/* Division by zero */
+#define E_PSOEXP	-12	/* Pseudo-Opcode expected but not found */
+#define E_BLKOVR	-13	/* Block-Stack overflow */
 #define E_FNF		-14	/* File not found (pp) */
 #define E_EOF		-15	/* End of File */
 #define E_BLOCK		-16	/* Block inkonsistent */
@@ -126,18 +150,25 @@ typedef struct {
 #define W_OVER16M	-74	/* included binary over 16M in 65816 mode */
 /* warnings 75-77 are placeholders */
 
-#define T_VALUE		-1
-#define T_LABEL		-2
-#define T_OP		-3
-#define T_END		-4
-#define T_LINE		-5
-#define T_FILE		-6
-#define T_POINTER	-7
+/* Meta-values for the token list. Note must not overlap with the
+ * K* definitions in xat.c, which have outgrown the positive numbers
+ * and are now growing up from -128 ... */
+#define T_VALUE		-1	/* following is a 24 bit value in the token list */
+#define T_LABEL		-2	/* referring to a label, following the token is the 16bit label number */
+#define T_OP		-3	/* label oriented operation; following is the label number (16bit), plus the operation char (e.g. '+') */
+#define T_END		-4	/* end of line marker */
+#define T_LINE		-5	/* new line indicator; following is the 16 bit line number */
+#define T_FILE		-6	/* new file indicator; following is the 16 bit line number, then the file name (zero-term) */
+#define T_POINTER	-7	/* ??? */
+#define T_COMMENT	-8	/* unused */
+#define T_DEFINE	-9	/* define a label; inserted at conversion and discarded in pass1, only used in listing output */
+#define T_LISTING	-10	/* meta token, inserted after conversion before pass1, used after pass2 to create listing */
+#define T_CAST		-11	/* token inserted for a cast */
 
-#define P_START		 0	/* Prioritaeten fuer Arithmetik    */
-#define P_LOR		 1	/* Von zwei Operationen wird immer */
-#define P_LAND		 2	/* die mit der hoeheren Prioritaet */
-#define P_OR		 3	/* zuerst ausgefuehrt              */
+#define P_START		 0	/* arithmetic operation priorities    */
+#define P_LOR		 1	/* of any two operations, the one with */
+#define P_LAND		 2	/* the higher priority will be done first */
+#define P_OR		 3	
 #define P_XOR		 4
 #define P_AND		 5
 #define P_EQU		 6
@@ -168,6 +199,8 @@ typedef struct {
 #define SEG_ZERO	5
 #define SEG_MAX         6
 
+#define SEG_UNDEFZP     7	/* is being mapped to UNDEF */
+
 typedef struct Fopt {
 	signed char *text;	/* text after pass1 */
 	int len;
@@ -188,8 +221,11 @@ typedef struct File {
 	int base[SEG_MAX];
 	int len[SEG_MAX];
 	struct {
+		// temporary memory between pass1 and pass2
 		signed char *tmp;
+		// write pointer
 		unsigned long tmpz;
+		// read pointer
 		unsigned long tmpe;
 	} mn;
 	struct {

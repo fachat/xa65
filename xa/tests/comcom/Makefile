@@ -1,3 +1,4 @@
+
 default:
 	# this should fail.
 	../../xa scomcom.asm || exit 0 && exit 1
@@ -11,4 +12,8 @@ default:
 
 clean:
 	rm -f a.o65
+
+tests:
+	./runtest.sh -q -C
+
 

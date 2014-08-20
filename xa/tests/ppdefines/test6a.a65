@@ -1,0 +1,28 @@
+
+// testing some more complicated defines
+
+
+#define max3420e_enable()       \
+        spi_enable(MAX3420E_EnMask)
+
+#define max3420e_disable()      \
+        spi_disable(MAX3420E_EnMask)
+
+#define wrac(reg)               \
+        pha                     :\
+        max3420e_enable()       :\
+        lda #(reg) | 0x02       :\
+        spi_wra()               :\
+        pla                     :\
+        spi_wra()               :\
+        max3420e_disable()
+
+// just the definition of this macro hangs the xa indefinitely...
+
+#define CLRBIT(reg, val)        \
+        rreg(reg)               :\
+        and #255-val            :\
+        wrac(reg)
+
+
+

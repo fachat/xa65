@@ -1,3 +1,4 @@
+
 default:
 	# this must not pass.
 	../../xa -DFAIL test3.asm || exit 0 && exit 1
@@ -11,4 +12,7 @@ default:
 
 clean:
 	rm -f a.o65 test.out
+
+tests:
+	./runtest.sh -q -C
 

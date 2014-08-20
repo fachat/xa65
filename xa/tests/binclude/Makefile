@@ -1,3 +1,4 @@
+
 default:
 	../../xa test.asm -o test.o
 	../hextool -cmp=test.ok < test.o
@@ -10,3 +11,5 @@ default:
 
 clean:
 	rm -f *.o
+
+ 

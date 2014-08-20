@@ -1,3 +1,4 @@
+
 default:
 	# xa should not allow this to happen. if it does, this test is no good.
 	../../xa 816.asm || exit 0 && exit 1
@@ -18,3 +19,7 @@ default:
 
 clean:
 	rm -f *.o
+
+tests:
+	./runtest.sh -q -C
+

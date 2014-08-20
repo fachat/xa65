@@ -22,9 +22,12 @@
 
 /* enable this to turn on (copious) optimization output */
 /* #define DEBUG_AM */
+#undef LISTING_DEBUG
+#undef DEBUG_CONV
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "xad.h"
 #include "xah.h"
@@ -38,6 +41,7 @@
 #include "xao.h"
 #include "xap.h"
 #include "xacharset.h"
+#include "xalisting.h"
 
 int dsb_len = 0;
 
@@ -48,10 +52,24 @@ static void tg_dez(signed char*,int*,int*);
 static void tg_hex(signed char*,int*,int*);
 static void tg_oct(signed char*,int*,int*);
 static void tg_bin(signed char*,int*,int*);
+static int t_p2(signed char *t, int *ll, int fl, int *al);
+//static void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
+
+void list_setbytes(int number_of_bytes_per_line);
 
 /* assembly mnemonics and pseudo-op tokens */
 /* ina and dea don't work yet */
-static char *kt[] ={ 
+/* Note AF 20110624: added some ca65 compatibility pseudo opcodes,
+ * many are still missing (and will most likely never by supported in this
+ * code base). Potential candidates are .hibytes, .lobytes, .asciiz,
+ * .addr, .charmap, .dbyt, .faraddr, .bankbytes, .segment (at least for the known ones)
+ * .incbin is similar to our .bin, but with parameters reversed (argh...)
+ * I like the .popseg/.pushseg pair; 
+ * .global/.globalzp is equivalent to forward-defining a label in the global block
+ * .export/.exportzp could be implemented with a commandline switch to NOT export
+ * global labels, where .exported labels would still be exported in an o65 file.
+ */
+char *kt[] ={ 
 /*    1     2     3    4      5     6      7   8      9     10   */
      "adc","and","asl","bbr","bbs","bcc","bcs","beq","bit","bmi",
      "bne","bpl","bra","brk","bvc","bvs","brl","clc","cld","cli",
@@ -75,17 +93,30 @@ static char *kt[] ={
 
      ".byt",".word",".asc",".dsb", ".(", ".)", "*=", ".text",".data",".bss",
      ".zero",".fopt", ".byte", ".end", ".list", ".xlist", ".dupb", ".blkb", ".db", ".dw",
-     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc"
+     ".align",".block", ".bend",".al",".as",".xl",".xs", ".bin", ".aasc", ".code",
+     ".include", ".import", ".importzp", ".proc", ".endproc",
+     ".zeropage", ".org", ".reloc", ".listbytes",
+     ".scope", ".endscope"
 
 };
 
+/* arithmetic operators (purely for listing, parsing is done programmatically */
+char *arith_ops[] = {
+	"", "+", "-", 
+	"*", "/", 
+	">>", "<<", 
+	"<", ">", "="
+	"<=", ">=", "<>", 
+	"&", "^", "|",
+	"&&", "||"
+};
+
+/* length of arithmetic operators indexed by operator number */
 static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
 /* index into token array for pseudo-ops */
 /* last valid mnemonic */
 #define   Lastbef   93
-/* last valid token+1 */
-#define   Anzkey    123
 
 #define   Kbyt      Lastbef+1
 #define   Kword     Lastbef+2
@@ -119,8 +150,31 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 #define   Kbin      Lastbef+28
 #define   Kaasc     Lastbef+29
 
-#define   Kreloc    Anzkey   	/* *= (relocation mode) */
-#define   Ksegment  Anzkey+1
+#define	  Kcode	    Lastbef+30	/* gets remapped to Ktext */
+
+/* 93 + 30 -> 123 */
+
+#define	  Kinclude  Lastbef+31
+#define   Kimport   Lastbef+32
+#define   Kimportzp Lastbef+33
+#define	  Kproc     Lastbef+34	/* mapped to Kopen */
+/* 93 + 35 -> 128 */
+#define	  Kendproc  Lastbef+35	/* mapped to Kclose */
+#define	  Kzeropage Lastbef+36	/* mapped to Kzero */
+#define	  Korg      Lastbef+37	/* mapped to Kpcdef - with parameter equivalent to "*=$abcd" */
+#define	  Krelocx   Lastbef+38	/* mapped to Kpcdef - without parameter equivalent to "*=" */
+#define	  Klistbytes (Lastbef+39-256)
+#define	  Kscope    (Lastbef+40) /* mapped to Kopen */
+#define	  Kendscope (Lastbef+41) /* mapped to Kclose */
+
+/* last valid token+1 */
+#define	  Anzkey    Lastbef+42	/* define last valid token number; last define above plus one */
+
+
+#define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
+#define   Ksegment  (Anzkey+1-256)	/* this actually now is above 127, which might be a problem as char is signed ... */
+
+int number_of_valid_tokens = Anzkey;
 
 /* array used for hashing tokens (26 entries, a-z) */
 
@@ -319,16 +373,21 @@ static int le[] ={ 1,2,2,2,2,2,2,2,3,3,3,2,3,3,3,2,
 static int opt[] ={ -1,-1,-1,-1,-1,-1,-1,-1,1,2,3,-1,4,5,-1,-1,
            /*new*/ -1,8,9,-1,-1,-1,-1,-1 }; /* abs -> zp */
 
+/*********************************************************************************************/
 /* pass 1 */
 int t_p1(signed char *s, signed char *t, int *ll, int *al)
 {
      static int er,l,n,v,nk,na1,na2,bl,am,sy,i,label,byte; /*,j,v2 ;*/
      int afl = 0;
+     int tlen;	/* token listing length, to adjust length that is returned */
+     int inp;	/* input pointer in t[] */
+     unsigned char cast;
 
 /* notes and typical conventions ... er = error code
 	am = addressing mode in use
 */
 
+     cast='\0';
      bl=0;
      *al = 0;
 
@@ -338,22 +397,66 @@ int t_p1(signed char *s, signed char *t, int *ll, int *al)
 #ifdef DEBUG_AM
 fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 #endif
-     er=t_conv(s,t,&l,pc[segment],&nk,&na1,&na2,0,&byte);
-     /* leaving our token sequence in t */
+    
+     /* As the t_p1 code below always works through the tokens
+      * from t_conv in such a way that it always produces a shorter
+      * result, the conversion below takes place "in place".
+      * This, however, means that the original token sequence, which
+      * would be useful for some assembler listing, is overwritten.
+      * While the original assumption was ok for a constrained 
+      * environment like the Atari ST, this is no longer true.
+      * Converting the code below to have separate input and output
+      * areas would be error-prone, so we do some copy-magic here
+      * instead...*/
+     /* we keep three bytes buffer for "T_LISTING" and the length of the
+      * token list
+      */
+     t[0]=T_LISTING;
+     er=t_conv(s,t+6,&l,pc[segment],&nk,&na1,&na2,0,&byte);
+     tlen = l+6;
+     t[1]=tlen&255;
+     t[2]=(tlen>>8)&255;
+     t[3]=segment;
+     t[4]=pc[segment]&255;
+     t[5]=(pc[segment]>>8)&255;
+     /* now we have to duplicate the token sequence from the T_LISTING buffer
+      * to the end of "t", so we can then in-place convert it
+      * below. Non-overlapping, size is known in advance, so 
+      * using memcpy is fine here
+      */
+     inp = 0;
+     /* discard label definitions before copying the buffer */
+     while (inp<l && t[6+inp]==T_DEFINE) {
+	inp+=3;
+     }
+     /* copy the buffer */
+     memcpy(t+tlen, t+6+inp, l-inp);
 
-     *ll=l;
-/*
-     printf("t_conv (er=%d):",er);
-     for(i=0;i<l;i++)
-          printf("%02x,",t[i]);
+#ifdef DEBUG_CONV
+     printf("t_conv s:%s\n",s);
+     printf("t_conv (er=%d, t=%p, tlen=%d, inp=%d):",er, t, tlen, inp);
+     for(i=0;i<l+6;i++)
+          printf("%02x,",t[i] & 0xff);
      printf("\n");
-*/
+#endif
+
+     // update pointers
+     t=t+tlen;
+     l-=inp;
+     /* the result of this is that we always have a Klisting entry in the buffer
+      * for each tokenization call */
+     /* here continue as before, except for adjusting the returne *ll length 
+      * in the end, just before return */
+
+     /* return length default is input length */
+     *ll=l;
+
      /* if text/data produced, then no more fopt allowed in romable mode */
-     if((romable>1) && (t[0]<Kopen || t[0]==Kbyte || t[0]==Kpcdef)) {
+     /* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
+     if((romable>1) && (t[inp]<Kopen || t[inp]==Kbyte || t[inp]==Kpcdef)) {
        afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
        romable=1;
      }
-
      if(!er)
      {
 
@@ -362,34 +465,66 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
  * pseudo-op dispatch (except .byt, .asc)
  *
  */
-          n=t[0];
+	  // fix sign
+          n=t[0]; // & 0xff;
+
 	  /* TODO: make that a big switch statement... */
 	  /* maybe later. Cameron */
 
 	  if(n==Kend || n==Klist || n==Kxlist) {
 	    *ll = 0;		/* ignore */
 	  } else
-
+	  if(n==Kinclude) {
+	    *ll = 0;		/* no output length */
+	    i=1;
+            if(t[i]=='\"') {
+	       int k,j=0;
+	       char binfname[255];
+               i++;
+               k=t[i]+i+1;
+               i++;
+               while(i<k && !er) {
+                 binfname[j++] = t[i++];
+                 if (j > 255)
+                    er = E_NOMEM; /* buffer overflow */
+               }
+               binfname[j] = '\0';
+	       er=icl_open(binfname);
+	    } else {
+	       er=E_SYNTAX;
+	    }
+	  } else
 	  if(n==Kfopt) {
 	    if(romable==1) er=E_ROMOPT;
 	    t[0] = Kbyt;
 	    set_fopt(l,t,nk+1-na1+na2);
 	    *ll = 0;
 	  } else
+          if(n==Klistbytes) {
+	    int p = 0;
+            if(!(er=a_term(t+1,&p,&l,pc[segment],&afl,&label,0))) {
+                er=E_OKDEF;
+	    }
+	    *ll = 3;
+	    t[0] = Klistbytes;
+	    t[1] = p & 0xff;
+	    t[2] = (p >> 8) & 0xff;
+	    //printf("Klistbytes p1: er=%d, l=%d\n", er, l);
+          } else
           if(n==Kpcdef)
           {
 	       int tmp;
                if(!(er=a_term(t+1,&tmp /*&pc[SEG_ABS]*/,&l,pc[segment],&afl,&label,0)))
                {
                     i=1;
-                    wval(i,tmp /*pc[SEG_ABS]*/);
+                    wval(i,tmp /*pc[SEG_ABS]*/, 0);	/* writes T_VALUE, 3 bytes value, plus one byte */
                     t[i++]=T_END;
-                    *ll=6;
+                    *ll=7;
                     er=E_OKDEF;
 /*printf("set pc=%04x, oldsegment=%d, pc[segm]=%04x, ", 
 				pc[SEG_ABS], segment, pc[segment]);
-printf(" wrote %02x %02x %02x %02x %02x %02x\n",
-				t[0],t[1],t[2],t[3],t[4],t[5]);*/
+printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
+				t[0],t[1],t[2],t[3],t[4],t[5],t[6],t[7]);*/
 		    if(segment==SEG_TEXT) {
 		      pc[SEG_ABS] = tmp;
 		      r_mode(RMODE_ABS);
@@ -407,7 +542,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 			segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
 		   t[0]=Kreloc;
 		   i=1;
-		   wval(i,pc[SEG_TEXT]);
+		   wval(i,pc[SEG_TEXT], 0);
 		   t[i++]=T_END;
 		   *ll=6;
 	  	   er=E_OKDEF;
@@ -526,7 +661,6 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		char binfnam[255];
 		int offset;
 		int length;
-		int fstart;
 
 		i = 1;
 		j = 0;
@@ -562,7 +696,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		if (!er) {
 		   int k;
 		
-		   fstart = i;
+		   //fstart = i;
 		   if(t[i]=='\"') {
 			i++;
 			k=t[i]+i+1;
@@ -584,7 +718,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		}
 
 		/* three arguments only please */
-		if (!er && t[i] != T_END) {
+		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
 			er = E_SYNTAX;
 		}
 
@@ -635,10 +769,10 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		    t[0]=Kdsb;
 		    i=1;
 		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp);
+		    wval(i,tmp, 0);
                     t[i++]=',';
 		    tmp2= 0xea;
-		    wval(i,tmp2);	/* nop opcode */
+		    wval(i,tmp2, 0);	/* nop opcode */
                     t[i++]=T_END;
 		    *ll=9;
 		    er=E_OKDEF;
@@ -653,11 +787,13 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 	      er=E_ILLSEGMENT;
 	    }
 	  } else
-/* optimization okay on pass 1: use 0 for fl */
+            /* optimization okay on pass 1: use 0 for fl */
 		{
 #ifdef DEBUG_AM
 fprintf(stderr, "E_OK ... t_p2 xat.c\n");
 #endif
+	       /* this actually calls pass2 on the current tokenization stream,
+ 		* but without including the Klisting token listing */
                er=t_p2(t,ll,(0 | byte), al);
 	}
           
@@ -665,11 +801,11 @@ fprintf(stderr, "E_OK ... t_p2 xat.c\n");
      if(er==E_NODEF)
      {
 
-/*
- * no label was found from t_conv!
- * try to figure out most likely length
- *
- */
+     /*
+      * no label was found from t_conv!
+      * try to figure out most likely length
+      *
+      */
 
 #ifdef DEBUG_AM
 fprintf(stderr, "E_NODEF pass1 xat.c\n");
@@ -685,20 +821,36 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
           if(n>=0 && n<=Lastbef)
           {
-               if(t[1]==T_END)
+	       int inp = 1;	/* input pointer */
+
+               if(t[inp]==T_END || t[inp]==T_COMMENT)
                {
                     sy=0;	/* implied */
+		    inp++;
                } else
-               if(t[1]=='#')
+               if(t[inp]=='#')
                {
                     sy=1+nk;	/* immediate */
+		    inp++;
                } else
-               if(t[1]=='(')
+               if(t[inp]=='(')
                {
                     sy=7+nk;	/* computed */
-               } else
+		    inp++;
+               } else {
                     sy=4+nk;	/* absolute or zero page */
+	       }
 
+	       /* this actually finds the cast for all addressing modes,
+ 		  but t_conv() only puts it there for immediate (#) or absolute/
+		  absolute indexed addressing modes */
+	       if (t[inp] == T_CAST) {
+		    inp++;
+		    cast = t[inp];
+		    inp++;
+	       }
+
+	       
 		/* length counter set to maximum length + 1 */
                bl=Maxbyt+1;
                
@@ -737,20 +889,20 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
 		/* optimize operand length for 24-bit quantities */
 		/* look at cast byte from t_conv */
-               if (t[l-1]!='@' && t[l-1] != '!')
+               if (cast!='@' && cast!= '!')
                {
                      if(bl && !er && opt[am]>=0 && am>16) /* <<< NOTE! */
                           if(ct[n][opt[am]]>=0)
                                am=opt[am];
                }
 		/* if ` is declared, force further optimization */
-		if (t[l-1]=='`') {
+		if (cast=='`') {
 			if (opt[am]<0 || ct[n][opt[am]]<0)
 				errout(E_ADRESS);
 			am=opt[am];
 		}
 		/* if ! is declared, force to 16-bit quantity */
-		if (t[l-1]=='!' && am>16 && opt[am]>=0 && bl) {
+		if (cast=='!' && am>16 && opt[am]>=0 && bl) {
 			am=opt[am];
 		}
 
@@ -774,6 +926,48 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 		/* .byt, .asc, .word, .dsb, .fopt pseudo-op dispatch */
 
           } else
+	  if(n==Kimportzp) {
+	    int i;
+	    *ll=0;		/* no output */
+	    bl = 0;		/* no output length */
+	    /* import labels; next follow a comma-separated list of labels that are
+ 	       imported. Tokenizer has already created label entries, we only need to
+	       set the flags appropriately */
+	    i=1;
+/*printf("Kimport: t[i]=%d\n",t[i]);*/
+	    while(t[i]==T_LABEL) {
+		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
+/*printf("lg_import: %d\n",n);*/
+		lg_importzp(n);
+		i+=3;
+		while (t[i]==' ') i++;
+		if (t[i]!=',') break;
+		i++;
+		while (t[i]==' ') i++;
+	    }
+	    er=E_NOLINE;
+	  } else
+	  if(n==Kimport) {
+	    int i;
+	    *ll=0;		/* no output */
+	    bl = 0;		/* no output length */
+	    /* import labels; next follow a comma-separated list of labels that are
+ 	       imported. Tokenizer has already created label entries, we only need to
+	       set the flags appropriately */
+	    i=1;
+/*printf("Kimport: t[i]=%d\n",t[i]);*/
+	    while(t[i]==T_LABEL) {
+		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
+/*printf("lg_import: %d\n",n);*/
+		lg_import(n);
+		i+=3;
+		while (t[i]==' ') i++;
+		if (t[i]!=',') break;
+		i++;
+		while (t[i]==' ') i++;
+	    }
+	    er=E_NOLINE;
+	  } else
           if(n==Kbyt || n==Kasc || n==Kaasc)
           {
 #ifdef DEBUG_AM
@@ -817,29 +1011,127 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
      if(segment==SEG_TEXT) pc[SEG_ABS]+=bl;
      if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
 
+     /* adjust length by token listing buffer length */
+#ifdef DEBUG_CONV 
+     printf("converted: (er=%d, t=%p, ll=%d, tlen=%d):",er, t, *ll, tlen);
+     for(i=0;i<*ll;i++)
+          printf("%02x,",t[i] & 0xff);
+     printf("\n");
+     printf("adjusted len=%d\n", *ll+tlen);
+#endif
+
+     *ll = *ll + tlen;
      return(er);
 }
 
-/*t_pass 2*/
+/*********************************************************************************************/
+/* t_pass 2
+ *
+ * *t is the token list as given from pass1
+ * *ll is the returned length of bytes (doubles as 
+ *     input for whether OK or OKDEF status from pass1)
+ * fl defines if we allow zeropage optimization
+ *
+ * Conversion takes place "in place" in the *t array.
+ */
+
+/**
+ * function called from the main loop, where "only" the
+ * undefined labels have to be resolved and the affected 
+ * opcodes are assembled, the rest is passed through from
+ * pass1 (pass-through is done in t_p2, when *ll<0)
+ * As this is not called from p1, assume that we do not
+ * do length optimization
+ *
+ * *t	is the input token list
+ * *ll	is the input length of the token list,
+ * 	and the output of how many bytes of the buffer are to be taken
+ * 	into the file; note that for .dsb and .bin, this does NOT match
+ * 	the length in the internal data structures!
+ */
+int t_p2_l(signed char *t, int *ll, int *al)
+{
+	int er = E_OK;
+	int l = *ll;
+
+	if (l < 0) l = -l;
+
+#if 0
+     {
+        printf("t_p2_l (ll=%d, t=%p):", *ll, t);
+        for(int i=0;i<l;i++)
+          printf("%02x,",t[i] & 0xff);
+        printf("\n");
+     }
+#endif
+
+
+	if (t[0] == T_LISTING) {
+	    int tlen;
+	    tlen=((t[2]&255)<<8) | (t[1]&255);
+	    if (*ll<0) {
+	    	*ll=(*ll) + tlen;
+	    } else {
+	    	*ll=(*ll) - tlen;
+	    }
+
+	    if (tlen > l) 
+     	    {
+		// that is corrupt data and should not happen
+		list_flush();
+        	printf("corrupt: t_p2_l (l=%d, tlen=%d, ll=%d, t=%p):", l, tlen, *ll, t);
+        	for(int i=0;i<l;i++)
+          	printf("%02x,",t[i] & 0xff);
+        	printf("\n");
+     	    }
+
+	    if (*ll != 0) {
+  	    	er = t_p2(t+tlen, ll, 1, al);
+	    }
+
+	    /* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
+	    do_listing(t+3, tlen-3, t+tlen, *ll);
+
+	    // adapt back, i.e. remove token listing 
+	    // Use the input token length as delimiter.
+	    if (*ll != 0) {
+	 	memmove(t, t+tlen, l-tlen);
+	    }
+
+	} else {
+	  er = t_p2(t, ll, 1, al);
+	}
+	return er;
+}
+
+/**
+ * This method does not handle a token list. Thus it
+ * is called internally from pass1 without the token listing, and 
+ * from the t_p2_l() method that strips the token listing 
+ * as well
+ *
+ * *t	is the input token list
+ * *ll	is the input length of the token list,
+ * 	and the output of how many bytes of the buffer are to be taken
+ * 	into the file
+ * fl	when set, do not do length optimization, when not set,
+ * 	allow length optimization (when called from p1)
+ */
 int t_p2(signed char *t, int *ll, int fl, int *al)
 {
      static int afl,nafl, i,j,k,er,v,n,l,bl,sy,am,c,vv[3],v2,label;
      static int rlt[3];	/* relocation table */
      static int lab[3];	/* undef. label table */
 
-#if(0)
-     (void)fl;		/* quench warning */
-#endif
-/* fl was not used in 2.2.0 so I'm overloading it for zp-optimization
-     control */
 
      er=E_OK;
      bl=0;
-     if(*ll<0) /* <0 bei E_OK, >0 bei E_OKDEF     */
+     if(*ll<0) /* <0 when E_OK, >0 when E_OKDEF     */
      {
           *ll=-*ll;
           bl=*ll;
           er=E_OK;
+	
      } else
      {
           n=t[0];
@@ -855,7 +1147,8 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                       v2=v;
                     } else {
                       if( (!(er=l_get(n,&v2, &afl))) 
-				&& ((afl & A_FMASK)!=(SEG_UNDEF<<8)) )
+				&& ((afl & A_FMASK)!=(SEG_UNDEF<<8)) 
+				&& ((afl & A_FMASK)!=(SEG_UNDEFZP<<8)) )
                       {
                          if(t[3]=='+')
                          {
@@ -910,7 +1203,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
           {
                i=1;
                j=0;
-               while(!er && t[i]!=T_END)
+               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
                {
                     if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
                     {   
@@ -921,7 +1214,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                          t[j++]=(v>>8)&255;
 
                          i+=l;     
-                         if(t[i]!=T_END && t[i]!=',')
+                         if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
                               er=E_SYNTAX;
                          else
                          if(t[i]==',')
@@ -1003,7 +1296,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 		}
 
 		/* three arguments only please */
-		if (!er && t[i] != T_END) {
+		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
 			er = E_SYNTAX;
 		}
 
@@ -1052,7 +1345,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 	} else if(n==Kasc || n==Kbyt || n==Kaasc) {
                i=1;
                j=0;
-               while(!er && t[i]!=T_END)
+               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
                {
                     if(t[i]=='\"')
                     {
@@ -1076,7 +1369,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                               }
                          }
                     }
-                    if(t[i]!=T_END && t[i]!=',')
+                    if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
                          er=E_SYNTAX;
                     else
                          if(t[i]==',')
@@ -1126,6 +1419,14 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 	       pc[segment] = npc;
 /*printf("Kreloc: newsegment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
 	  } else
+	  if(n==Klistbytes) {
+	       int nbytes = (t[1] & 0xff) + (t[2] << 8);
+	       //printf("Klistbytes --> er=%d, nbytes=%d\n", er, nbytes);
+	       list_setbytes(nbytes);
+	       l = 2;
+	       *ll=0;
+	       bl =0;
+	  } else
 	  if(n==Ksegment) {
 	       segment = t[1];
 	       *ll=0;
@@ -1172,46 +1473,56 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                }
 	       dsb_len = 0;
           } else
-          if(n<=Lastbef)
+          if(n>=0 && n<=Lastbef)
           {
-               if((c=t[1])=='#')
+	       int inp = 1;		/* input pointer */
+ 	       signed char cast = '\0';	/* cast value */
+
+	       c = t[inp];
+
+               if(c=='#')
                {
-                    i=2;
+                    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=1;
-                    if(!(er=a_term(t+i,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
 /* if(1) printf("a_term returns afl=%04x\n",afl); */
 
 			 rlt[0] = afl;
 			 lab[0] = label;
-                         i+=l;
-                         if(t[i]!=T_END)
+                         inp+=l;
+                         if(t[inp]!=T_END && t[inp] != T_COMMENT)
                          {
-                              if(t[i]!=',')
+                              if(t[inp]!=',')
                                    er=E_SYNTAX;
                               else
                               {
-                                   i++;
+                                   inp++;
                                    sy++;
-                                   if(!(er=a_term(t+i,vv+1,&l,pc[segment],&afl,&label,1)))
+                                   if(!(er=a_term(t+inp,vv+1,&l,pc[segment],&afl,&label,1)))
                                    {
 			                rlt[1] = afl;
 					lab[1] = label;
-                                        i+=l;
-                                        if(t[i]!=T_END)
+                                        inp+=l;
+                                        if(t[inp]!=T_END && t[inp] != T_COMMENT)
                                         {
-                                             if(t[i]!=',')
+                                             if(t[inp]!=',')
                                                   er=E_SYNTAX;
                                              else
                                              {
-                                                  i++;
+                                                  inp++;
                                                   sy++;
-                                                  if(!(er=a_term(t+i,vv+2,&l,pc[segment],&afl,&label,1)))
+                                                  if(!(er=a_term(t+inp,vv+2,&l,pc[segment],&afl,&label,1)))
                                                   {
 			                               rlt[2] = afl;
 						       lab[2] = label;
-                                                       i+=l;
-                                                       if(t[i]!=T_END)
+                                                       inp+=l;
+                                                       if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                                             er=E_SYNTAX;
                                                   }
                                              }
@@ -1221,38 +1532,48 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                          }
                     }
                } else
-               if(c==T_END)
+               if(c==T_END || c==T_COMMENT)
                {
                     sy=0;
                } else
                if(c=='(')
                {
+		    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=7;
-                    if(!(er=a_term(t+2,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
 			 rlt[0] = afl;
 			 lab[0] = label;
 
-                         if(t[2+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[2+l]==',')
+                              if(t[inp]==',')
                               {
-                                   if (tolower(t[3+l])=='x')
+				   inp++;
+                                   if (tolower(t[inp])=='x')
                                         sy=8;
                                    else
                                         sy=13;
 
                               } else
-                              if(t[2+l]==')')
+                              if(t[inp]==')')
                               {
-                                   if(t[3+l]==',')
+				   inp++;
+                                   if(t[inp]==',')
                                    {
-                                        if(tolower(t[4+l])=='y')
+					inp++;
+                                        if(tolower(t[inp])=='y')
                                              sy=9;
                                         else
                                              er=E_SYNTAX;
                                    } else
-                                   if(t[3+l]!=T_END)
+                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                         er=E_SYNTAX;
                               } 
                          } else
@@ -1261,24 +1582,33 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                } else
                if(c=='[')
                {
+		    inp++;
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=10;
-                    if(!(er=a_term(t+2,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
                          rlt[0] = afl;
 			 lab[0] = label;
 
-                         if(t[2+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[2+l]==']')
+                              if(t[inp]==']')
                               {
-                                   if(t[3+l]==',')
+				   inp++;
+                                   if(t[inp]==',')
                                    {
-                                        if(tolower(t[4+l])=='y')
+					inp++;
+                                        if(tolower(t[inp])=='y')
                                              sy=11;
                                         else
                                              er=E_SYNTAX;
                                    } else
-                                   if(t[3+l]!=T_END)
+                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                                         er=E_SYNTAX;
                               } 
                          } else
@@ -1286,19 +1616,26 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                     }
                } else
                {
+		    if (t[inp] == T_CAST) {
+			inp++;
+			cast = t[inp];
+			inp++;
+		    }
                     sy=4;
-                    if(!(er=a_term(t+1,vv,&l,pc[segment],&afl,&label,1)))
+                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
                     {
+			 inp += l;
 			 rlt[0] = afl;
 			 lab[0] = label;
-                         if(t[1+l]!=T_END)
+                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
                          {
-                              if(t[1+l]==',')
+                              if(t[inp]==',')
                               {
-                                   if(tolower(t[2+l])=='y')
+				   inp++;
+                                   if(tolower(t[inp])=='y')
                                         sy=6;
                                    else
-                                   if(tolower(t[2+l])=='s')
+                                   if(tolower(t[inp])=='s')
                                         sy=12;
                                    else
                                         sy=5;
@@ -1343,7 +1680,7 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 
 /* only do optimization if we're being called in pass 1 -- never pass 2 */
 /* look at cast byte */
-               if (t[*ll-1]!='@')
+               if (cast!='@')
                {
 #ifdef DEBUG_AM
 fprintf(stderr,
@@ -1354,9 +1691,12 @@ fprintf(stderr,
 /* terrible KLUDGE!!!! OH NOES!!!1!
    due to the way this is constructed, you must absolutely always specify @ to
    get an absolute long or it will absolutely always be optimized down */
-
-                    if(bl && am>16 &&
-			!er && !(vv[0]&0xff0000) && opt[am]>=0)
+/* now also checks for negative overflow, resp. not-overflow */
+                    if(bl 
+			&& am>16 
+			&& !er 
+			&& (((vv[0]&0xff8000)==0xff8000) || !(vv[0]&0xff0000)) 
+			&& opt[am]>=0)
                          if(ct[n][opt[am]]>=0)
                               am=opt[am];
 #ifdef DEBUG_AM
@@ -1364,10 +1704,10 @@ fprintf(stderr,
 "aftaa1: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d\n",
 	pc[segment], am, vv[0], fl, (vv[0]&0xffff00));
 #endif
-                    if(t[*ll-1]!='!') {
+                    if(cast!='!') {
                          if(bl && !er && !(vv[0]&0xffff00) && opt[am]>=0) {
                               if(ct[n][opt[am]]>=0) {
-				if (!fl || t[*ll-1]=='`') {
+				if (!fl || cast=='`') {
                                    	am=opt[am];
 				} else {
 					errout(W_FORLAB);
@@ -1409,8 +1749,10 @@ fprintf(stderr, "byte length is now %d\n", bl);
                                   er=E_CMOS;
                          } else {
                               n65816++;
-                              if(!w65816)
+                              if(!w65816) {
+fprintf(stderr,"n=%d, am=%d\n", n, am);
                                   er=E_65816;
+			      }
                          }
                     }
                     if(am!=0)
@@ -1501,10 +1843,11 @@ fprintf(stderr, "address mode: %i address: %i\n", am, vv[0]);
                               er=E_SYNTAX;
                     }
                }          
-                    
+               
           } else
                er=E_SYNTAX;
      }
+
 #ifdef DEBUG_AM
 fprintf(stderr, "-- endof P2\n");
 #endif
@@ -1515,6 +1858,11 @@ fprintf(stderr, "-- endof P2\n");
      return(er);
 }
 
+/*********************************************************************************************/
+/* helper function for the preprocessor, to compute an arithmetic value
+ * (e.g. for #if or #print).
+ * First tokenizes it, then calculates the value
+ */
 int b_term(char *s, int *v, int *l, int pc)
 {
      static signed char t[MAXLINE];
@@ -1528,17 +1876,37 @@ int b_term(char *s, int *v, int *l, int pc)
      return(er);
 }
      
-/* translate a string into a first-pass sequence of tokens */
+/*********************************************************************************************/
+/* translate a string into a first-pass sequence of tokens;
+ * Take the text from *s (stopping at \0 or ';'), tokenize it
+ * and write the result to *t, returning the length of the
+ * token sequence in *l
+ *
+ * Input params:
+ * 	s	source input line
+ * 	t	output token sequence buffer
+ * 	l	return length of output token sequence here
+ * 	pc	the current PC to set address labels to that value
+ * 	nk	return number of comma in the parameters
+ * 	na1	asc text count returned
+ * 	na2	total byte count in asc texts returned
+ * 	af	arithmetic flag: 0=do label definitions, parse opcodes and params;
+ * 		1=only tokenize parameters, for b_term() call from the preprocessor
+ * 		for arithmetic conditions
+ * 	bytep	???
+ */
 static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
-             int *na1, int *na2, int af, int *bytep)  /* Pass1 von s nach t */
-/* tr. pass1, from s to t */
+             int *na1, int *na2, int af, int *bytep)  
 {
      static int v,f;
      static int operand,o;
      int fl,afl;
-     int p,q,ud,n,ll,mk,er;
-     int m, uz, byte;
-     static unsigned char cast;
+     int p,q,ll,mk,er;
+     int ud;	/* counts undefined labels */
+     int n;	/* label number to be passed between l_def (definition) and l_set (set the value) */
+     int byte;
+     int uz;	/* unused at the moment */
+     /*static unsigned char cast;*/
 
 /* ich verstehe deutsch, aber verstehen andere leute nicht; so, werde ich
    diese bemerkungen uebersetzen ... cameron */
@@ -1558,16 +1926,37 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      fl=0;          /* 1 = pass text thru */
      afl=0;         /* pointer flag for label */
 
-     while(s[p]==' ') p++;
+     while(isspace(s[p])) p++;
 
      n=T_END;
-     cast='\0';
+     /*cast='\0';*/
 
      if(!af)
      {
           while(s[p]!='\0' && s[p]!=';')
           {
+		//printf("CONV: %s\n", s);
 
+	       if (s[p] == ':') {
+			// this is a ca65 unnamed label
+			if ((er = l_def((char*)s+p, &ll, &n, &f)))
+				break;
+                    	l_set(n,pc,segment);        /* set as address value */
+		    	t[q++]=T_DEFINE;
+		    	t[q++]=n&255;
+		    	t[q++]=(n>>8)&255;
+                    	n=0;
+
+			p+=ll;
+
+               		while(isspace(s[p])) p++;
+
+			// end of line
+			if (s[p] == 0 || s[p] == ';') {
+				break;
+			}
+	       }
+			
 		/* is keyword? */
                if(!(er=t_keyword(s+p,&ll,&n)))
                     break;
@@ -1576,16 +1965,18 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                if(er && er!=E_NOKEY)
                     break;
 
-		/* if so, try to understand as label */
+		// if so, try to understand as label 
+		// it returns the label number in n
                if((er=l_def((char*)s+p,&ll,&n,&f)))
                     break;
 
                p+=ll;
 
-               while(s[p]==' ') p++;
+               while(isspace(s[p])) p++;
 
                if(s[p]=='=')
                {
+		    /*printf("Found = @%s\n",s+p);*/
                     t[q++]=T_OP;
                     t[q++]=n&255;
                     t[q++]=(n>>8)&255;
@@ -1593,6 +1984,17 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     p++;
                     ll=n=0;
                     break;
+               } else
+               if(s[p]==':' && s[p+1]=='=')		/* support := label assignments (ca65 compatibility) */
+	       {
+		    /*printf("Found := @%s\n", s+p);*/
+		    t[q++]=T_OP;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
+		    t[q++]='=';
+		    p+=2;
+		    ll=n=0;
+		    break;
                } else
                if(f && s[p]!='\0' && s[p+1]=='=')
                {
@@ -1609,15 +2011,22 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     p++;
                     while(s[p]==' ') p++;
                     l_set(n,pc,segment);        /* set as address value */
+		    t[q++]=T_DEFINE;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
                     n=0;
+
                } else {		/* label ... syntax */
                     l_set(n,pc,segment);        /* set as address value */
-                    n=0;
+      		    t[q++]=T_DEFINE;
+		    t[q++]=n&255;
+		    t[q++]=(n>>8)&255;
+        	    n=0;
                }
 
           }
 
-          if((n & 0xff) <=Lastbef)
+          if(n>=0 && n<=Lastbef)
                mk=1;     /* 1= nur 1 Komma erlaubt *//* = only 1 comma ok */
      }
 
@@ -1674,10 +2083,14 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                  if(operand)
                  {
 			/* are we forcing the operand into a particular
-				addressing mode? !, @, ` operators */
-                    if(s[p]=='!' || s[p]=='@' || s[p]=='`')
+			   addressing mode? !, @, ` operators 
+			   Note these are not available in ca65, but we only
+			   switch off "@" which are used for cheap local labels*/
+                    if(s[p]=='!' || (s[p]=='@' && !ca65) || s[p]=='`')
                     {
-                       cast=s[p];
+		       t[q++]=T_CAST;
+		       t[q++]=s[p];
+                       /*cast=s[p];*/
                        operand= -operand+1;
                        p++;
                     } else
@@ -1691,12 +2104,30 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     {
                          t[q++]=s[p++];
                     } else
-		/* maybe it's a label */
-                    if(isalpha(s[p]) || s[p]=='_')
+		    /* maybe it's a label 
+ 			Note that for ca65 cheap local labels, we check for "@" */
+                    if(isalpha(s[p]) || s[p]=='_' || ((s[p]==':' || s[p]=='@') && ca65))
                     {
-                         m=n;
+                       
+			int p2 = 0; 
+			if (n == (Klistbytes & 0xff)) {
+				// check for "unlimited"
+				// Note: this could be done by a more general "constants" handling,
+				// where in appropriate places (like the one here), constants are
+				// replaced by a pointer to a predefined constants info, e.g. using 
+				// a T_CONSTANT. Which would also fix the listing of this constant
+				// (which is currently listed as "0")
+				static char *unlimited = "unlimited";
+				while (s[p+p2] != 0 && unlimited[p2] != 0 && s[p+p2] == unlimited[p2]) p2++;
+			} 
+			if (p2 == 9) {	// length of "unlimited"
+				er = E_OK;
+				// found constant
+                       		wval(q, 0, 'd');
+				p += p2;
+			} else {
+			 //m=n;
                          er=l_search((char*)s+p,&ll,&n,&v,&afl);
-
 /*
                          if(m==Kglobl || m==Kextzero) {
                               if(er==E_NODEF) {
@@ -1715,8 +2146,13 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                              t[q++]=afl & 255;
                              t[q++]=v & 255;
                              t[q++]=(v>>8) & 255;
+			     t[q++]=n & 255;		/* cheap fix for listing */
+			     t[q++]=(n>>8) & 255;	/* why is the label already resolved in t_conv? */
                            } else {
-                             wval(q,v);
+                              t[q++]=T_LABEL;
+                              t[q++]=n & 255;
+                              t[q++]=(n>>8) & 255;
+                             /*wval(q,v, 0);*/
                            }
                          } else
                          if(er==E_NODEF)
@@ -1730,36 +2166,57 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
 /*
                               if(afl==SEG_ZEROUNDEF) uz++;
 */
-                              ud++;
+                              ud++;	// number of undefined labels
                               er=E_OK;
                          }
                          p+=ll;
+			}
                     }
                     else
-                    if(s[p]<='9' && s[p]>='0')
+                    if(s[p]<='9' && (s[p]>'0' || (s[p] == '0' && !ctypes)))
                     {
                          tg_dez(s+p,&ll,&v);
                          p+=ll;
-                         wval(q,v);
+                         wval(q,v, 'd');
                     }
                     else
-
-		/* handle encodings: hex, binary, octal, quoted strings */
+		    /* handle encodings: hex, binary, octal, quoted strings */
                     switch(s[p]) {
+                    case '0':
+			 // only gets here when "ctypes" is set, and starts with 0
+			 // we here check for the C stype "0xHEX" and "0OCTAL" encodings
+			 if ('x' == tolower(s[p+1])) {
+				// c-style hex
+				tg_hex(s+p+2, &ll, &v);
+				p+=2+ll;
+				wval(q, v, '$');
+			 } else 
+			 if (isdigit(s[p+1])) {
+				// c-style octal if digit follows
+                         	tg_oct(s+p+1,&ll,&v);
+                         	p+=1+ll;
+                         	wval(q,v, '&');
+			 } else {
+				// else use decimal (0)
+                         	tg_dez(s+p,&ll,&v);
+                         	p+=ll;
+                         	wval(q,v, 'd');
+			 }
+			 break;
                     case '$':
                          tg_hex(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '$');
                          break;
                     case '%':
                          tg_bin(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '%');
                          break;
                     case '&':
                          tg_oct(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v, '&');
                          break;
                     case '\'':
                     case '\"':
@@ -1881,9 +2338,6 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     {
                          t[q++]=o;
                          p+=lp[o];
-#if(0)
-                         uz++; /* disable 8-bit detection */
-#endif
                     }
                     operand= -operand+1;
                  }
@@ -1892,6 +2346,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                }
           }
      }
+//printf("er=%d, ud=%d\n", er, ud);
      if(!er)
      {
 /*
@@ -1905,33 +2360,62 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
           }
 */
 	  byte = 0;
-          t[q++]=T_END;
           if(ud > 0) {
                er=E_NODEF;
 		byte = 1;
           }
      }
+    
+     if (s[p] == ';') {
+	/* handle comments */
+	/* first find out how long */
+	int i;
+	for (i = p+1; s[i] != '\0'; i++);
+	i = i - p;	/* actual length of the comment, including zero-byte terminator */
+	/*if (i >= 1) {*/
+		/* there actually is a comment */
+		t[q++] = T_COMMENT;
+		t[q++] = i&255;
+		t[q++] = (i>>8)&255;
+		memcpy(t+q, s+p+1, i);	/* also copy zero terminator, used in listing */
+		q += i;
+	/*}*/
+     } 
+     t[q++]=T_END;
      /* FIXME: this is an unholy union of two "!" implementations :-( */
-     t[q++]='\0';
-     t[q++]=cast;
+     /* FIXME FIXME FIXME ... 
+     if (operand==1) {
+         t[q++]='\0';
+         t[q++]=cast;
+     }
+     */
      *l=q;
      if(bytep) *bytep=byte; 
      return(er);
 }
 
+/*********************************************************************************************
+ * identifies a keyword in s, if it is found, starting with s[0]
+ * A keyword is either a mnemonic, or a pseudo-opcode
+ */
 static int t_keyword(signed char *s, int *l, int *n)
 {
-     int i = 0, j = 0, hash;
+     int i = 0;		// index into keywords
+     int j = 0;
+     int hash;
 
+     // keywords either start with a character, a "." or "*"
      if(!isalpha(s[0]) && s[0]!='.' && s[0]!='*' )
           return(E_NOKEY);
 
+     // if first char is a character, use it as hash...
      if(isalpha(s[0]))
           hash=tolower(s[0])-'a';
      else
           hash=26;
      
 
+     // check for "*="
      if(s[0]=='*') {
  	j=1;
 	while(s[j] && isspace(s[j])) j++;
@@ -1940,9 +2424,14 @@ static int t_keyword(signed char *s, int *l, int *n)
 	  j++;
 	}
      } 
+
+     // no keyword yet found?
      if(!i) {    
+       // get sub-table from hash code, and compare with table content
+       // (temporarily) redefine i as start index in opcode table, and hash as end index
        i=ktp[hash];
        hash=ktp[hash+1];
+       // check all entries in opcode table from start to end for that hash code
        while(i<hash)
        {
           j=0;
@@ -1961,6 +2450,12 @@ static int t_keyword(signed char *s, int *l, int *n)
      if(i==Kdw) i=Kword;
      if(i==Kblock) i=Kopen;
      if(i==Kbend) i=Kclose;
+     if(i==Kcode) i=Ktext;
+     if(i==Kproc || i==Kscope) i=Kopen;
+     if(i==Kendproc || i==Kendscope) i=Kclose;
+     if(i==Kzeropage) i=Kzero;
+     if(i==Korg) i=Kpcdef;
+     if(i==Krelocx) i=Kpcdef;
 
 
      *l=j;
@@ -2038,7 +2533,7 @@ fprintf(stderr, "tg_asc token = %i\n", n);
 	/* do NOT convert for Kbin or Kaasc, or for initial parse */
 	  if (!n || n == Kbin || n == Kaasc) {
 		t[j++]=s[i];
-          } else if(s[i]!='^') { 	/* no escape code "^" */
+          } else if(ca65 || s[i]!='^') { 	/* no escape code "^" - TODO: does ca65 has an escape code */
                t[j++]=convert_char(s[i]);
           } else { 		/* escape code */
 		  signed char payload = s[i+1];
@@ -2080,7 +2575,8 @@ fprintf(stderr, "tg_asc token = %i\n", n);
           t[1]=t[2];
           t[2]=0;
           t[3]=0;
-          j++;
+	  t[4]=delimiter;
+          j+=2;
      } else
      {		/* handle as string */
           t[1]=j-2;
@@ -2094,4 +2590,5 @@ fprintf(stderr, "tg_asc token = %i\n", n);
      *p +=i;
      return(er);
 }
+
 

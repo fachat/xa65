@@ -18,4 +18,4 @@
 	lda (forward1),y
 	jmp forward3
 
-#include "test2.asm"
+#include "test2.s"

@@ -1,0 +1,17 @@
+
+; test of unnamed labels
+
+start:	.org $4000
+
+	lda #$00
+:	iny		; first
+	bne :-		; go to first
+	beq :++		; go to third
+	.scope
+:			; second
+	jmp :-		; go to second
+	jmp :++
+:	ldy #1		; third
+	.endscope
+:	nop
+

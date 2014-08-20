@@ -1,3 +1,4 @@
+
 default:
 	../../xa test.s
 	../hextool -cmp=no-charset.o < a.o65
@@ -10,3 +11,7 @@ default:
 
 clean:
 	rm -rf a.o65
+
+tests:
+	./runtest.sh -q -C
+

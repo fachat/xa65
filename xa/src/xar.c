@@ -34,18 +34,22 @@ File *afile = NULL;
 
 int rmode = RMODE_RELOC;
 
+/*
 int r_set(int pc, int afl, int l) {
-/*printf("set relocation @$%04x, l=%d, afl=%04x, segment=%d\n",pc, l, afl,segment);*/
 	if(segment==SEG_TEXT) return rt_set(pc,afl,l,0);
 	if(segment==SEG_DATA) return rd_set(pc,afl,l,0);
 	return 0;
 }
+*/
 
 int u_set(int pc, int afl, int label, int l) {
 /*printf("set relocation @$%04x, l=%d, afl=%04x, segment=%d, label=%d\n",
 					pc, l, afl,segment, label);*/
-	if((afl & A_FMASK) == (SEG_UNDEF<<8)) 
+	if(((afl & A_FMASK) == (SEG_UNDEF<<8))
+		|| ((afl & A_FMASK) == (SEG_UNDEFZP<<8))
+		)  {
 		label = u_label(label);		/* set label as undefined */
+	}
 	if(segment==SEG_TEXT) return rt_set(pc,afl,l,label);
 	if(segment==SEG_DATA) return rd_set(pc,afl,l,label);
 	return 0;
@@ -77,7 +81,9 @@ int rt_set(int pc, int afl, int l, int lab) {
 	  /*printf("Warning: byte relocation in word value at PC=$%04x!\n",pc);*/
 	}
 	if(l==1 && ((afl&A_MASK)==A_ADR)) {
-	  if((afl & A_FMASK) != (SEG_ZERO<<8)) {
+	  if(((afl & A_FMASK) != (SEG_ZERO<<8)) 
+	    && ((afl & A_FMASK) != (SEG_UNDEFZP<<8)) 
+	    ) {
 /*printf("afl=%04x\n",afl);*/
 	    errout(W_ADRRELOC);
 	  }
@@ -147,10 +153,16 @@ int rt_write(FILE *fp, int pc) {
 	    }
 	    fputc(pc2-pc, fp);
 	    pc=pc2;
-	    fputc((afl>>8)&255, fp);
-	    if((afile->rt.rlist[p].afl&A_FMASK)==(SEG_UNDEF<<8)) {
+	    if((afile->rt.rlist[p].afl&A_FMASK)==(SEG_UNDEFZP<<8)) {
+	      fputc( (((afl & ~A_FMASK)>>8)&255)|SEG_UNDEF, fp);
+	      fputc(afile->rt.rlist[p].lab & 255, fp);
+	      fputc((afile->rt.rlist[p].lab>>8) & 255, fp);
+	    } else {
+	      fputc( (afl>>8)&255, fp);
+	      if((afile->rt.rlist[p].afl&A_FMASK)==(SEG_UNDEF<<8)) {
 		fputc(afile->rt.rlist[p].lab & 255, fp);
 		fputc((afile->rt.rlist[p].lab>>8) & 255, fp);
+	      }
 	    }
 	    if((afl&A_MASK)==A_HIGH) fputc(afl&255,fp);
 	  }

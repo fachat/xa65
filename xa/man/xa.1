@@ -19,6 +19,9 @@ further in this manual page.
 
 .SH OPTIONS
 .TP
+.B \-E
+Do not stop after 20 errors, but show all errors.
+.TP
 .B \-v
 Verbose output.
 .TP
@@ -54,6 +57,15 @@ use the special filename
 .BR \-
 to output to standard output.
 .TP
+.B \-P filename
+Set listing filename, default is none. use the special filename
+.BR \-
+to print the listing to standard output.
+.TP
+.B \-F html
+Set listing format, default is plain. The only other currently supported format is
+.BR html
+.TP
 .B \-e filename
 Set errorlog filename, default is none.
 .TP
@@ -67,12 +79,27 @@ to reconstruct source.
 Add cross-reference list to labellist (requires
 .BR \-l ).
 .TP
+.B \-Xcompatset
+Enables compatibility settings to become more (not fully!) compatible with other 6502 assemblers.
+Currently supported are compatibility set "MASM" and "CA65".
+"MASM" allows colons to appear in comments. This does not affect colon interpretation elsewhere.
+"CA65" allows the ":=" label definition (instead of "="), It adds the "unnamed labels" and also the 
+"cheap local labels" using
+the "@" character. This, however, disables the "@" 24-bit enforcement.
+"C" enables the usage of "0xHEX" and "0OCTAL" C-style number encodings. Note that you can combine
+compatibility sets e.g. with "-XCA65 -XC".
+.TP
 .B \-M
 Allow colons to appear in comments; for MASM compatibility. This does
-not affect colon interpretation elsewhere.
+not affect colon interpretation elsewhere. This option is deprecated. Use
+.BR -X
+instead.
 .TP
 .B \-R
-Start assembler in relocating mode.
+Start assembler in relocating mode, i.e. use segments.
+.TP
+.B \-U
+Do not allow undefined labels in relocating mode.
 .TP
 .B \-Llabel
 Defines
@@ -339,7 +366,7 @@ for those opcodes that support it (i.e., keep as 16 bit word)
 .B @
 render as 24-bit quantity for 65816 (must specify
 .B \-w
-command-line option).
+command-line option, must not specify the CA65 compatibility).
 .B This is required to specify any
 .B 24-bit quantity!
 .TP
@@ -441,7 +468,7 @@ and
 are synonymous, so you can mix things such as
 .B .byt $43, 22, """a character string"""
 and get the expected result. The string is subject to the current character
-set, but the remaining bytes are inserted wtihout modification.
+set, but the remaining bytes are inserted without modification.
 .TP
 .B .aasc """text1""","text2",...
 Specifies a character string that is
@@ -491,10 +518,21 @@ a block, precede the label with
 or precede it with
 .B &
 to declare it within the previous level only (or globally if you are only
-one level deep). Sixteen levels of scoping are permitted.
+one level deep). Sixteen levels of scoping are permitted. 
+.B \&.)
+is equivalent to
+.B .block
+or
+.B .proc
+. The latter is similar to the ca65 pseudo-opcode, but only anonymous blocks
+are supported.
 .TP
 .B \&.)
-Closes a block.
+Closes a block. This is equivalent to
+.B .bend
+or 
+.B .endproc
+.
 .TP
 .B \.as \.al \.xs \.xl
 Only relevant in 65816 mode (with the
@@ -521,6 +559,11 @@ and
 generate errors if
 .B \-w
 is not specified.
+.TP
+.B .include "filename"
+Includes another file in place of the pseudo opcode. Same as the preprocessor 
+.B #include
+
 .LP
 The following pseudo-ops apply primarily to relocatable .o65 objects.
 A full discussion of the relocatable format is beyond the
@@ -537,6 +580,11 @@ code section, .data being the data segment, .bss being uninitialized label
 space for allocation and .zero being uninitialized zero page space for
 allocation. In .bss and .zero, only labels are evaluated. These pseudo-ops
 are valid in relative and absolute modes.
+.TP
+.B .code
+For CA65 compatibility this is currently mapped to ".text".
+.B .zeropage
+For CA65 compatibility this is currently mapped to ".zero".
 .TP
 .B .align value
 Aligns the current segment to a byte boundary (2, 4 or 256) as specified by
@@ -555,6 +603,17 @@ is used to specify the file option being referenced. A table of these options
 is in the relocatable o65 file format description. The remainder of the options
 are interpreted as values to insert. Any number of values may be specified,
 and may also be strings.
+.TP
+.B .import label1, label2, label3, ...
+Defines the given labels as global labels which are imported and resolved during
+the link stage. Similar to the
+.B -L
+command line parameter
+.TP
+.B .importzp label1, label2, label3, ...
+Similar to
+.B .import
+only it imports zeropage labels (i.e. byte values)
 
 .SH PREPROCESSOR
 
@@ -830,7 +889,7 @@ This manual page was written by David Weinehall <tao@acc.umu.se>,
 Andre Fachat <fachat@web.de>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall,
+(C)1989-2011 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
 
 .SH WEBSITE

@@ -304,3 +304,24 @@ xa-2.3.6
   * Fixed message offsets.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 11 July 2014
+
+xa-2.x.x
+
+  * Add -E commandline option to not stop after 20 errors, but show all
+    of them
+  * Introduce -X compatibility set commandline option, to distinguish 
+    between MASM and CA65 compatibility options
+  * Implement CA65 "cheap local labels", ":=" label definitions,
+    and various pseudo opcodes (.include, .import, .importzp,
+    .zeropage, .proc (anonymous only), .endproc, .code, .org, .reloc)
+  * some bugfixes around error/warning logs
+  * some more comments
+  * Stuff is mostly untested...
+
+ -- André Fachat <afachat@gmx.de> 25 June, 2011
+
+xa-2.x.x
+
+  * add test suite code
+
+ -- André Fachat <afachat@gmx.de> 20 August, 2014

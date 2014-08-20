@@ -1,0 +1,7 @@
+Copyright (C) 1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall
+and Cameron Kaiser.
+test4.asm:line 6: 0400:Wrong addressing mode error
+test4.asm:line 7: 0402:Wrong addressing mode error
+test4.asm:line 8: 0401:Wrong addressing mode error
+test4.asm:line 9: 0400:Wrong addressing mode error
+test4.asm:line 9: 0409:Overflow error

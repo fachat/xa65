@@ -119,13 +119,15 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_LABEL)
      {
           er=l_get(cval(s+pp+1),v, &afl);
-/* printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
-			er, segment, afl, nolink, fundef); */
+	  //printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
+	  //		er, segment, afl, nolink, fundef); 
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( nolink || (afl==SEG_UNDEF)) {
+	    if( (nolink && !noundef) || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
 	      *v = 0;
-	      afl = SEG_UNDEF;
+	      if(afl!=SEG_UNDEFZP) {
+	        afl = SEG_UNDEF;
+	      }
 	      *label = cval(s+pp+1);
 	    }
 	  }
@@ -135,7 +137,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_VALUE)
      {
           *v=lval(s+pp+1);
-          pp+=4;
+          pp+=5;
 /* printf("value: v=%04x\n",*v); */
      }
      else
@@ -143,7 +145,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      {
 	  afl = s[pp+1];
           *v=cval(s+pp+2);
-          pp+=4;
+          pp+=6;
 /* printf("pointer: v=%04x, afl=%04x\n",*v,afl); */
      }
      else
@@ -159,7 +161,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 
      *v *= mf;
 
-     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END)
+     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
      {
           er=get_op(s,&o);
 
@@ -169,7 +171,7 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
                if(!(er=ag_term(s,pr[o],&w, nafl, label)))
                {
 		    if(afl || *nafl) {	/* check pointer arithmetic */
-		      if((afl == *nafl) && (afl!=SEG_UNDEF) && o==2) {
+		      if((afl == *nafl) && (afl!=SEG_UNDEFZP) && (afl!=SEG_UNDEF) && o==2) {
 			afl = 0; 	/* substract two pointers */
 		      } else 
 		      if(((afl && !*nafl) || (*nafl && !afl)) && o==1) {
@@ -180,6 +182,8 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 		      } else {
 			if(segment!=SEG_ABS) { 
 			  if(!dsb_len) {
+			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
+			    /* e.g. adding two pointers, adding two undefined values */
 			    er=E_ILLPOINTER;
 			  }
 			}
@@ -202,10 +206,18 @@ static int get_op(signed char *s, int *o)
 
      *o=s[pp];
 
-     if(*o<1 || *o>17)
+     if(*o<1 || *o>17) {
+/*
+	printf("*o=%d, pp=%d, s=%s\n", *o, pp, s);
+	for (int i=0; i< 10; i++) {
+		printf(" %02x", s[i]);
+	}
+	printf("\n");
+*/
           er=E_SYNTAX;
-     else
+     } else {
           er=E_OK;
+     }
 
      return(er);
 }

@@ -1,0 +1,23 @@
+
+// tests the html listing feature with blocks that 
+// contain the same label names, but in different scopes
+
+	*=$1000
+
+label1	lda #$00
+
+	.(
+label2	sta $02
+	bne label2
+	.)
+
+	.(
+label2	lda $02		; again!
+	bne label2
+	.)
+
+label2	iny
+	beq label2
+
+	jmp label1
+
