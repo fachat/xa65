@@ -2,6 +2,14 @@ This is a directory of test suites for complex or pathological cases that
 have been repaired (?) in the current version. It is primarily for internal
 testing, but is here for your interest.
 
+Starting with 2.3.6, you should not normally need to run these directly
+unless 'make test' fails. If you do, use harness:
+
+./harness -cc=... -cflags=... -make=... -tests=testdir,testdir,testdir,...
+
+If -tests is omitted, all tests are run.
+Don't run the makefiles directly, if they exist; they may not work properly.
+
 adrm/		Addressing mode test (especially the optimizer and quantity
 		prefixes)
 nonl/		Patryk's no-new-line-on-last-line cases ;)

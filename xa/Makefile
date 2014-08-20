@@ -2,7 +2,9 @@
 #
 CC = gcc
 LD = gcc
-CFLAGS = -O2 -W -Wall -pedantic -std=c99 -g
+# for testing. not to be used; build failures in misc/.
+#CFLAGS = -O2 -W -Wall -pedantic -ansi
+CFLAGS = -O2
 LDFLAGS = -lc
 
 # for DOS?
@@ -58,5 +60,8 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	#cd .. ; tar cvf xa-2.3.5A.tar xa-2.3.5 ; gzip xa-2.3.5A.tar
-	cd .. ; tar cvf xa-2.3.5.tar xa-2.3.5 ; gzip xa-2.3.5.tar
+	#cd .. ; tar cvf xa-2.3.6A.tar xa-2.3.6 ; gzip xa-2.3.6A.tar
+	cd .. ; tar cvf xa-2.3.6.tar xa-2.3.6 ; gzip xa-2.3.6.tar
+
+test:
+	cd tests && ./harness -make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"

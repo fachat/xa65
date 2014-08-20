@@ -55,9 +55,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.5"
+#define progversion	"v2.3.6"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2014 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -87,7 +87,7 @@ static int pass2(void);
 static int puttmp(int);
 static int puttmps(signed char *, int);
 static void chrput(int);
-static int xagetline(char *);
+static int xa_getline(char *);
 static void lineout(void);
 static long ga_p1(void);
 static long gm_p1(void);
@@ -763,7 +763,7 @@ static int pass1(void)
 	temp_er = 0;
 
 /*FIXIT*/
-     while(!(er=xagetline(s)))
+     while(!(er=xa_getline(s)))
      {         
           er=t_p1((signed char*)s,o,&l,&al);
 	  switch(segment) {
@@ -898,7 +898,7 @@ static char *ertxt[] = {
 	"DSB",
 	"NewLine",
         "NewFile",
-	"CMOS-Befehl",
+	"CMOS instruction used with -C",
 	"pp:Wrong parameter count",
 	"Illegal pointer arithmetic", 
 	"Illegal segment",
@@ -1002,7 +1002,7 @@ static int puttmps(signed char *s, int l)
 
 static char l[MAXLINE];
 
-static int xagetline(char *s)
+static int xa_getline(char *s)
 {
      static int ec;
 

@@ -112,19 +112,19 @@ typedef struct {
 #define E_OUTOFDATA	-34	/* out of data */
 #define E_ILLQUANT	-35	/* generic illegal quantity error */
 #define E_BIN		-36	/* okdef */
-/* errors thru 63 are placeholders */
+/* errors thru 64 are placeholders */
 
-#define W_ADRRELOC	-64	/* word relocation in byte value */
-#define W_BYTRELOC	-65	/* byte relocation in word value */
-#define E_WPOINTER	-66	/* illegal pointer arithmetic!   */
-#define W_ADDRACC	-67	/* addr access to low or high byte pointer */
-#define W_HIGHACC	-68	/* high byte access to low byte pointer */
-#define W_LOWACC	-69	/* low byte access to high byte pointer */
-#define W_FORLAB	-70	/* no zp-optimization for a forward label */
-#define W_OPENPP	-71	/* warning about open preprocessor directive */
-#define W_OVER64K	-72	/* included binary over 64K in 6502 mode */
-#define W_OVER16M	-73	/* included binary over 16M in 65816 mode */
-/* warnings 74-76 are placeholders */
+#define W_ADRRELOC	-65	/* word relocation in byte value */
+#define W_BYTRELOC	-66	/* byte relocation in word value */
+#define E_WPOINTER	-67	/* illegal pointer arithmetic!   */
+#define W_ADDRACC	-68	/* addr access to low or high byte pointer */
+#define W_HIGHACC	-69	/* high byte access to low byte pointer */
+#define W_LOWACC	-70	/* low byte access to high byte pointer */
+#define W_FORLAB	-71	/* no zp-optimization for a forward label */
+#define W_OPENPP	-72	/* warning about open preprocessor directive */
+#define W_OVER64K	-73	/* included binary over 64K in 6502 mode */
+#define W_OVER16M	-74	/* included binary over 16M in 65816 mode */
+/* warnings 75-77 are placeholders */
 
 #define T_VALUE		-1
 #define T_LABEL		-2

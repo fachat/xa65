@@ -295,3 +295,12 @@ xa-2.3.5
   * Documentation updated.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 7 February, 2009
+
+xa-2.3.6
+
+  * 'make test' for regression testing framework (requires Perl).
+  * Changed getline() to xa_getline() to avoid collision with glibc 2.10+
+  * Fixed compile problems with misc/.
+  * Fixed message offsets.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 11 July 2014

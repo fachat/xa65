@@ -26,8 +26,8 @@
 
 #define programname	"printcbm"
 #define progversion	"v1.0.0"
-#define author		"Written by André Fachat"
-#define copyright	"Copyright (C) 1997-2002 André Fachat."
+#define author		"Written by Andre Fachat"
+#define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
 char *cmd[] = {
 	"end", "for", "next", "data", "input#", "input", "dim", "read",

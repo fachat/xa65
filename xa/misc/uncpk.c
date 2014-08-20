@@ -29,8 +29,8 @@
 
 #define programname	"uncpk"
 #define progversion	"v0.2.1"
-#define author		"Written by André Fachat"
-#define copyright	"Copyright (C) 1997-2002 André Fachat."
+#define author		"Written by Andre Fachat"
+#define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
 FILE *fp;
 char name[100];

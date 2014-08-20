@@ -18,12 +18,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
 #ifndef _MSC_VER
 #include <unistd.h>
 #endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <errno.h>
 #include <string.h>
 
@@ -33,8 +34,8 @@
 
 #define programname	"file65"
 #define progversion	"v0.2.1"
-#define author		"Written by André Fachat"
-#define copyright	"Copyright (C) 1997-2002 André Fachat."
+#define author		"Written by Andre Fachat"
+#define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
 int read_options(FILE *fp);
 int print_labels(FILE *fp, int offset);
@@ -160,11 +161,11 @@ int main(int argc, char *argv[]) {
 		      }
 		      if(rompar==1) {
 			printf("-A %lu ", (unsigned long)((hdr[9]*256+hdr[8])
-						-hlen +romoff +fbuf.st_size));
+						-hlen +romoff +(fbuf.st_size)));
 		      } else
 		      if(rompar==2) {
 			printf("%lu ", (unsigned long)((hdr[9]*256+hdr[8])
-						-hlen +romoff +fbuf.st_size));
+						-hlen +romoff +(fbuf.st_size)));
 		      }
 		      printf("\n");
 		    }

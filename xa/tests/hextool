@@ -1,0 +1,57 @@
+#!/usr/bin/perl -s
+
+# This tool either emits hex in a machine or human parseable format, or
+# compares two binaries in the form of cmp. It is mostly to deal with
+# systems with an unreliable hexdump, that *lack* hexdump (or od), and/or
+# emit non-standard output. 
+
+# "use bytes"
+BEGIN { $^H |= 0x00000008 unless ($] < 5.006); }
+
+
+if ($output || $noutput) {
+	# check output mode. If $output, there must be output. If there is
+	# $noutput there must NOT be output. Feed tee or something to this.
+	$wasoutput = 0;
+	while(<>) {
+		$wasoutput++;
+	}
+	exit (($wasoutput && $output) ? 0 :
+		($wasoutput && $noutput) ? 1 :
+		(!$wasoutput && !$noutput) ? 0 :
+		1);
+}
+
+if ($cmp) {
+	# compare mode. both files must fit in memory. to eliminate any
+	# weirdness about endianness, encoding, etc., we unpack them to
+	# hex bytes and just compare strings.
+	undef $/;
+	open(W, "$cmp") || die("can't open $cmp: $!\n");
+	$cmp = unpack("H*", <W>);
+	close(W);
+	$std = unpack("H*", <>);
+	if ($cmp ne $std) {
+		print <<"EOF";
+FAILED!
+
+received from stdin
+-------------------
+$std
+
+expected to equal
+-----------------
+$cmp
+
+FAILED!
+EOF
+		exit 255;
+	}
+	exit 0;
+}
+
+# hexdump mode. accept data on stdin, spew a stream of hex bytes.
+
+while(<>) {
+	print STDOUT unpack("H*", $_);
+}
