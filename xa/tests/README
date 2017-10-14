@@ -9,6 +9,8 @@ unless 'make test' fails. If you do, use harness:
 
 If -tests is omitted, all tests are run.
 Don't run the makefiles directly, if they exist; they may not work properly.
+If a Makefile is not present, then the test harness assembles "test.s" and
+compares it with "ok".
 
 adrm/		Addressing mode test (especially the optimizer and quantity
 		prefixes)
@@ -32,6 +34,8 @@ dos51/		Regression test, label scoping, "real world code"
 cpktest/	Regression test, label listing, "real world code"
 op816/		Regression test for '816 opcodes (thanks Alessandro Gatti)
 branch/		Branch range test
+masmcom/	Another test for -M that generates totally valid code
+quotch/		Test quoting problematic characters (thanks Simon Rowe)
 
 Cameron Kaiser, André Fachat
 

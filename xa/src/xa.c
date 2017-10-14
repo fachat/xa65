@@ -55,9 +55,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.7"
+#define progversion	"v2.3.8"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2015 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2017 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -1054,8 +1054,10 @@ static int xa_getline(char *s)
           do {
                c=s[j]=l[i++];
 
-               if (c=='\"')
+                if (!(hkfl&2) && c=='\"')
                     hkfl^=1;
+                if (!comcom && !(hkfl&1) && c=='\'')
+                    hkfl^=2;
 		if (c==';' && !hkfl)
 			comcom = 1;
                if (c=='\0') 

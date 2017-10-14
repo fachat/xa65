@@ -63,8 +63,8 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	#cd .. ; tar cvf xa-2.3.7A.tar xa-2.3.7 ; gzip xa-2.3.7A.tar
-	cd .. ; tar cvf xa-2.3.7.tar xa-2.3.7 ; gzip xa-2.3.7.tar
+	#cd .. ; tar cvf xa-2.3.8A.tar xa-2.3.8 ; gzip xa-2.3.8A.tar
+	cd .. ; tar cvf xa-2.3.8.tar xa-2.3.8 ; gzip xa-2.3.8.tar
 
 test: xa uncpk
 	cd tests && ./harness -make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"

@@ -316,3 +316,11 @@ xa-2.3.7
   * Testsuite expanded.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 29 December 2014
+
+xa-2.3.8
+
+  * Fixed issue with colons in string literals being treated as separators
+    (thanks Simon Rowe).
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 29 June 2017
