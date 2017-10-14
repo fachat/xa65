@@ -3,8 +3,7 @@ derivatives). xa is a small, fast, portable two-pass assembler that compiles
 under most ANSI C compilers. It is distributed under the GNU Public License
 (see COPYING).
 
-The current version is 2.3.4, which implements multiple improvements on
-2.3.2, a bug fix to the 2.3.0 version. 2.3.0 itself features many
+The current version is 2.3.7, a bug fix to the long-lived 2.3.0, itself with
 compatibility improvements and new man-based documentation. It also completed
 the merge of the 65816 and 6502/R65C02 versions and thus the current xa can
 generate code for all targets now.
@@ -12,6 +11,7 @@ generate code for all targets now.
 To install on a generic Unixy thing, you should be able to just type
 
 	% make # to build the executable, and if it works ...
+	% make test # if you have Perl, make and prerequisites, otherwise
 	% make install # to install man pages and binaries into the system
 
 This will create xa along with its various support utilities. Try assembling

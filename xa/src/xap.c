@@ -213,14 +213,22 @@ int pp_endif(char *t)
 
 /* stub for handling CPP directives */
 int pp_cpp(char *t) {
+	char name[MAXLINE];
 
-	if(sscanf(t, " %d \"%s\"", &filep->fline, filep->fname) == 2) {
+	if(sscanf(t, " %d \"%s\"", &filep->fline, name) == 2) {
 		/* massage it into our parameters and drop last quote */
-		char *u = "";
+		char *u;
 
 		filep->fline--;
-		if((u = (char *)strrchr(filep->fname, '"')))
+		if((u = (char *)strrchr(name, '"')))
 			*u = '\0';
+
+		free(filep->fname);
+		filep->fname = strdup(name);
+		if(!filep->fname) {
+			fprintf(stderr,"Oops, no more memory!\n");
+			exit(1);
+		}
 		return (0);
 	} else {
 		return(E_SYNTAX);

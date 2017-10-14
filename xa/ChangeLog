@@ -304,3 +304,15 @@ xa-2.3.6
   * Fixed message offsets.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 11 July 2014
+
+xa-2.3.7
+
+  * Fixed buffer overflow and test failure with gcc 4.9 (thanks Adam Sampson).
+  * mvn and mvp now use the standard syntax (thanks Alessandro Gatti).
+  * Copyright message is no longer put in the error log to simplify testing.
+  * Makefile properly triggers a relink for testing or source changes.
+  * Spurious messages quelled.
+  * Documentation updated.
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 29 December 2014

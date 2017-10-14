@@ -1,0 +1,1070 @@
+
+#include  "c64def.def"
+
+#define   Tout(a)   .(:lda #<a:ldy #>a:jsr Txtout:.)
+#define   Aout(a)   .(:lda #<b:ldy #>b:jsr Txtout:jmp c:b .byt a,0:c .)
+#define   Ibout(a)  .(:ldx a:lda #0:jsr INTOUT:.)
+#define   Iout(a)   .(:ldx a:lda a+1:jsr INTOUT:.)
+
+#define   PFADLEN   40
+#define   FN_WR     3
+#define   FN_RD     4
+#define   XCODE     $f7
+#define   Version   1
+
+          .(
+          .word $0801
+          *=$0801
+
+          .word basicend,10
+          .byt $9e,"2064",0       ;sys $0810
+basicend  .word 0
+          .byt 0,0,0
+
+          .(
+          jsr CLRCH
+          jsr iniscreen
+          jsr inipar     
+menu1     
+          Tout(m1atxt)
+          Tout(quellpfad)
+          Tout(m1btxt)
+          Ibout(quelldrv)
+          Tout(m1ctxt)          
+          Tout(zielpfad)
+          Tout(m1dtxt)
+          Ibout(zieldrv)
+          Tout(m1etxt)          
+          
+next      jsr GET
+          beq next
+
+          ldx #0
+l1        cmp befkeys,x
+          beq exe
+          inx
+          cpx #Anzbefs
+          bcc l1
+          bcs next
+          
+exe       jsr exec
+          jmp menu1
+          
+exec      txa
+          asl
+          tax
+          lda madr+1,x
+          pha
+          lda madr,x
+          pha
+          rts
+          
+madr      .word pack-1,unpack-1,quelle-1,ziel-1,switch-1,dir-1,qdrv-1,zdrv-1
+befkeys   .asc TC_F1,TC_F2,TC_F3,TC_F5,TC_F8,TC_F7,TC_F4,TC_F6
+Anzbefs   =8
+   
+m1atxt    .asc TC_LCH,TC_SCO,TC_FF,TC_LF,TC_LF
+          .asc "(F1) PACK PROGRAMMS",TC_CR,TC_LF
+          .asc "(F2) EXTRACT FROM ARCHIVE",TC_CR,TC_LF
+          .asc "(F3) SOURCEPATH/ARC:",0
+m1btxt    .asc TC_CR,TC_LF
+          .asc "(F4) SOURCEDEVICE:",0
+m1ctxt    .asc TC_CR,TC_LF
+          .asc "(F5) TARGETPATH/ARC:",0
+m1dtxt    .asc TC_CR,TC_LF
+          .asc "(F6) TARGETDEVICE :",0
+m1etxt    .asc TC_CR,TC_LF        
+          .asc "(F7) SOURCEDIRECTORY",TC_CR,TC_LF
+          .asc "(F8) EXCHANGE TARGET AND SOURCE",TC_CR,TC_LF
+          .asc "YOUR CHOICE PLEASE",TC_CR,0
+          .)
+
+unpack    .(
+          jsr openarcrd
+          bcs cls
+          
+          lda #0
+          sta rcnt
+          sta rcnt+1
+          
+          jsr rbyte
+          cmp #Version
+          bne verr
+          
+loop      jsr unpackfile
+          bcc loop
+          
+          Tout(t1)
+          lda rcnt+1
+          ldx rcnt
+          jsr INTOUT
+          lda #TC_CR
+          jsr BSOUT
+          jsr waitkey
+          
+cls       lda #FN_RD
+          jsr CLOSE
+          rts
+          
+verr      Tout(verrtxt)
+          jmp cls
+verrtxt   .asc "UNKNOWN ARCHIVE VERSION",0
+
+t1        .asc "ARCHIVE HAD BYTES #",0
+          .)
+          
+unpackfile
+          .(
+          lda #0
+          sta wcnt
+          sta wcnt+1
+          lda #TC_CR
+          jsr BSOUT
+          ldy #0
+          sty P1
+l1        jsr rbyte
+          bcs endx
+          ldy P1
+          sta filetab,y
+          inc P1
+          cmp #0
+          beq endnam
+          jsr BSOUT
+          jmp l1
+          
+endnam    Tout(ask)
+          jsr waitkey
+          cmp #"J"
+          bne nounpack
+          Tout(tok)
+          lda #<-1
+          sta P1+1
+          jsr fxopen
+          jsr Getzst
+          bcs xa
+          bcc lo
+          
+endx      jmp end
+nounpack  Tout(tno)
+xa        lda #0
+          sta P1+1
+
+lo        jsr rbyte
+          bcs cls
+          cmp #XCODE
+          bne xb
+          jsr rbyte
+          sta wxanz
+          cmp #0
+          clc
+          beq cls
+          jsr rbyte
+          sta wxbyt
+          bit P1+1
+          bpl lo
+ly        lda wxbyt
+          jsr wbyte
+          dec wxanz
+          bne ly
+          jmp lo
+          
+xb        bit P1+1
+          bpl lo
+          jsr wbyte
+          jmp lo
+                                     
+cls       php
+          jsr wbuf
+          lda #FN_WR
+          jsr CLOSE
+          
+          Tout(t1)
+          lda wcnt+1
+          ldx wcnt
+          jsr INTOUT
+          lda #TC_CR
+          jsr BSOUT
+          
+          plp
+end       rts
+          
+ask       .asc TC_CR,"EXTRACT FILE (Y/N)?",0
+
+t1        .asc "GIVES BYTES #",0
+          .)
+          
+incwcnt   .(
+          inc wcnt
+          bne l1
+          inc wcnt+1
+l1        rts
+          .)
+          
+fxopen    .(
+          ldy #0
+          sty INT
+l1        lda zielpfad,y
+          sta INBUF,y
+          beq l2
+          iny
+          cmp #":"
+          beq l1a
+          cmp #"/"
+          bne l1b
+l1a       sty INT
+l1b       cpy #PFADLEN
+          bcc l1
+          
+l2        ldx INT
+          ldy #0
+l3        lda filetab,y
+          sta INBUF,x
+          inx
+          iny
+          cmp #0
+          bne l3
+          dex
+          txa
+          ldx #<INBUF
+          ldy #>INBUF
+          jsr SETFNPAR
+          lda #FN_WR
+          ldx zieldrv
+          ldy #1
+          jsr SETFPAR
+          
+          jsr OPEN
+          bcs err
+          jsr clrwrbuf
+          clc
+err       rts
+          .)
+
+openarcrd .(
+          ldy #0
+l0        lda quellpfad,y
+          beq l1
+          iny
+          cpy #PFADLEN
+          bcc l0
+l1        cpy #0
+          beq err
+          tya
+          ldx #<quellpfad
+          ldy #>quellpfad
+          jsr SETFNPAR
+          lda #FN_RD
+          ldx quelldrv
+          ldy #0
+          jsr SETFPAR
+          jsr OPEN
+          bcs err
+          jsr Getqst
+          bcs err
+          jsr clrrdbuf
+          clc
+          rts
+err       sec
+          rts
+          .)
+ 
+pack      .(
+          jsr getlist
+          lda anzfiles
+          beq end
+          jsr openarcwr
+          bcs cls
+
+          lda #Version
+          jsr wbyte
+                              
+          lda #0
+          sta P1
+l1        jsr setfadr
+          sta P2
+          stx P2+1
+          jsr packfile
+          inc P1
+          lda P1
+          cmp anzfiles
+          bcc l1
+                  
+          jsr wbuf
+          
+cls       lda #FN_WR
+          jsr CLOSE
+          
+          jsr Getzst
+        
+end       jmp LINEIN:rts
+          .)
+          
+packfile  .(
+          Tout(lft)
+
+          ldy #0
+l1        sty P1+1
+          lda (P2),y
+          jsr BSOUT
+          jsr wbyte
+          ldy P1+1
+          iny
+          cmp #0
+          bne l1
+
+          jsr fopen
+          bcs le
+
+          jsr clrwxbyt
+l2        jsr rbyte
+          bcs l3
+          jsr wxbyte
+          jmp l2
+l3        jsr savwxbyt
+          
+le        lda #FN_RD
+          jsr CLOSE
+          
+          lda #XCODE
+          jsr wbyte
+          lda #0
+          jsr wbyte
+          
+          lda #TC_CR
+          jsr BSOUT
+          rts
+              
+lft       .asc TC_CR,"cOPYING ",0
+
+          .)
+
+fopen     .(
+          ldy #0
+          sty INT
+l1        lda quellpfad,y
+          sta INBUF,y
+          beq l2
+          iny
+          cmp #":"
+          beq l1a
+          cmp #"/"
+          bne l1b
+l1a       sty INT
+l1b       cpy #PFADLEN
+          bcc l1
+          
+l2        ldx INT
+          ldy #0
+l3        lda (P2),y
+          sta INBUF,x
+          inx
+          iny
+          cmp #0
+          bne l3
+          dex
+          txa
+          ldx #<INBUF
+          ldy #>INBUF
+          jsr SETFNPAR
+          lda #FN_RD
+          ldx quelldrv
+          ldy #0
+          jsr SETFPAR
+          
+          jsr OPEN
+          bcs err
+          jsr clrrdbuf
+          clc
+err       rts
+          .)
+
+incrcnt   .(
+          inc rcnt
+          bne l1
+          inc rcnt+1
+l1        rts
+          .)
+          
+rbyte     .(
+          ldy ro
+          cpy ri
+          beq leerbuf
+          lda rb,y
+          inc ro
+          clc
+          rts
+            
+leerbuf   lda rf
+          beq ldbuf
+          sec
+          rts
+          
+ldbuf     lda #0
+          sta ri
+          sta ro
+          ldx #FN_RD
+          jsr CHKIN
+          lda #0
+          sta STATUS
+
+lok       jsr BASIN
+
+     pha
+     lda STATUS
+     beq l0
+     lda #"L"
+     jsr BSOUT
+     Ibout($90)
+     lda #TC_CR
+     jsr BSOUT
+l0   pla
+
+          jsr incrcnt
+          ldy ri
+          sta rb,y
+          iny
+          sty ri
+          iny
+          ;cpy ro
+          beq le
+          lda STATUS
+          beq lok
+          
+le        lda STATUS
+          sta rf
+          jsr CLRCH
+          jmp rbyte
+          .)
+          
+clrrdbuf  .(
+          lda #0
+          sta ri
+          sta ro
+          sta rf
+          rts
+          .)
+          
+wxbyte    .(
+          ldx wxanz
+          beq add
+          inx
+          bne ad2
+          pha
+          jsr savwxbyt
+          pla
+          jmp add
+          
+ad2       cmp wxbyt
+          beq adx
+          pha
+          jsr savwxbyt
+          pla
+add       sta wxbyt
+adx       inc wxanz
+
+          rts
+          .)
+          
+clrwxbyt  .(
+          lda #0
+          sta wxanz
+          rts
+          .)
+          
+savwxbyt  .(
+          lda wxanz
+          beq nosav
+          cmp #4
+          bcs savs
+          lda wxbyt
+          cmp #XCODE
+          beq savs
+
+l1        lda wxbyt
+          jsr wbyte
+          dec wxanz
+          bne l1
+          rts
+
+savs      lda #XCODE
+          jsr wbyte
+          lda wxanz
+          jsr wbyte
+          lda wxbyt
+          jsr wbyte  
+          lda #0
+          sta wxanz
+nosav     rts
+          .)
+       
+openarcwr .(
+          ldy #0
+l0        lda zielpfad,y
+          beq l1
+          iny
+          cpy #PFADLEN
+          bcc l0
+l1        cpy #0
+          beq err
+          tya
+          ldx #<zielpfad
+          ldy #>zielpfad
+          jsr SETFNPAR
+          lda #FN_WR
+          ldx zieldrv
+          ldy #1
+          jsr SETFPAR
+          jsr OPEN
+          bcs err
+          lda zieldrv
+          jsr Getzst
+          bcs err
+          jsr clrwrbuf
+          clc
+          rts
+err       sec
+          rts
+          .)
+          
+clrwrbuf  .(
+          lda #0
+          sta wi
+          sta wo
+          rts
+          .)
+
+wbyte     .(
+          ldy wi
+          sta wb,y
+          iny
+          sty wi
+          iny
+          cpy wo
+          bne nowr
+          pha
+          jsr wbuf
+          pla
+nowr      rts
+          .)
+          
+wbuf      .(
+          ldx #FN_WR
+          jsr CKOUT
+          ldy wo
+l1        cpy wi
+          beq end
+          lda wb,y
+          jsr BSOUT
+
+     lda STATUS
+     beq l0
+     tya
+     pha
+     lda #"W"
+     jsr $e716
+     lda $90
+     ora #$40
+     jsr $e716
+     lda #TC_CR
+     jsr $e716
+     pla
+     tay
+l0
+          jsr incwcnt
+          iny
+          jmp l1
+end       lda #0
+          sta wi
+          sta wo
+          jsr CLRCH
+          rts
+          .)
+          
+          .(
+&Getqst   lda quelldrv
+          jmp Getst
+&Getzst   lda zieldrv    
+&Getst    
+          pha
+          jsr CLRCH
+          lda #TC_CR
+          jsr BSOUT
+          pla
+          jsr TALK
+          lda #15+$60
+          jsr SECTALK
+          lda #0
+          sta STATUS
+          jsr IECIN
+          pha
+          jsr BSOUT
+          
+l1        jsr IECIN
+          cmp #0
+          beq l2
+          jsr BSOUT
+          lda STATUS
+          beq l1
+l2        jsr UNTALK
+          pla
+          cmp #"0"
+          bne err
+          clc
+          rts
+err       sec
+          rts
+          .)
+                              
+/*
+showlist  .(
+          lda #0
+          sta P1
+          
+l1        lda P1
+          cmp anzfiles
+          bcs le
+          
+          jsr setfadr
+          lda #TC_CR
+          jsr BSOUT
+          lda INT
+          ldy INT+1
+          jsr Txtout
+          inc P1
+          jmp l1
+le        rts
+          .)
+*/                  
+          .(
+l4x       jmp l4
+
+&getlist  
+          lda #0
+          sta anzfiles
+          
+          lda #TC_FF
+          jsr BSOUT
+          
+          jsr setdirnam
+          jsr SENDNAM
+          lda DEVADR
+          jsr TALK
+          lda SECADR
+          jsr SECTALK
+          
+          lda #0
+          sta STATUS
+          ldy #3
+l0        sty P1
+l1        jsr IECIN
+          sta P1+1
+          ldy STATUS
+          bne l4x
+          jsr IECIN
+          dec P1
+          bne l1
+          ldx P1+1
+          jsr INTOUT
+          lda #" "
+          jsr BSOUT
+
+la        jsr IECIN
+          cmp #0
+          beq l4x
+          cmp #TC_REV
+          bne l3x
+          jmp l3
+l3x       jsr BSOUT
+          cmp #34
+          bne la
+
+          lda anzfiles
+          jsr setfadr
+          sta P2
+          stx P2+1
+          
+          ldy #0
+lb        sty P1
+          jsr IECIN
+          jsr BSOUT
+          ldy P1
+          cmp #34
+          beq lc
+          sta (P2),y
+          iny
+          cpy #17
+          bcc lb
+lc        lda #","
+          sta (P2),y
+          iny
+          
+ld        sty P1
+          jsr IECIN
+          jsr BSOUT
+          ldy P1
+          cmp #" "
+          beq ld
+          sta P1+1
+          sta (P2),y
+          iny
+          lda #0
+          sta (P2),y
+/*
+          lda #TC_CR
+          jsr BSOUT
+          lda P2+1
+          ldx P2
+          jsr INTOUT
+          lda #":"
+          jsr BSOUT
+          lda P2
+          ldy P2+1
+          jsr Txtout
+*/
+lf        tax
+          jsr IECIN
+          jsr BSOUT
+          cmp #" "
+          bne lf
+          cpx #"<"
+          beq lg
+          lda #" "
+          jsr BSOUT
+lg        lda #" "
+          jsr BSOUT
+          
+          lda P1+1
+          jsr testkeys
+
+lh        jsr IECIN
+          cmp #0
+          bne lh
+          beq l2
+          
+l3        jsr IECIN
+          ldx STATUS
+          bne l4
+          tax
+          beq l2
+          jsr BSOUT
+          jmp l3
+
+l2        lda #TC_CR
+          jsr BSOUT
+          jsr GET
+          beq l5
+          jsr waitkey
+l5        ldy #2
+          beq l4
+          jmp l0
+l4        jsr CLSFIL
+          jmp waitkey                    
+          .)
+
+testkeys  .(
+          cmp #"P"
+          beq ok
+          cmp #"S"
+          beq ok
+          rts
+ok        Tout(t1)
+          jsr waitkey
+          cmp #"J"
+          beq ja
+          Tout(tno)
+          rts
+ja        Tout(tok)
+          inc anzfiles
+          rts
+          
+t1        .asc TC_REV,"YES/NO ",TC_CRL,TC_CRL,TC_CRL
+          .asc TC_CRL,TC_CRL,TC_CRL,TC_CRL,0
+&tno      .asc TC_REO,"NO     ",0
+&tok      .asc TC_REO,"YES    ",0
+          .)
+          
+setfadr   .(
+          ldx #0
+          stx INT+1
+          asl 
+          rol INT+1
+          asl
+          rol INT+1
+          sta INT
+          ldx INT+1
+          asl
+          rol INT+1
+          asl
+          rol INT+1
+          clc
+          adc INT
+          sta INT
+          txa
+          adc INT+1
+          sta INT+1
+          lda #<filetab
+          clc
+          adc INT
+          sta INT
+          pha
+          lda #>filetab
+          adc INT+1
+          sta INT+1
+          tax
+          pla
+          rts
+          .)
+          
+dir       .(
+          lda #TC_FF
+          jsr BSOUT
+          
+          jsr setdirnam
+          jsr SENDNAM
+          lda DEVADR
+          jsr TALK
+          lda SECADR
+          jsr SECTALK
+          
+          lda #0
+          sta STATUS
+          ldy #3
+l0        sty P1
+l1        jsr IECIN
+          sta P1+1
+          ldy STATUS
+          bne l4
+          jsr IECIN
+          dec P1
+          bne l1
+          ldx P1+1
+          jsr INTOUT
+          lda #" "
+          jsr BSOUT
+l3        jsr IECIN
+          ldx STATUS
+          bne l4
+          tax
+          beq l2
+          jsr BSOUT
+          jmp l3
+l2        lda #TC_CR
+          jsr BSOUT
+          jsr GET
+          beq l5
+          jsr waitkey
+l5        ldy #2
+          bne l0
+l4        jsr CLSFIL
+          jmp waitkey                    
+          .)
+
+waitkey   jsr GET
+          beq waitkey
+          rts
+          
+setdirnam .(
+p1        =INT
+
+          lda #"$"
+          sta INBUF
+          ldx #1
+          stx p1
+          
+          ldy #0
+l1        lda quellpfad,y
+          beq nodp
+          cmp #":"
+          beq dp
+          iny
+          cpy #PFADLEN
+          bcc l1
+nodp      lda #":"
+          sta INBUF,x
+          inx
+dp        ldy #0
+dp1       lda quellpfad,y
+          sta INBUF,x
+          beq end
+          cmp #":"
+          beq l2a
+          cmp #"/"
+          bne l2
+l2a       stx p1
+l2        inx
+          iny
+          cpy #PFADLEN
+          bcc dp1
+end       ldx p1
+          inx
+          lda #"*"
+          sta INBUF,x
+          inx
+          lda #"."
+          sta INBUF,x
+          inx
+          lda #"*"
+          sta INBUF,x
+          inx
+          txa
+          ldx #<INBUF
+          ldy #>INBUF
+          jsr SETFNPAR
+          lda #1
+          ldx quelldrv
+          ldy #0
+          jmp SETFPAR
+          .)
+
+qdrv      .(
+          inc quelldrv
+          lda quelldrv
+          cmp #12
+          bcc ok
+          lda #8
+          sta quelldrv
+ok        rts
+          .)
+          
+zdrv      .(
+          inc zieldrv
+          lda zieldrv
+          cmp #12
+          bcc ok
+          lda #8
+          sta zieldrv
+ok        rts
+          .)
+          
+quelle    .(
+          Tout(quelltxt)
+          jsr LINEIN
+          ldy #0
+q1        lda INBUF,y
+          sta quellpfad,y
+          beq end
+          iny
+          cpy #PFADLEN-1
+          bcc q1
+          lda #0
+          sta quellpfad,y
+end       rts
+
+quelltxt  .asc TC_CR,"PLEASE INPUT NEW SOURCEPATH/ARCHIVE:",TC_CR,0
+          .)
+
+ziel      .(
+          Tout(quelltxt)
+          jsr LINEIN
+          ldy #0
+q1        lda INBUF,y
+          sta zielpfad,y
+          beq end
+          iny
+          cpy #PFADLEN-1
+          bcc q1
+          lda #0
+          sta zielpfad,y
+end       rts
+
+quelltxt  .asc TC_CR,"PLEASE INPUT NEW TARGETPATH/ARCHIVE:",TC_CR,0
+          .)
+
+switch    .(
+          lda quelldrv
+          ldx zieldrv
+          stx quelldrv
+          sta zieldrv
+          ldx #0
+l1        lda quellpfad,x
+          pha
+          lda zielpfad,x
+          sta quellpfad,x
+          pla
+          sta zielpfad,x
+          inx
+          cpx #PFADLEN
+          bcc l1
+          rts
+          .)
+          
+inipar    .(
+          lda #0
+          sta quellpfad
+          sta zielpfad
+          lda DEVADR
+          cmp #8
+          bcc noval
+          cmp #12
+          bcc ok
+noval     lda #8
+ok        sta quelldrv
+          sta zieldrv
+          rts
+          .)
+          
+Txtout    .(
+p         =$22
+
+          sta p
+          sty p+1
+l1        ldy #0
+          lda (p),y
+          beq le
+          jsr BSOUT
+          inc p
+          bne l1
+          inc p+1
+          bne l1
+le        rts
+          .)
+          
+iniscreen .(
+          lda #COL_SCHWARZ
+          sta VIC+VIC_EXTCOL
+          sta VIC+VIC_BCKCOL0
+          lda #TC_HELLGRUEN
+          jsr BSOUT
+          rts
+          .)
+
+sysmem    =*
+
+quelldrv  =sysmem
+zieldrv   =sysmem+1
+-sysmem   +=2
+
+quellpfad =sysmem
+zielpfad  =sysmem+PFADLEN
+-sysmem   +=2*PFADLEN
+
+anzfiles  =sysmem
+-sysmem   +=1
+
+wi        =sysmem
+wo        =sysmem+1
+-sysmem   +=2
+wb        =sysmem
+-sysmem   +=256
+
+wxbyt     =sysmem
+wxanz     =sysmem+1
+-sysmem   +=2
+
+ri        =sysmem
+ro        =sysmem+1
+rf        =sysmem+2
+-sysmem   +=3
+rb        =sysmem
+-sysmem   +=256
+
+wcnt      =sysmem
+-sysmem   +=2
+rcnt      =sysmem
+-sysmem   +=2
+ecnt      =sysmem
+-sysmem   +=2
+
+filetab   =sysmem
+ende      .)
+

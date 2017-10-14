@@ -15,7 +15,7 @@ adrm/		Addressing mode test (especially the optimizer and quantity
 nonl/		Patryk's no-new-line-on-last-line cases ;)
 fordef/		Optimizer warnings for forward defined labels
 relocundef/  	Tests for the detection of undefined references during a
-		reloc65 export.
+		reloc65 export
 ldoreloc/ 	Test case for the relocation table reading of ldo when undef'd
 		refs are involved
 comcom/		Comments-with-comments-with-commands-etc. for testing -M
@@ -23,10 +23,15 @@ recmac/		Recursive macro evaluation testing
 openpp/		Testing of open #if*s in pp
 cpp/		Random preprocessor tests, mostly crap
 incerr/		1) .xl/.al should error without -w 2) error should be in
-		the correct file
+		the correct file ('816)
 binclude/	Binary include code with some weird casing
 chppch/		Changing preprocessor characters (-p)
 charset/	Tests of when charsets should be honoured and when not
+mvnmvp/		Test MVN MVP unusual addressing mode ('816)
+dos51/		Regression test, label scoping, "real world code"
+cpktest/	Regression test, label listing, "real world code"
+op816/		Regression test for '816 opcodes (thanks Alessandro Gatti)
+branch/		Branch range test
 
 Cameron Kaiser, André Fachat
 

@@ -26,7 +26,10 @@ DOCDIR = $(DESTDIR)/share/doc
 MKDIR = mkdir -p
 INSTALL = install
 
-all: xa uncpk
+all: killxa xa uncpk
+
+killxa:
+	rm -f xa
 
 xa:
 	(cd src && LD=${LD} CC="${CC} ${CFLAGS}" ${MAKE})
@@ -60,8 +63,8 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	#cd .. ; tar cvf xa-2.3.6A.tar xa-2.3.6 ; gzip xa-2.3.6A.tar
-	cd .. ; tar cvf xa-2.3.6.tar xa-2.3.6 ; gzip xa-2.3.6.tar
+	#cd .. ; tar cvf xa-2.3.7A.tar xa-2.3.7 ; gzip xa-2.3.7A.tar
+	cd .. ; tar cvf xa-2.3.7.tar xa-2.3.7 ; gzip xa-2.3.7.tar
 
-test:
+test: xa uncpk
 	cd tests && ./harness -make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"

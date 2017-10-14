@@ -55,9 +55,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.6"
+#define progversion	"v2.3.7"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2014 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2015 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -355,6 +355,7 @@ int main(int argc,char *argv[])
 	if(setfext(old_o,".obj")==0) ofile = old_o;
 	if(setfext(old_l,".lab")==0) lfile = old_l;
      }
+     if(verbose) fprintf(stderr, "%s\n",copyright);
 
      fplab= lfile ? xfopen(lfile,"w") : NULL;
      fperr= efile ? xfopen(efile,"w") : NULL;
@@ -369,8 +370,6 @@ int main(int argc,char *argv[])
 	exit(1);
      }
 
-     if(verbose) fprintf(stderr, "%s\n",copyright);
-
      if(1 /*!m_init()*/)
      {
        if(1 /*!b_init()*/)
@@ -381,7 +380,7 @@ int main(int argc,char *argv[])
            {
              if(!x_init())
              {
-	       if(fperr) fprintf(fperr,"%s\n",copyright);
+	       /* if(fperr) fprintf(fperr,"%s\n",copyright); */
 	       if(verbose) logout(ctime(&tim1));
 
 	       /* Pass 1 */
@@ -804,7 +803,6 @@ static int pass1(void)
      } 
 
      if(er!=E_EOF) {
-	fprintf(stderr, "foul through\n");
           errout(er);
 	}
 
@@ -951,8 +949,8 @@ static char *ertxt[] = {
 	  "Open preprocessor directive at end of file (intentional?)",
 	  "Included binary data exceeds 64KB",
 	  "Included binary data exceeds 16MB",
+          "MVN/MVP $XXXX syntax is deprecated and will be removed",
 /* more placeholders */
-		"",
 		"",
 		"",
 

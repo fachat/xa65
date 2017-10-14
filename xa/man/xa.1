@@ -785,6 +785,16 @@ and
 .B dec
 instructions respectively.
 .LP
+The 65816 instructions
+.B mvn
+and
+.B mvp
+use two eight bit parameters, the only instructions in the entire
+instruction set to do so. Older versions of
+.B xa
+took a single 16-bit absolute value. Since 2.3.7, the standard syntax is
+now accepted and the old syntax is deprecated (a warning will be generated).
+.LP
 Forward-defined labels -- that is, labels that are defined after the current
 instruction is processed -- cannot be optimized into zero
 page instructions even if the label does end up being defined as a zero page
@@ -830,7 +840,7 @@ This manual page was written by David Weinehall <tao@acc.umu.se>,
 Andre Fachat <fachat@web.de>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall,
+(C)1989-2015 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
 
 .SH WEBSITE
