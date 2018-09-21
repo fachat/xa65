@@ -56,9 +56,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.6+af"
+#define progversion	"v2.3.8+af"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2014 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2017 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -402,6 +402,7 @@ int main(int argc,char *argv[])
 	if(setfext(old_o,".obj")==0) ofile = old_o;
 	if(setfext(old_l,".lab")==0) lfile = old_l;
      }
+     if(verbose) fprintf(stderr, "%s\n",copyright);
 
      if (printfile!=NULL && !strcmp(printfile, "-")) {
 	printfile=NULL;
@@ -422,8 +423,7 @@ int main(int argc,char *argv[])
 	exit(1);
      }
 
-     if(verbose) fprintf(stderr, "%s\n",copyright);
-
+     //if(verbose) fprintf(stderr, "%s\n",copyright);
 
      if(1 /*!m_init()*/)
      {
@@ -435,7 +435,7 @@ int main(int argc,char *argv[])
            {
              if(!x_init())
              {
-	       if(fperr) fprintf(fperr,"%s\n",copyright);
+	       /* if(fperr) fprintf(fperr,"%s\n",copyright); */
 	       if(verbose) logout(ctime(&tim1));
 
      	       list_setfile(fplist);
@@ -870,7 +870,6 @@ static int pass1(void)
      } 
 
      if(er!=E_EOF) {
-	fprintf(stderr, "foul through\n");
           errout(er);
 	}
 
@@ -1024,8 +1023,8 @@ static char *ertxt[] = {
 	  "Open preprocessor directive at end of file (intentional?)",
 	  "Included binary data exceeds 64KB",
 	  "Included binary data exceeds 16MB",
+          "MVN/MVP $XXXX syntax is deprecated and will be removed",
 /* more placeholders */
-		"",
 		"",
 		"",
 
@@ -1146,13 +1145,16 @@ static int xa_getline(char *s)
           do {
                c=s[j]=l[i++];
 
-               	if (c=='\"') {
+                if (!(hkfl&2) && c=='\"') {
                     hkfl^=1;
 		}
+                if (!comcom && !(hkfl&1) && c=='\'') {
+                    hkfl^=2;
+		}
 		if (c==';' && !hkfl) {
-			// start of comment
 			comcom = 1;
 		}
+		
                	if (c=='\0') {
 			// end of line
                     	break;	/* hkfl = comcom = 0 */

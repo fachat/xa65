@@ -136,7 +136,7 @@ typedef struct {
 #define E_OUTOFDATA	-34	/* out of data */
 #define E_ILLQUANT	-35	/* generic illegal quantity error */
 #define E_BIN		-36	/* okdef */
-/* errors thru 64 are placeholders */
+/* errors thru 64 are placeholders available for use */
 
 #define W_ADRRELOC	-65	/* word relocation in byte value */
 #define W_BYTRELOC	-66	/* byte relocation in word value */
@@ -148,7 +148,8 @@ typedef struct {
 #define W_OPENPP	-72	/* warning about open preprocessor directive */
 #define W_OVER64K	-73	/* included binary over 64K in 6502 mode */
 #define W_OVER16M	-74	/* included binary over 16M in 65816 mode */
-/* warnings 75-77 are placeholders */
+#define W_OLDMVNS	-75	/* use of old mv? $xxxx syntax */
+/* warnings 76-77 are placeholders available for use */
 
 /* Meta-values for the token list. Note must not overlap with the
  * K* definitions in xat.c, which have outgrown the positive numbers

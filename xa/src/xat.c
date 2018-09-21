@@ -114,6 +114,10 @@ char *arith_ops[] = {
 /* length of arithmetic operators indexed by operator number */
 static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2 };
 
+/* mvn and mvp are handled specially, they have a weird syntax */
+#define  Kmvp 38
+#define  Kmvn Kmvp+1
+
 /* index into token array for pseudo-ops */
 /* last valid mnemonic */
 #define   Lastbef   93
@@ -790,7 +794,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
             /* optimization okay on pass 1: use 0 for fl */
 		{
 #ifdef DEBUG_AM
-fprintf(stderr, "E_OK ... t_p2 xat.c\n");
+fprintf(stderr, "E_OK ... t_p2 xat.c %i %i\n", t[0], *ll);
 #endif
 	       /* this actually calls pass2 on the current tokenization stream,
  		* but without including the Klisting token listing */
@@ -819,7 +823,7 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
 		/* choose addressing mode; add commas found */
 
-          if(n>=0 && n<=Lastbef)
+          if(n>=0 && n<=Lastbef && n != Kmvn && n != Kmvp) /* not for mvn/p */
           {
 	       int inp = 1;	/* input pointer */
 
@@ -967,6 +971,11 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 		while (t[i]==' ') i++;
 	    }
 	    er=E_NOLINE;
+	  } else
+	  if(n==Kmvn || n==Kmvp)
+	  {
+               bl=3;
+		if (!w65816) er = E_65816;
 	  } else
           if(n==Kbyt || n==Kasc || n==Kaasc)
           {
@@ -1224,7 +1233,9 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
                }
                *ll=j;
                bl=j;
-          } else if (n == Kbin) {
+          } else
+          if (n == Kbin)
+          {
 		int j;
 		int l;
 
@@ -1342,6 +1353,61 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 				er = E_BIN;
 			}
 		}
+	} else
+	if (n==Kmvn || n==Kmvp)
+	{
+	/* special case these instructions' syntax */
+		int wide=0;
+		i=1;
+		j=1;
+		/* write opcode */
+		t[0] = ((n == Kmvp) ? 0x44 : 0x54);
+		while(!er && t[i]!=T_END)
+		{
+			if (wide) /* oops */
+				er = E_SYNTAX;
+#ifdef DEBUG_AM
+fprintf(stderr, "mvn mvp: %i %i %i %i %i\n", t[0], t[i], wide, i, j);
+#endif
+			if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
+			{   
+/*if(afl) printf("relocation 1 %04x at pc=$%04x, value now =$%04x\n",
+							afl,pc[segment],v); */
+				if(afl) u_set(pc[segment]+j, afl, label, 2);
+				i+=l;     
+			/* for backwards compatibility, accept the old
+				mv? $xxxx syntax, but issue a warning.
+				mv? $00xx can be legal, so accept that too. */
+				if ((v & 0xff00) || (j==1 && t[i]==T_END)) {
+					errout(W_OLDMVNS);
+					wide = 1;
+					t[j++] = ((v & 0xff00) >> 8);
+					t[j++] = (v & 0x00ff);
+				} else {
+					t[j++] = v;
+				}
+			}
+			if (j > 3)
+				er=E_SYNTAX;
+			if(t[i]!=T_END && t[i]!=',')
+				er=E_SYNTAX;
+			else
+			if(t[i]==',')
+                              i++;
+		}
+		if (j != 3) er = E_SYNTAX; /* oops */
+
+		/* before we leave, swap the bytes. although disassembled as
+			mv? src,dest it's actually represented as
+			mv? $ddss -- see 
+			http://6502org.wikidot.com/software-65816-memorymove */
+		i = t[2];
+		t[2] = t[1];
+		t[1] = i;
+
+		*ll = j;
+		bl = j;
+		if (!w65816) er = E_65816;
 	} else if(n==Kasc || n==Kbyt || n==Kaasc) {
                i=1;
                j=0;
@@ -1722,14 +1788,13 @@ fprintf(stderr,
 #endif
                }
 
-               if(!bl)
+               if(!bl) {
                     er=E_SYNTAX;
-               else
-               {
+               } else {
                     bl=le[am];
                     if( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode)) {
                          bl++;
-		}
+		    }
                     *ll=bl;
 
                }
@@ -2026,8 +2091,9 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 
           }
 
-          if(n>=0 && n<=Lastbef)
+          if(n != Kmvn && n != Kmvp && ((n & 0xff) <=Lastbef)) {
                mk=1;     /* 1= nur 1 Komma erlaubt *//* = only 1 comma ok */
+	  }
      }
 
      if(s[p]=='\0' || s[p]==';')
