@@ -324,3 +324,14 @@ xa-2.3.8
   * Testsuite expanded.
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 29 June 2017
+
+xa-2.3.9
+
+  * Fixed issue on Windows and DOS systems with the .bin pseudo-op (thanks
+    Bago Zonde).
+  * Documentation updated.
+  * Testsuite expanded.
+  * For the thirty year anniversary of xa, we're changing the name to xxxa.
+    (Just kidding.)
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 31 January 2019

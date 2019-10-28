@@ -601,7 +601,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 "binclude1 offset = %i len = %i filename = %s endchar = %i\n",
 		offset, length, binfnam, i);
 #endif
-			if (!(foo = fopen(binfnam, "r"))) {
+			if (!(foo = fopen(binfnam, "rb"))) {
 				er = E_FNF;
 			} else {
 				fseek(foo, 0, SEEK_END);
@@ -1027,7 +1027,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 "binclude2 offset = %i len = %i filename = %s endchar = %i\n",
 		offset, length, binfnam, i);
 #endif
-			if (!(foo = fopen(binfnam, "r"))) {
+			if (!(foo = fopen(binfnam, "rb"))) {
 				er = E_FNF;
 			} else {
 				fseek(foo, 0, SEEK_END);

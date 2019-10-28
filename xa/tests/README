@@ -36,6 +36,7 @@ op816/		Regression test for '816 opcodes (thanks Alessandro Gatti)
 branch/		Branch range test
 masmcom/	Another test for -M that generates totally valid code
 quotch/		Test quoting problematic characters (thanks Simon Rowe)
+linkr/		Test linking using .dsb and generated code
 
 Cameron Kaiser, André Fachat
 

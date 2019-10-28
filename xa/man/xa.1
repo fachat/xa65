@@ -1,4 +1,4 @@
-.TH XA "1" "29 June 2017"
+.TH XA "1" "31 January 2019"
 
 .SH NAME
 xa \- 6502/R65C02/65816 cross-assembler
@@ -10,8 +10,7 @@ xa \- 6502/R65C02/65816 cross-assembler
 .SH DESCRIPTION
 .B xa
 is a multi-pass cross-assembler for the 8-bit processors in the 6502 series
-(such as
-the 6502, 65C02, 6504, 6507,
+(such as the 6502, 65C02, 6504, 6507,
 6510, 7501, 8500, 8501 and 8502), the Rockwell R65C02, and
 the 16-bit 65816 processor. For a description of syntax, see
 .B ASSEMBLER SYNTAX
@@ -31,7 +30,7 @@ and
 This option is now deprecated.
 .TP
 .B \-C
-No CMOS opcodes (default is to allow R65C02 opcodes)
+No CMOS opcodes (default is to allow R65C02 opcodes).
 .TP
 .B \-W
 No 65816 opcodes (default).
@@ -228,6 +227,21 @@ for block instructions). A label may also be hard-specified with the
 .B \-L
 command line option.
 .LP
+Redefining a label does not change previously assembled code that used the
+earlier value. Therefore, because the program counter is a special type of
+label, changing the program counter to a lower value does not reorder code
+assembled previously and changing it to a higher value does not issue
+padding to put subsequent code at the new location. This is intentional
+behaviour to facilitate generating relocatable and position-independent code,
+but can differ from other assemblers which use this behaviour for
+linking. However, it is possible to use pseudo-ops to simulate other
+assemblers' behaviour and use
+.B xa
+as a linker; see
+.B PSEUDO-OPS
+and
+.BR LINKING .
+.LP
 For those instructions where the accumulator is the implied argument (such as
 .B asl 
 and
@@ -238,7 +252,7 @@ and
 on R65C02; etc.), the idiom of explicitly specifying the accumulator with
 .B a
 is unnecessary as the proper form will be selected if there is no explicit
-argument. In fact, for consistency with label handing, if there is a label
+argument. In fact, for consistency with label handling, if there is a label
 named
 .BR a ,
 this will actually generate code referencing that label as a memory
@@ -464,7 +478,9 @@ repetitions of
 will be inserted into the assembled object. For example,
 .B .dsb 5,$10
 will insert five bytes, each being 16 decimal, into the object. The arguments
-may be expressions.
+may be expressions. See
+.B LINKING
+for how to use this pseudo-op to link multiple objects.
 .TP
 .B .bin offset,length,"filename"
 Inlines a binary file without further interpretation specified by
@@ -479,7 +495,9 @@ file's object. If
 .B length
 is zero, then the length of
 .BR filename ,
-minus the offset, is used instead. The arguments may be expressions.
+minus the offset, is used instead. The arguments may be expressions. See
+.B LINKING
+for how to use this pseudo-op to link multiple objects.
 .TP
 .B \&.(
 Opens a new block for scoping. Within a block, all labels defined are local to
@@ -757,6 +775,107 @@ you might use something like this in your library's code:
 .br
 .B #endif
 
+.SH LINKING
+
+.B xa
+is oriented towards generating sequential binaries. Code is strictly
+emitted in order even if the program counter is set to a lower location
+than previously assembled code, and padding is not automatically emitted
+if the program counter is set to a higher location. Changing the program
+location only changes new labels for code that is subsequently emitted;
+previous emitted code remains unchanged. Fortunately, for many object files
+these conventions have no effect on their generation.
+.LP
+However, some applications may require generating an object file built
+from several previously generated components, and/or submodules which
+may need to be present at specific memory locations. With a minor amount of
+additional specification, it is possible to use
+.B xa
+for this purpose as well.
+.LP
+The first means of doing so uses the o65 format to make relocatable objects
+that in turn can be linked by
+.BR ldo65 (1)
+(q.v.).
+.LP
+The second means involves either assembled code, or insertion of
+previously built object or data files with
+.BR .bin ,
+using
+.B .dsb
+pseudo-ops with computed expression arguments to insert any necessary padding
+between them, in the sequential order they are to reside in memory. Consider
+this example:
+.LP
+
+.br
+    .word $1000
+.br
+    * = $1000
+.br
+
+.br
+    ; this is your code at $1000
+.br
+part1       rts
+.br
+    ; this label marks the end of code
+.br
+endofpart1
+.br
+
+.br
+    ; DON'T PUT A NEW .word HERE!
+.br
+    * = $2000
+.br
+    .dsb (*-endofpart1), 0
+.br
+    ; yes, set it again
+.br
+    * = $2000
+.br
+
+.br
+    ; this is your code at $2000
+.br
+part2       rts
+.br
+.LP
+This example, written for Commodore microcomputers using a 16-bit starting
+address, has two "modules" in it: one block of code at $1000 (4096),
+indicated by the code between labels
+.B part1
+and
+.BR endofpart1 ,
+and a second block at $2000 (8192) starting at label
+.BR part2 .
+.LP
+The padding is computed by the
+.B .dsb
+pseudo-op between the two modules. Note that the program counter is set
+to the new address and then a computed expression inserts the proper number
+of fill bytes from the end of the assembled code in part 1 up to the new
+program counter address. Since this itself advances the program counter,
+the program counter is reset again, and assembly continues.
+.LP
+When the object this source file generates is loaded, there will be an
+.B rts
+instruction at address 4096 and another at address 8192, with null bytes
+between them.
+.LP
+Should one of these areas need to contain a pre-built file, instead of
+assembly code, simply use a
+.B .bin
+pseudo-op to load whatever portions of the file are required into the
+output. The computation of addresses and number of necessary fill bytes
+is done in the same fashion.
+.LP
+Although this example used the program counter itself to compute the
+difference between addresses, you can use any label for this purpose,
+keeping in mind that only the program counter determines where relative
+addresses within assembled code are resolved.
+
 .SH ENVIRONMENT
 
 .B xa
@@ -840,8 +959,11 @@ This manual page was written by David Weinehall <tao@acc.umu.se>,
 Andre Fachat <fachat@web.de>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2017 Andre Fachat, Jolse Maginnis, David Weinehall,
+(C)1989-2019 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
+
+.SH 30 YEARS OF XA
+Yay us?
 
 .SH WEBSITE
 http://www.floodgap.com/retrotech/xa/

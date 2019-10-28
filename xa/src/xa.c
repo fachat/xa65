@@ -55,9 +55,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.8"
+#define progversion	"v2.3.9"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2017 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2019 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -716,7 +716,7 @@ fprintf(stderr, "offset = %i length = %i fstart = %i flen = %i charo = %c\n",
 			fprintf(stderr, "fnam = %s\n", binfnam);
 */
 			/* primitive insurance */
-			if (!(foo = fopen(binfnam, "r"))) {
+			if (!(foo = fopen(binfnam, "rb"))) {
 				errout(E_FNF);
 				ner++;
 			} else {
@@ -855,7 +855,7 @@ static void usage(int default816, FILE *fp)
 	    " -G           suppress list of exported globals\n");
 	fprintf(fp,
 	    " -DDEF=TEXT   defines a preprocessor replacement\n"
-	    " -Ocharset    set output charset (PETSCII or ASCII), case-sensitive\n"
+	    " -Ocharset    set output charset (PETSCII, ASCII, etc.), case-sensitive\n"
 	    " -Idir        add directory `dir' to include path (before XAINPUT)\n"
 	    "  --version   output version information and exit\n"
 	    "  --help      display this help and exit\n");
