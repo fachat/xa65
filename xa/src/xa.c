@@ -56,9 +56,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.5+af"
+#define progversion	"v2.3.9+af"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2009 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2019 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -96,7 +96,7 @@ static int puttmp(int);
 static int puttmpw(int);
 static int puttmps(signed char *, int);
 static void chrput(int);
-static int xagetline(char *);
+static int xa_getline(char *);
 static void lineout(void);
 static long ga_p1(void);
 static long gm_p1(void);
@@ -402,6 +402,7 @@ int main(int argc,char *argv[])
 	if(setfext(old_o,".obj")==0) ofile = old_o;
 	if(setfext(old_l,".lab")==0) lfile = old_l;
      }
+     if(verbose) fprintf(stderr, "%s\n",copyright);
 
      if (printfile!=NULL && !strcmp(printfile, "-")) {
 	printfile=NULL;
@@ -424,7 +425,6 @@ int main(int argc,char *argv[])
 
      if(verbose) fprintf(stderr, "%s\n",copyright);
 
-
      if(1 /*!m_init()*/)
      {
        if(1 /*!b_init()*/)
@@ -435,7 +435,7 @@ int main(int argc,char *argv[])
            {
              if(!x_init())
              {
-	       if(fperr) fprintf(fperr,"%s\n",copyright);
+	       /* if(fperr) fprintf(fperr,"%s\n",copyright); */
 	       if(verbose) logout(ctime(&tim1));
 
      	       list_setfile(fplist);
@@ -785,7 +785,7 @@ fprintf(stderr, "offset = %i length = %i fstart = %i flen = %i charo = %c\n",
 			fprintf(stderr, "fnam = %s\n", binfnam);
 */
 			/* primitive insurance */
-			if (!(foo = fopen(binfnam, "r"))) {
+			if (!(foo = fopen(binfnam, "rb"))) {
 				errout(E_FNF);
 				ner++;
 			} else {
@@ -829,7 +829,7 @@ static int pass1(void)
      ner=0;
 
 /*FIXIT*/
-     while(!(er=xagetline(s)))
+     while(!(er=xa_getline(s)))
      {         
           er=t_p1((signed char*)s,o,&l,&al);
 	  switch(segment) {
@@ -870,7 +870,6 @@ static int pass1(void)
      } 
 
      if(er!=E_EOF) {
-	fprintf(stderr, "foul through\n");
           errout(er);
 	}
 
@@ -931,7 +930,7 @@ static void usage(int default816, FILE *fp)
 	    " -G           suppress list of exported globals\n");
 	fprintf(fp,
 	    " -DDEF=TEXT   defines a preprocessor replacement\n"
-	    " -Ocharset    set output charset (PETSCII or ASCII), case-sensitive\n"
+	    " -Ocharset    set output charset (PETSCII, ASCII, etc.), case-sensitive\n"
 	    " -Idir        add directory `dir' to include path (before XAINPUT)\n"
 	    "  --version   output version information and exit\n"
 	    "  --help      display this help and exit\n");
@@ -972,7 +971,7 @@ static char *ertxt[] = {
 	"DSB",
 	"NewLine",
         "NewFile",
-	"CMOS-Befehl",
+	"CMOS instruction used with -C",
 	"pp:Wrong parameter count",
 	"Illegal pointer arithmetic (-26)", 
 	"Illegal segment",
@@ -1024,8 +1023,8 @@ static char *ertxt[] = {
 	  "Open preprocessor directive at end of file (intentional?)",
 	  "Included binary data exceeds 64KB",
 	  "Included binary data exceeds 16MB",
+          "MVN/MVP $XXXX syntax is deprecated and will be removed",
 /* more placeholders */
-		"",
 		"",
 		"",
 
@@ -1097,7 +1096,7 @@ static int puttmps(signed char *s, int l)
 
 static char l[MAXLINE];
 
-static int xagetline(char *s)
+static int xa_getline(char *s)
 {
      static int ec;
 
@@ -1146,11 +1145,11 @@ static int xagetline(char *s)
           do {
                c=s[j]=l[i++];
 
-               	if (c=='\"') {
+                if (!(hkfl&2) && c=='\"')
                     hkfl^=1;
-		}
+                if (!comcom && !(hkfl&1) && c=='\'')
+                    hkfl^=2;
 		if (c==';' && !hkfl) {
-			// start of comment
 			comcom = 1;
 		}
                	if (c=='\0') {

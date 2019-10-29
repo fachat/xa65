@@ -35,8 +35,8 @@
 
 #define programname	"ldo65"
 #define progversion	"v0.1.1"
-#define author		"Written by André Fachat"
-#define copyright	"Copyright (C) 1997-2002 André Fachat. Formerly ld65."
+#define author		"Written by Andre Fachat"
+#define copyright	"Copyright (C) 1997-2002 Andre Fachat. Formerly ld65."
 
 typedef struct {
 	char	*name;

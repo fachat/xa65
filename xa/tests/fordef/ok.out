@@ -1,0 +1,2 @@
+test.asm:line 6: 0400: Warning - Can't optimize forward-defined label; using absolute addressing
+test.asm:line 7: 0403: Warning - Can't optimize forward-defined label; using absolute addressing

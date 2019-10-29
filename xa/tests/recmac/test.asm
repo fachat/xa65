@@ -26,6 +26,6 @@ start
 
 /* this should bug out */
 
-/*
+#ifdef FAIL
 	POKE(NOGOOD, 7)
-*/	
+#endif

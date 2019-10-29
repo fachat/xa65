@@ -10,7 +10,9 @@
 #endif
 
 /* comment this out to stop testing included gaffes */
+#ifdef BUG
 #include "test.inc"
+#endif
 
 #if 1
 #if 2
@@ -21,7 +23,5 @@
 
 #ifdef X
 /* comment this out for bugs in this file */
-/*
 #endif
-*/
 

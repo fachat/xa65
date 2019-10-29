@@ -296,6 +296,46 @@ xa-2.3.5
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 7 February, 2009
 
+xa-2.3.6
+
+  * 'make test' for regression testing framework (requires Perl).
+  * Changed getline() to xa_getline() to avoid collision with glibc 2.10+
+  * Fixed compile problems with misc/.
+  * Fixed message offsets.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 11 July 2014
+
+xa-2.3.7
+
+  * Fixed buffer overflow and test failure with gcc 4.9 (thanks Adam Sampson).
+  * mvn and mvp now use the standard syntax (thanks Alessandro Gatti).
+  * Copyright message is no longer put in the error log to simplify testing.
+  * Makefile properly triggers a relink for testing or source changes.
+  * Spurious messages quelled.
+  * Documentation updated.
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 29 December 2014
+
+xa-2.3.8
+
+  * Fixed issue with colons in string literals being treated as separators
+    (thanks Simon Rowe).
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 29 June 2017
+
+xa-2.3.9
+
+  * Fixed issue on Windows and DOS systems with the .bin pseudo-op (thanks
+    Bago Zonde).
+  * Documentation updated.
+  * Testsuite expanded.
+  * For the thirty year anniversary of xa, we're changing the name to xxxa.
+    (Just kidding.)
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 31 January 2019
+
 xa-2.x.x
 
   * Add -E commandline option to not stop after 20 errors, but show all

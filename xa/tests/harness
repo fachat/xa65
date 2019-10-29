@@ -1,0 +1,67 @@
+#!/usr/bin/perl -s
+
+$make ||= "make";
+$cc ||= "cc";
+$cflags ||= '';
+$ENV{'MAKE'} = $make;
+$ENV{'CC'} = $cc;
+$ENV{'CFLAGS'} = $cflags;
+$|++;
+
+$dtests = $tests || "ALL";
+
+print <<"EOF";
+CC = $cc
+CFLAGS = $cflags
+MAKE = $make
+tests to run: $dtests
+
+EOF
+
+# Get a list of all directories. If there is a Makefile there, do it.
+# If there is not, see if there is an .s file and an ok binary to cmp to.
+# Otherwise, do nothing (acknowledge and ignore directories we don't grok).
+
+opendir(D, ".") || die("test harness failed: $!\n");
+W: while($x = readdir(D)) {
+	next W if ($x =~ /^\./);
+	next W if (length($tests) && ($tests !~ /$x/));
+	next W if (!chdir($x));
+	$x = substr($x . " " . ("." x 79), 0, 50);
+	print STDOUT "$x > ";
+
+	if (-e "Makefile") {
+		print STDOUT "running Makefile\n";
+		print STDOUT "=" x 79, "\n";
+		system("$make clean");
+		print STDOUT "-" x 79, "\n";
+		system("$make");
+		print STDOUT "-" x 79, "\n";
+		if ($?) {
+			print STDOUT "## FAILURE (make clean NOT run) ##\n";
+			exit 1;
+		}
+		system("$make clean");
+		print STDOUT "=" x 35, " PASSED! ", "=" x 35, "\n";
+	} elsif (-e "ok" && -e "test.s") {
+		unlink("a.o65");
+		&failed("../../xa test.s");
+		&failed("../hextool -cmp=ok < a.o65");
+		unlink("a.o65");
+		print STDOUT "PASSED\n";
+	} else {
+		print STDOUT "ignored\n";
+	}
+	chdir("..");
+}
+closedir(D);
+print STDOUT "\n## ALL TESTS PASS ##\n";
+exit 0;
+
+sub failed {
+	system(@_);
+	if ($?) {
+		print STDOUT "## FAILURE ##\n";
+		exit 1;
+	}
+}

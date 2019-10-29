@@ -2,7 +2,9 @@
 #
 CC = gcc
 LD = gcc
-CFLAGS = -O2 -W -Wall -pedantic -std=c99 -g
+# for testing. not to be used; build failures in misc/.
+#CFLAGS = -O2 -W -Wall -pedantic -ansi
+CFLAGS = -O2
 LDFLAGS = -lc
 
 # for DOS?
@@ -24,7 +26,10 @@ DOCDIR = $(DESTDIR)/share/doc
 MKDIR = mkdir -p
 INSTALL = install
 
-all: xa uncpk
+all: killxa xa uncpk
+
+killxa:
+	rm -f xa
 
 xa:
 	(cd src && LD=${LD} CC="${CC} ${CFLAGS}" ${MAKE})
@@ -58,5 +63,7 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	#cd .. ; tar cvf xa-2.3.5A.tar xa-2.3.5 ; gzip xa-2.3.5A.tar
-	cd .. ; tar cvf xa-2.3.5.tar xa-2.3.5 ; gzip xa-2.3.5.tar
+	cd .. ; tar cvf xa-2.3.9.tar xa-2.3.9 ; gzip xa-2.3.9.tar
+
+test: xa uncpk
+	cd tests && ./harness -make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"

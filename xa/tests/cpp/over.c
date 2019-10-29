@@ -10,6 +10,8 @@
 
 /* This has a .c extension for those cc -E's that won't deal with .asm */
 
+	* = $0000
+
 	lda #AA
 	jmp buggy
 	rts
@@ -17,3 +19,5 @@
 #include "over.h"
 
 /* the buggy will force a line number to be printed */
+
+buggy
