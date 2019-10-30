@@ -392,6 +392,8 @@ int main(int argc,char *argv[])
 		 r_mode(RMODE_RELOC);
 		 segment = SEG_TEXT;
 	       } else {
+		 /* prime old_segment in r_mode with SEG_TEXT */
+	         segment = SEG_TEXT;
 		 r_mode(RMODE_ABS);
 	       }
 
@@ -461,6 +463,8 @@ int main(int argc,char *argv[])
 		    seg_pass2();
 
 	            if(!relmode) {
+		      /* prime old_segment in r_mode with SEG_TEXT */
+	              segment = SEG_TEXT;
 	              r_mode(RMODE_ABS);
 	            } else {
 	              r_mode(RMODE_RELOC);
