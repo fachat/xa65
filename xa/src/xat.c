@@ -479,48 +479,44 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 	       dsb_len = 0;
           } else
 	  if(n==Ktext) {
-/*	    if(segment!=SEG_ABS) {    */
 	      segment = relmode ? SEG_TEXT : SEG_ABS;
 	      t[0]=Ksegment;
 	      t[1]=segment;
 	      *ll=2;
               er=E_OKDEF;
-/*	    } else {
-	      er=E_ILLSEGMENT;
-	    }                        */
 	  } else
 	  if(n==Kdata) {
-/*  	    if(segment!=SEG_ABS) {   */
+  	    if(relmode) {   
 	      segment = SEG_DATA;
 	      t[0]=Ksegment;
 	      t[1]=SEG_DATA;
 	      *ll=2;
               er=E_OKDEF;
-/*	    } else {
+	    } else {
 	      er=E_ILLSEGMENT;
-	    }                        */
+	    } 
 	  } else
 	  if(n==Kbss) {
-/*  	    if(segment!=SEG_ABS) {   */
+  	    if(relmode) { 
 	      segment = SEG_BSS;
 	      t[0]=Ksegment;
 	      t[1]=SEG_BSS;
 	      *ll=2;
               er=E_OKDEF;
-/*	    } else {
+	    } else {
 	      er=E_ILLSEGMENT;
-	    }                        */
+	    } 
 	  } else
 	  if(n==Kzero) {
-/*  	    if(segment!=SEG_ABS) {   */
+  	    if(relmode) {   
 	      segment = SEG_ZERO;
 	      t[0]=Ksegment;
 	      t[1]=SEG_ZERO;
 	      *ll=2;
               er=E_OKDEF;
-/*	    } else {
+	    } else {
 	      er=E_ILLSEGMENT;
-	    }                        */
+	    }  
 	  } else
 	if (n==Kbin) {
 		int j;
@@ -1512,6 +1508,7 @@ fprintf(stderr, "address mode: %i address: %i\n", am, vv[0]);
                               }
                          } else
                          if(am==11 || am==16) {
+			   /* relative, relative long */
 			   if((segment!=SEG_ABS) && (!rlt[0])) {
 			     er=E_ILLPOINTER;
 			   } else {
