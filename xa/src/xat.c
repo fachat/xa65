@@ -704,8 +704,14 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
                } else
                     sy=4+nk;	/* absolute or zero page */
 
-		/* length counter set to maximum length + 1 */
-               bl=Maxbyt+1;
+	       /* length counter set to maximum length + 1 */
+	       if (w65816 || (t[l-1]=='@' || t[l-1] == '!')) {
+		       	/* for 65816 allow addressing modes up to 4 byte overall length */
+               		bl=Maxbyt+1;
+	       } else {
+		       	/* for other modes only check for addressing modes up to 3 byte overall length */
+		 	bl=Maxbyt;
+	       }
                
 		/* find best fit for length of this operand */
                while(--bl)
@@ -1375,9 +1381,19 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                          }
                     }
                }
-                
-               bl=Maxbyt+1;
                
+	       /* set bl to maximum overall length +1 as while() below starts with decrementing it */
+	       if (w65816 || (t[*ll-1]=='@' || t[*ll-1] == '!')) {
+		       	/* for 65816 allow addressing modes up to 4 byte overall length */
+               		bl=Maxbyt+1;
+	       } else {
+		       	/* for other modes only check for addressing modes up to 3 byte overall length */
+		 	bl=Maxbyt;
+	       }
+              
+#ifdef DEBUG_AM
+	      printf("--- trying to find am using: (max+1) bl=%d, sy=%d\n", bl, sy); 
+#endif
                while(--bl)
                {
                     if((am=at[sy][bl-1])>=0)
@@ -1415,8 +1431,8 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                {
 #ifdef DEBUG_AM
 fprintf(stderr,
-"b4: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d\n",
-	pc[segment], am, vv[0], fl, (vv[0]&0xffff00));
+"b4: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %u, er=%d\n",
+	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), er);
 #endif
 
 /* terrible KLUDGE!!!! OH NOES!!!1!
@@ -1455,15 +1471,21 @@ fprintf(stderr,
                else
                {
                     bl=le[am];
+		    if ((am != 11 && am != 16) && (vv[0] > 255 || vv[0] < -256) && bl == 2) {
+			    er = E_OVERFLOW;
+		    } else
+		    if ((am != 11 && am != 16) && (vv[0] > 65535 || vv[0] < -65536) && (bl == 2 || bl == 3)) {
+			    er = E_OVERFLOW;
+		    } else
                     if( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode)) {
                          bl++;
-		}
+		    }
                     *ll=bl;
 
                }
 
 #ifdef DEBUG_AM
-fprintf(stderr, "byte length is now %d\n", bl);
+fprintf(stderr, "byte length is now %d, am=%d, er=%d\n", bl, am, er);
 #endif
 
                if(!er)
