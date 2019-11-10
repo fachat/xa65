@@ -16,6 +16,8 @@ adrm/		Addressing mode test (especially the optimizer and quantity
 		prefixes)
 nonl/		Patryk's no-new-line-on-last-line cases ;)
 fordef/		Optimizer warnings for forward defined labels
+relocmode/	Tests to prevent use of irrational segments if relocating
+		mde isn't on
 relocundef/  	Tests for the detection of undefined references during a
 		reloc65 export
 ldoreloc/ 	Test case for the relocation table reading of ldo when undef'd
@@ -27,6 +29,8 @@ cpp/		Random preprocessor tests, mostly crap
 incerr/		1) .xl/.al should error without -w 2) error should be in
 		the correct file ('816)
 binclude/	Binary include code with some weird casing
+ppstrings/	Don't substitute inside strings (unless -S)
+neg_offset/	Test handling of negative offsets with/without relocation
 chppch/		Changing preprocessor characters (-p)
 charset/	Tests of when charsets should be honoured and when not
 mvnmvp/		Test MVN MVP unusual addressing mode ('816)

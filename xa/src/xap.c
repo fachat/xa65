@@ -456,7 +456,25 @@ int pp_replace(char *to, char *ti, int a,int b)
      {
        while(t[0]!='\0')
        {
-          while(!isalpha(t[0]) && t[0]!='_')
+ 	  /* find start of a potential token to be replaced */
+          while(!isalpha(t[0]) && t[0]!='_') {
+	      
+	       /* escape strings quoted with " */ 
+	       if (!ppinstr && t[0] == '\"') {
+		    do {
+			t++;
+			ti++;
+		    } while (t[0] && t[0]!='\"');
+	       }
+
+	       /* escape strings quoted with ' */ 
+	       if (!ppinstr && t[0] == '\'') {
+		    do {
+			t++;
+			ti++;
+		    } while (t[0] && t[0]!='\'');
+	       }
+
                if(t[0]=='\0')
                     break;    /*return(E_OK);*/
                else
@@ -464,6 +482,7 @@ int pp_replace(char *to, char *ti, int a,int b)
                     t++;
                     ti++;
                }
+	  }
          
           for(l=0;isalnum(t[l])||t[l]=='_';l++);
           ld=l;

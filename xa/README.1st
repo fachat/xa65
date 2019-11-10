@@ -3,7 +3,7 @@ derivatives). xa is a small, fast, portable two-pass assembler that compiles
 under most ANSI C compilers. It is distributed under the GNU Public License
 (see COPYING).
 
-The current version is 2.3.9, a bug fix to the long-lived 2.3.0, itself with
+The current version is 2.3.10, a bug fix to the long-lived 2.3.0, itself with
 compatibility improvements and new man-based documentation. It also completed
 the merge of the 65816 and 6502/R65C02 versions and thus the current xa can
 generate code for all targets now.

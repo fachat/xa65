@@ -1,4 +1,4 @@
-.TH XA "1" "31 January 2019"
+.TH XA "1" "9 November 2019"
 
 .SH NAME
 xa \- 6502/R65C02/65816 cross-assembler
@@ -20,14 +20,6 @@ further in this manual page.
 .TP
 .B \-v
 Verbose output.
-.TP
-.B \-x
-Use old filename behaviour (overrides
-.BR \-o ,
-.B \-e
-and
-.BR \-l ).
-This option is now deprecated.
 .TP
 .B \-C
 No CMOS opcodes (default is to allow R65C02 opcodes).
@@ -133,6 +125,23 @@ Show summary of options.
 .TP
 .B \-\-version
 Show version of program.
+.LP
+The following options are
+.BR deprecated
+and will be removed in 2.4 and later versions:
+.TP
+.B \-x
+Use old filename behaviour (overrides
+.BR \-o ,
+.B \-e
+and
+.BR \-l ).
+.TP
+.B \-S
+Allow preprocessor substitution within strings (this is now disallowed
+for better
+.BR cpp (1)
+compatibility).
 
 .SH ASSEMBLER SYNTAX
 
@@ -945,6 +954,20 @@ be prepended with the
 .B @
 prefix. Otherwise, the assembler will attempt to optimize to 16 bits, which
 may be undesirable. 
+
+.SH "IMMINENT DEPRECATION"
+The following options and modes will be
+.B REMOVED
+in 2.4 and later versions of
+.BR xa :
+.LP
+.B \-x
+.LP
+.B \-S
+.LP
+the original
+.B mvn $xxxx
+syntax
 
 .SH "SEE ALSO"
 .BR file65 (1),
