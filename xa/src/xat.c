@@ -1213,7 +1213,9 @@ fprintf(stderr, "mvn mvp: %i %i %i %i %i\n", t[0], t[i], wide, i, j);
 			 er=E_ILLPOINTER;
 		    else
 */
-                    {
+		    if (j < 0) {
+			er = E_ILLQUANT;
+		    } else {
 			 dsb_len = 0;
 
 			 if(t[i+1]==',') {
