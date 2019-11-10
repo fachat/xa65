@@ -22,7 +22,7 @@
 #include "xah.h"	/* For SEG_MAX */
 
 extern int ncmos, cmosfl, w65816, n65816;
-extern int masm, nolink;
+extern int masm, nolink, ppinstr;
 extern int noglob;
 extern int showblk;
 extern int relmode;

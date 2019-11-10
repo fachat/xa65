@@ -5,8 +5,7 @@ xa65 is a 6502 cross assembler, running on Unix (and Unix-alikes), and producing
 
 xa65 was originally authored by me, André Fachat, but currently and still xa65 is maintained by Cameron Kaiser at http://www.floodgap.com/retrotech/xa/ . 
 
-Due to current time constraints Cameron can not do any updates, so I decided to create this repository to publish my (beta) version that implements a long outstanding feature: assembler listings...
-
+In this experimental repository, I am mirroring Cameron's releases and I am working on fixes and changes that I may want to submit to Cameron.
 
 These are the directories:
 

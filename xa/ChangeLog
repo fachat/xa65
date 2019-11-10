@@ -335,3 +335,20 @@ xa-2.3.9
     (Just kidding.)
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 31 January 2019
+
+xa-2.3.10
+
+  * Three fixes, all from Andre:
+    - Don't crash if a useless segment is referenced outside of relocating
+      mode (thanks Laszlo Barath for the report).
+    - Don't substitute within strings, for better cpp compatibility (thanks
+      Glenn Holmer for the report). I added the -S option for backwards
+      compatibility for the old behaviour; it will be removed in 2.4 and later.
+    - Fix underflow issue if a variable is late-bound (with -L) when that
+      variable is used in computations with negative offsets.
+  * Deprecated options will be removed in 2.4 and everything is warned.
+  * Documentation updated.
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 9 November 2019
+
