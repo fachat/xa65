@@ -55,9 +55,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.10"
+#define progversion	"v2.3.11"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2019 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2020 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;

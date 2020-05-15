@@ -1205,6 +1205,9 @@ fprintf(stderr, "mvn mvp: %i %i %i %i %i\n", t[0], t[i], wide, i, j);
 	       dsb_len = 1;
                if(!(er=a_term(t+1,&j,&i,pc[segment],&afl,&label,0)))
                {
+                    if (j<0)
+			er=E_SYNTAX;
+		    else
 /*
                     if(t[i+1]!=',')
                          er=E_SYNTAX;

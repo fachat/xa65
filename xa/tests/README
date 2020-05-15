@@ -30,7 +30,7 @@ incerr/		1) .xl/.al should error without -w 2) error should be in
 		the correct file ('816)
 binclude/	Binary include code with some weird casing
 ppstrings/	Don't substitute inside strings (unless -S)
-neg_offset/	Test handling of negative offsets with/without relocation
+neg_offset/	Test negative offsets/values with/without relocation
 chppch/		Changing preprocessor characters (-p)
 charset/	Tests of when charsets should be honoured and when not
 mvnmvp/		Test MVN MVP unusual addressing mode ('816)
@@ -41,6 +41,8 @@ branch/		Branch range test
 masmcom/	Another test for -M that generates totally valid code
 quotch/		Test quoting problematic characters (thanks Simon Rowe)
 linkr/		Test linking using .dsb and generated code
+csapiec/	Test on pointer arithmetic in relocating mode
+math/		Math tests (currently divide by zero, thanks Frederic Cambus)
 
 Cameron Kaiser, André Fachat
 

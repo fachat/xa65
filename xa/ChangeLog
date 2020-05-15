@@ -352,3 +352,14 @@ xa-2.3.10
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 9 November 2019
 
+xa-2.3.11
+
+  * Compilation fix for gcc 10 (thanks Dan Horak).
+  * Allow pointer arithmetic in relocating mode within the same segment, since
+    the result is segmentless (thanks Andre for the report).
+  * .dsb with negative quantities shouldn't work (thanks Andre for the report).
+  * Stop a divide-by-zero floating point exception (thanks Frederic Cambus).
+  * Testsuite expanded.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> 4 May 2020
+

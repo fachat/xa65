@@ -1,4 +1,8 @@
-default: test1 test2 test3 test4 test5 test6 test7 test8 
+default: test0 test1 test2 test3 test4 test5 test6 test7 test8 
+
+test0:
+	# this test must fail.
+	../../xa -o test0.o test0.s || exit 0 && exit 1
 
 test1:
 	../../xa -R -LLIB6502 test1.s -o test1.o
