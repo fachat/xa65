@@ -792,7 +792,7 @@ int pp_open(char *name)
      flist[0].filep=fp;
      flist[0].flinep=NULL;    
 
-     return(((long)fp)==0l);
+     return fp == NULL;
 }
 
 void pp_close(void)
