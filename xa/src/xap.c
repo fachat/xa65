@@ -595,7 +595,7 @@ int pp_replace(char *to, char *ti, int a,int b)
                                         if(!er)
                                              er=pp_replace(fto,fti,rlist,rlist+i);
 /*               if(flag) printf("sl=%d,",sl);*/
-                                        sl=(int)((long)y+1L-(long)t);
+                                        sl=(int)(y +1 - t);
 /*               if(flag) printf("sl=%d\n",sl);*/
                                         rs=fto;
 /*     printf("->%s\n",fto);*/
@@ -706,7 +706,7 @@ int pp_replace(char *to, char *ti, int a,int b)
                                         }   
                                         if(!er)
                                              er=pp_replace(fto,fti,0,rlist+i);
-                                        sl=(int)((long)y+1L-(long)t);
+                                        sl=(int)(y + 1 - t);
                                         rs=fto;
                                    }    
                               }
