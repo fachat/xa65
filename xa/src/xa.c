@@ -56,17 +56,18 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.9+af"
+#define progversion	"v2.3.11+af"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2019 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2020 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
+
 /* compatibility flags */
 int masm = 0;	/* MASM */
 int ca65 = 0;	/* CA65 */
 int ctypes = 0;	/* C compatibility, like "0xab" types */
-
+int ppinstr = 0;
 int nolink = 0;
 int romable = 0;
 int romaddr = 0;
@@ -239,6 +240,9 @@ int main(int argc,char *argv[])
 		    fprintf(stderr, "Compatibility set '%s' unknown - ignoring! (check case?)\n", name);
 		  }
 		}
+          case 'S':
+                ppinstr = 1;    /* preprocessor substitution in strings ok */
+                fprintf(stderr, "Warning: -S is deprecated and will be removed in 2.4+!\n");
 		break;
 	  case 'O':		/* output charset */
 		{
@@ -300,7 +304,7 @@ int main(int argc,char *argv[])
 		break;
 	  case 'x':		/* old filename behaviour */
 		oldfile = 1;
-		fprintf(stderr, "Warning: -x is now deprecated and may disappear in future versions!\n");
+		fprintf(stderr, "Warning: -x is now deprecated and will be removed in 2.4+!\n");
 		break;
 	  case 'I':
 		if(argv[i][2]==0) {
@@ -449,6 +453,8 @@ int main(int argc,char *argv[])
 		 r_mode(RMODE_RELOC);
 		 segment = SEG_TEXT;
 	       } else {
+		 /* prime old_segment in r_mode with SEG_TEXT */
+	         segment = SEG_ABS;
 		 r_mode(RMODE_ABS);
 	       }
 
@@ -519,11 +525,13 @@ int main(int argc,char *argv[])
 
 		    seg_pass2();
 
-	            if(!relmode) {
-	              r_mode(RMODE_ABS);
+	     	    if(relmode) {
+		 	r_mode(RMODE_RELOC);
+		 	segment = SEG_TEXT;
 	            } else {
-	              r_mode(RMODE_RELOC);
-		      segment = SEG_TEXT;
+		 	/* prime old_segment in r_mode with SEG_TEXT */
+	         	segment = SEG_ABS;
+		 	r_mode(RMODE_ABS);
 	            }
                     er=pass2();
 
@@ -929,11 +937,16 @@ static void usage(int default816, FILE *fp)
 	    "                Other segments must be specified with `-b?'\n"
 	    " -G           suppress list of exported globals\n");
 	fprintf(fp,
+	    " -p?          set preprocessor character to ?, default is #\n"
 	    " -DDEF=TEXT   defines a preprocessor replacement\n"
 	    " -Ocharset    set output charset (PETSCII, ASCII, etc.), case-sensitive\n"
 	    " -Idir        add directory `dir' to include path (before XAINPUT)\n"
 	    "  --version   output version information and exit\n"
 	    "  --help      display this help and exit\n");
+	fprintf(fp,
+	    "== These options are deprecated and will be removed in 2.4+! ==\n"
+	    " -x           old filename behaviour (overrides `-o', `-e', `-l')\n"
+	    " -S           allow preprocessor substitution within strings\n");
 }
 
 /*

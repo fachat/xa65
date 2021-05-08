@@ -98,7 +98,9 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 
      afl = 0;
 
-/*printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);*/
+/*
+printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
+*/
      while(s[pp]=='-')
      {
           pp++;
@@ -119,8 +121,10 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_LABEL)
      {
           er=l_get(cval(s+pp+1),v, &afl);
-	  //printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
-	  //		er, segment, afl, nolink, fundef); 
+/*
+ printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
+			er, segment, afl, nolink, fundef);
+*/
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
 	    if( (nolink && !noundef) || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
@@ -137,16 +141,22 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_VALUE)
      {
           *v=lval(s+pp+1);
-          pp+=5;
-/* printf("value: v=%04x\n",*v); */
+          //pp+=5;
+          pp+=4;
+/*
+printf("value: v=%04x\n",*v);
+*/
      }
      else
      if(s[pp]==T_POINTER)
      {
 	  afl = s[pp+1];
           *v=cval(s+pp+2);
-          pp+=6;
-/* printf("pointer: v=%04x, afl=%04x\n",*v,afl); */
+          //pp+=6;
+          pp+=4;
+/*
+printf("pointer: v=%04x, afl=%04x\n",*v,afl);
+*/
      }
      else
      if(s[pp]=='*')
@@ -180,11 +190,12 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 		      if((afl && !*nafl) && o==2) {
 			afl=(afl | *nafl);  /* substract constant from pointer */
 		      } else {
-			if(segment!=SEG_ABS) { 
+                        /* allow math in the same segment */
+			if(segment!=SEG_ABS && segment != afl) { 
 			  if(!dsb_len) {
 			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
 			    /* e.g. adding two pointers, adding two undefined values */
-			    er=E_ILLPOINTER;
+			    er=E_ILLSEGMENT;
 			  }
 			}
 			afl=0;
@@ -236,7 +247,7 @@ static int do_op(int *w,int w2,int o)
           *w *=w2;
           break;
      case 4:
-          if (w!=0)
+          if (w2!=0)
                *w /=w2;
           else
                er =E_DIV;

@@ -38,7 +38,7 @@ int gm_pp(void);
 long gm_ppm(void);
 long ga_ppm(void);
 
-Datei *filep;
-char s[MAXLINE];
+extern Datei *filep;
+extern char s[MAXLINE];
 
 #endif /* __XA65_XAP_H__ */

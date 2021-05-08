@@ -480,10 +480,12 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 	printf("replace part: n=%d, sl=%d, rec=%d, %s\n", n, sl, recursive, t);
 #endif
 
-			 // yes, mark replacement string
-                         char *rs=liste[n].replace;
+	 // yes, mark replacement string
+        char *rs=liste[n].replace;
                         
-			 // does it have parameters? 
+	 // does it have parameters? 
+
+                         
                          if(liste[n].p_anz)        
                          {
 			      // yes, we have parameters, so we need to pp_replace them
