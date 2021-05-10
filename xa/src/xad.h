@@ -37,7 +37,7 @@
                                 t[i++] = v & 255;                       \
                                 t[i++] = (v >> 8) & 255;                \
                                 t[i++] = (v >> 16) & 255;               \
-                                t[i++] = f & 255;                       \
+                                /*t[i++] = f & 255; for syntactically correct printing */                       \
                         } while (0)
 
 #endif /* __XA65_XAD_H__ */
