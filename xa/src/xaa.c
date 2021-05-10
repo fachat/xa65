@@ -141,8 +141,7 @@ printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
      if(s[pp]==T_VALUE)
      {
           *v=lval(s+pp+1);
-          //pp+=5;
-          pp+=4;
+          pp+=5;
 /*
 printf("value: v=%04x\n",*v);
 */
@@ -152,8 +151,7 @@ printf("value: v=%04x\n",*v);
      {
 	  afl = s[pp+1];
           *v=cval(s+pp+2);
-          //pp+=6;
-          pp+=4;
+          pp+=6;
 /*
 printf("pointer: v=%04x, afl=%04x\n",*v,afl);
 */
