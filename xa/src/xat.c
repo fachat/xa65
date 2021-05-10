@@ -387,7 +387,7 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
                if(!(er=a_term(t+1,&tmp /*&pc[SEG_ABS]*/,&l,pc[segment],&afl,&label,0)))
                {
                     i=1;
-                    wval(i,tmp /*pc[SEG_ABS]*/);
+                    wval(i,tmp /*pc[SEG_ABS]*/,'d');
                     t[i++]=T_END;
                     *ll=6;
                     er=E_OKDEF;
@@ -412,7 +412,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 			segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
 		   t[0]=Kreloc;
 		   i=1;
-		   wval(i,pc[SEG_TEXT]);
+		   wval(i,pc[SEG_TEXT],'d');
 		   t[i++]=T_END;
 		   *ll=6;
 	  	   er=E_OKDEF;
@@ -636,10 +636,10 @@ printf(" wrote %02x %02x %02x %02x %02x %02x\n",
 		    t[0]=Kdsb;
 		    i=1;
 		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp);
+		    wval(i,tmp,'d');
                     t[i++]=',';
 		    tmp2= 0xea;
-		    wval(i,tmp2);	/* nop opcode */
+		    wval(i,tmp2,'d');	/* nop opcode */
                     t[i++]=T_END;
 		    *ll=9;
 		    er=E_OKDEF;
@@ -1806,7 +1806,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                              t[q++]=v & 255;
                              t[q++]=(v>>8) & 255;
                            } else {
-                             wval(q,v);
+                             wval(q,v,'d');
                            }
                          } else
                          if(er==E_NODEF)
@@ -1830,7 +1830,7 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     {
                          tg_dez(s+p,&ll,&v);
                          p+=ll;
-                         wval(q,v);
+                         wval(q,v,'d');
                     }
                     else
 		    /* handle encodings: hex, binary, octal, quoted strings */
@@ -1853,17 +1853,17 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     case '$':
                          tg_hex(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v,'$');
                          break;
                     case '%':
                          tg_bin(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v,'%');
                          break;
                     case '&':
                          tg_oct(s+p+1,&ll,&v);
                          p+=1+ll;
-                         wval(q,v);
+                         wval(q,v,'&');
                          break;
                     case '\'':
                     case '\"':
