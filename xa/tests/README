@@ -43,6 +43,7 @@ quotch/		Test quoting problematic characters (thanks Simon Rowe)
 linkr/		Test linking using .dsb and generated code
 csapiec/	Test on pointer arithmetic in relocating mode
 math/		Math tests (currently divide by zero, thanks Frederic Cambus)
+alxl/		Various '816 width tests (includes Samuel Falvo's test)
 
 Cameron Kaiser, André Fachat
 

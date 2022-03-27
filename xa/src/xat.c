@@ -139,8 +139,8 @@ static int ktp[]={ 0,3,17,25,28,29,29,29,29,32,34,34,38,40,41,42,58,
  * opcodes for each addressing mode
  * high byte: supported architecture (no bits = original NMOS 6502)
  *  bit 1: R65C02
- *  bit 2: 65816
- *  bit 3: 65816 and allows 16-bit quantity (immediate only)
+ *  bit 2: 65816 and allows 16-bit quantity (accum only)
+ *  bit 3: 65816 and allows 16-bit quantity (index only)
  * low byte: opcode itself
  *
  * each opcode is indexed in this order: *=65816, ^=R65C02
@@ -1430,8 +1430,8 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                {
 #ifdef DEBUG_AM
 fprintf(stderr,
-"b4: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %u, er=%d\n",
-	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), er);
+"b4: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %u, er=%d, bl=%d\n",
+	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), er, bl);
 #endif
 
 /* terrible KLUDGE!!!! OH NOES!!!1!
@@ -1444,8 +1444,8 @@ fprintf(stderr,
                               am=opt[am];
 #ifdef DEBUG_AM
 fprintf(stderr,
-"aftaa1: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d\n",
-	pc[segment], am, vv[0], fl, (vv[0]&0xffff00));
+"aftaa1: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d, bl = %d\n",
+	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), bl);
 #endif
                     if(t[*ll-1]!='!') {
                          if(bl && !er && !(vv[0]&0xffff00) && opt[am]>=0) {
@@ -1460,8 +1460,8 @@ fprintf(stderr,
                     }
 #ifdef DEBUG_AM
 fprintf(stderr,
-"aftaa2: pc=%d, am=%d and vv[0]=%d, optimize=%d, bitmask=%d, op=%d\n",
-	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), ct[n][opt[am]]);
+"aftaa2: pc=%d, am=%d and vv[0]=%d, optimize=%d, bitmask=%d, op=%d, bl=%d\n",
+	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), ct[n][opt[am]], bl);
 #endif
                }
 
@@ -1470,17 +1470,16 @@ fprintf(stderr,
                else
                {
                     bl=le[am];
+                    if( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode)) {
+                         bl++;
+		    }
 		    if ((am != 11 && am != 16) && (vv[0] > 255 || vv[0] < -256) && bl == 2) {
 			    er = E_OVERFLOW;
 		    } else
 		    if ((am != 11 && am != 16) && (vv[0] > 65535 || vv[0] < -65536) && (bl == 2 || bl == 3)) {
 			    er = E_OVERFLOW;
-		    } else
-                    if( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode)) {
-                         bl++;
 		    }
                     *ll=bl;
-
                }
 
 #ifdef DEBUG_AM
