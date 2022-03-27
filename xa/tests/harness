@@ -55,6 +55,7 @@ W: while($x = readdir(D)) {
 	chdir("..");
 }
 closedir(D);
+print STDOUT "=" x 79, "\n";
 print STDOUT "\n## ALL TESTS PASS ##\n";
 exit 0;
 

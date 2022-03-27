@@ -2111,7 +2111,7 @@ static void tg_hex(signed char *s, int *l, int *v)
 static int tg_asc(signed char *s, signed char *t, int *q, int *p, int *na1, int *na2,int n)
 {
 
-     int er=E_OK,i=0,j=0;
+     int er=E_OK,i=0,j=0,bs=0;
 
      signed char delimiter = s[i++];
      
@@ -2122,8 +2122,16 @@ fprintf(stderr, "tg_asc token = %i\n", n);
      t[j++]='"';	/* pass2 token for string */
      j++;		/* skip place for length */
 
-     while(s[i]!='\0' && s[i]!=delimiter)
+     while(s[i]!='\0' && (bs || s[i]!=delimiter))
      {
+
+#if(0)
+/* implement backslashed quotes for 2.4 */
+          if(n != Kbin && s[i] == '\\' && !bs) {
+               fprintf(stderr, "B"); bs=1; i++; continue;
+          } else bs=0;
+#endif
+
 	/* do NOT convert for Kbin or Kaasc, or for initial parse */
 	  if (!n || n == Kbin || n == Kaasc) {
 		t[j++]=s[i];
