@@ -62,6 +62,8 @@ static int pp_undef(char*);
 #define   VALBEF    6
 
 static int ungeteof = 0;
+static int quotebs = 0;
+static int inquote = 0;
 
 static char *cmd[]={ "echo","include","define","undef","printdef","print",
 			"ifdef","ifndef","else","endif",
@@ -886,7 +888,7 @@ int pp_open(char *name)
      flist[0].filep=fp;
      flist[0].flinep=NULL;    
 
-     return(((long)fp)==0l);
+     return (fp == NULL);
 }
 
 void pp_close(void)
@@ -1017,6 +1019,7 @@ int pgetline(char *t)
      int c,er=E_OK;
      int rlen, tlen;
      char *p = 0;
+     char *q = 0;
 
      loopfl =0; /* set if additional fetch needed */
 
@@ -1073,6 +1076,40 @@ int pgetline(char *t)
 
 	if (loopfl) {
 		errout(E_OPENPP);
+	}
+
+     /* handle the double-slash comment (like in C++) */
+	/* get p past any quoted strings */
+	p = strchr(in_line, '/');
+	if (p != NULL) {
+		q = strchr(in_line, '"');
+		for(;;) {
+			/* no more quotes to skip, or slashes before quotes */
+			if (q == NULL || (p < q)) {
+				if (p[1] == '/') {
+					/* truncate line, done with loop */
+					*p = 0;
+					break;
+				} else {
+					/* wasn't //, but could be later */
+					p++;
+				}
+			} else {
+				/* quote before slash, so skip string */
+				q++;
+				while (*q != 0 && *q != '"') {
+					if (*q == '\\') q++;
+					if (*q != 0) q++;
+				}
+				if (*q == 0) break; /* oops */
+				q++;
+				p = q;
+			}
+
+			p = strchr(p, '/');
+			if (p == NULL) break; /* never mind */
+			if (q != NULL) q = strchr(q, '"');
+		}
 	}
 
      if(!er || loopfl) {
@@ -1138,15 +1175,22 @@ int egetc(FILE *fp) {
 /* smart getc that can skip C comment blocks */
 int rgetc(FILE *fp)
 {
-     static int c,d,fl;
-
+     static int c,cc,d,fl;
+     cc=0;
      fl=0;
 
      do
      {
           while((c=egetc(fp))==13);  /* remove ^M for unices */
 
-          if(fl && (c=='*'))
+          /* flag if we're in a quoted string */
+          if(c=='"' && !quotebs) inquote ^= 1;
+#if(0)
+/* implement backslashed quotes for 2.4 */
+          if(c=='\\') quotebs=1; else quotebs=0;
+#endif
+
+          if(!inquote && fl && (c=='*'))
           {
                if((d=egetc(fp))!='/')
                     ungetc(d,fp);
@@ -1156,12 +1200,14 @@ int rgetc(FILE *fp)
                     while((c=egetc(fp))==13);
                }
           }
+
+          /* in comment block */
           if(c=='\n')
           {
                flist[fsp].fline++;
                nlf=1;
           } else
-          if(c=='/')
+          if(!inquote && c=='/')
           {
                if((d=egetc(fp))!='*')
                     ungetc(d,fp);

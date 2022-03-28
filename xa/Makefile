@@ -53,7 +53,7 @@ clean:
 	(cd src && ${MAKE} clean)
 	(cd loader && ${MAKE} clean)
 	(cd misc && ${MAKE} mrproper)
-	rm -f xa *.exe *.o65
+	rm -f xa *.exe *.o65 *.s
 
 install: xa uncpk
 	$(MKDIR) $(BINDIR)
@@ -63,7 +63,7 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	cd .. ; tar cvf xa-2.3.11.tar xa-2.3.11 ; gzip xa-2.3.11.tar
+	cd .. ; tar cvf xa-2.3.13.tar xa-2.3.13 ; gzip xa-2.3.13.tar
 
 test: xa uncpk
 	cd tests && ./harness -make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"

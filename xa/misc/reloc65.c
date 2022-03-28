@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
 	FILE *fp;
 	int tflag = 0, dflag = 0, bflag = 0, zflag = 0;
 	int tbase = 0, dbase = 0, bbase = 0, zbase = 0;
+	int *base;
 	char *outfile = "a.o65";
 	int extract = 0;
 	int verbose = 0;
@@ -113,36 +114,39 @@ int main(int argc, char *argv[]) {
 		break;
 	    case 'o':
 		if(argv[i][2]) outfile=argv[i]+2;
-		else outfile=argv[++i];
+		else if(i + 1 < argc) outfile=argv[++i];
+		else fprintf(stderr,"%s: missing output file\n",programname);
 		break;
 	    case 'X':
 		extract=3;
 		break;
 	    case 'b':
+	        base=NULL;
 		switch(argv[i][2]) {
 		case 't':
 			tflag= 1;
-			if(argv[i][3]) tbase = atoi(argv[i]+3);
-			else tbase = atoi(argv[++i]);
+			base=&tbase;
 			break;
 		case 'd':
 			dflag= 1;
-			if(argv[i][3]) dbase = atoi(argv[i]+3);
-			else dbase = atoi(argv[++i]);
+			base=&dbase;
 			break;
 		case 'b':
 			bflag= 1;
-			if(argv[i][3]) bbase = atoi(argv[i]+3);
-			else bbase = atoi(argv[++i]);
+			base=&bbase;
 			break;
 		case 'z':
 			zflag= 1;
-			if(argv[i][3]) zbase = atoi(argv[i]+3);
-			else zbase = atoi(argv[++i]);
+			base=&zbase;
 			break;
 		default:
 			printf("Unknown segment type '%c' - ignored!\n", argv[i][2]);
 			break;
+		}
+		if (base != NULL) {
+			if(argv[i][3]) *base = atoi(argv[i]+3);
+			else if(i + 1 < argc) *base = atoi(argv[++i]);
+			else fprintf(stderr,"%s: missing address\n",programname);
 		}
 		break;
 	    case 'x':		/* extract segment */
@@ -163,7 +167,7 @@ int main(int argc, char *argv[]) {
 		}
 		break;
 	    default:
-		fprintf(stderr,"reloc65: %s unknown option, use '-?' for help\n",argv[i]);
+		fprintf(stderr,"%s: %s unknown option, use '-?' for help\n",programname,argv[i]);
 		break;
 	    }
 	  } else {

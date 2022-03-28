@@ -56,9 +56,9 @@
 #define ANZWARN		13
 
 #define programname	"xa"
-#define progversion	"v2.3.11+af"
+#define progversion	"v2.3.13+af"
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2020 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2022 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -247,8 +247,12 @@ int main(int argc,char *argv[])
 	  case 'O':		/* output charset */
 		{
 		  char *name = NULL;
-		  if (argv[i][2] == 0) { 
-		    name = argv[++i]; 
+		  if (argv[i][2] == 0) {
+		    if (i + 1 < argc) name = argv[++i];
+		    else {
+		      fprintf(stderr, "-O requires an argument\n");
+		      exit(1);
+		    }
 		  } else {
 		    name = argv[i]+2;
 		  }
@@ -260,7 +264,13 @@ int main(int argc,char *argv[])
 	  case 'A':		/* make text segment start so that text relocation
 				   is not necessary when _file_ starts at adr */
 		romable = 2;
-		if(argv[i][2]==0) romaddr = atoi(argv[++i]);
+		if(argv[i][2]==0) {
+		  if (i + 1 < argc) romaddr = atoi(argv[++i]);
+		  else {
+		    fprintf(stderr, "-A requires an argument\n");
+		    exit(1);
+		  }
+		}
 		else romaddr = atoi(argv[i]+2);
 		break;
 	  case 'G':
@@ -308,7 +318,11 @@ int main(int argc,char *argv[])
 		break;
 	  case 'I':
 		if(argv[i][2]==0) {
-		  reg_include(argv[++i]);
+		  if (i + 1 < argc) reg_include(argv[++i]);
+		  else {
+		    fprintf(stderr, "-I requires an argument\n");
+		    exit(1);
+		  }
 		} else {
 		  reg_include(argv[i]+2);
 		}
@@ -329,21 +343,33 @@ int main(int argc,char *argv[])
 		break;
 	  case 'o':
 		if(argv[i][2]==0) {
-		  ofile=argv[++i];
+		  if (i + 1 < argc) ofile=argv[++i];
+		  else {
+		    fprintf(stderr, "-o requires an argument\n");
+		    exit(1);
+		  }
 		} else {
 		  ofile=argv[i]+2;
 		}
 		break;
 	  case 'l':
 		if(argv[i][2]==0) {
-		  lfile=argv[++i];
+		  if (i + 1 < argc) lfile=argv[++i];
+		  else {
+		    fprintf(stderr, "-l requires an argument\n");
+		    exit(1);
+		  }
 		} else {
 		  lfile=argv[i]+2;
 		}
 		break;
 	  case 'e':
 		if(argv[i][2]==0) {
-		  efile=argv[++i];
+		  if (i + 1 < argc) efile=argv[++i];
+		  else {
+		    fprintf(stderr, "-e requires an argument\n");
+		    exit(1);
+		  }
 		} else {
 		  efile=argv[i]+2;
 		}

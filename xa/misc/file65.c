@@ -101,13 +101,14 @@ int main(int argc, char *argv[]) {
 		rompar = 1;
 		if(argv[i][1]=='A') rompar++;
 		if(argv[i][2]) romoff = atoi(argv[i]+2);
-		else romoff = atoi(argv[++i]);
+		else if(i + 1 < argc) romoff = atoi(argv[++i]);
+		else fprintf(stderr,"%s: missing offset\n",programname);
 		break;
 	    case 'P':
 		xapar = 1;
 		break;
 	    default:
-		fprintf(stderr,"file65: %s unknown option\n",argv[i]);
+		fprintf(stderr,"%s: %s unknown option\n",programname,argv[i]);
 		break;
 	    }
 	  } else {

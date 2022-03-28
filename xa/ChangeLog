@@ -363,8 +363,29 @@ xa-2.3.11
 
  -- Cameron Kaiser <ckaiser@floodgap.com> 4 May 2020
 
+xa-2.3.12
+
+  * Regression fix for address size validation in 65816 mode (thanks Sam
+    Falvo; we had a pending fix for this but I like his test case).
+  * Testsuite expanded. 
+
+-- Cameron Kaiser <ckaiser@floodgap.com> 26 November 2021
+
+xa-2.3.13
+
+  * Fix // and /* */ in quoted strings. Incredible no one ever hit this
+    before (thanks ZornsLemma).
+  * Segfault fixes for file65, reloc65 and xa. Remember, kids, if you ever
+    run xa as root all kittens will die. Please save the kittens (thanks
+    Stephen Kitt).
+  * Just compare to null in the preprocessor (thanks Bas Wassink).
+  * Testsuite expanded.
+
+-- Cameron Kaiser <ckaiser@floodgap.com> 25 March 2022
+
 xa-2.x.x
 
+  * Listing feature
   * Add -E commandline option to not stop after 20 errors, but show all
     of them
   * Introduce -X compatibility set commandline option, to distinguish 
