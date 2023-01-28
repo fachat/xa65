@@ -925,39 +925,6 @@ int pgetline(char *t)
 		errout(E_OPENPP);
 	}
 
-     /* handle the double-slash comment (like in C++) */
-	/* get p past any quoted strings */
-	p = strchr(in_line, '/');
-	if (p != NULL) {
-		q = strchr(in_line, '"');
-		for(;;) {
-			/* no more quotes to skip, or slashes before quotes */
-			if (q == NULL || (p < q)) {
-				if (p[1] == '/') {
-					/* truncate line, done with loop */
-					*p = 0;
-					break;
-				} else {
-					/* wasn't //, but could be later */
-					p++;
-				}
-			} else {
-				/* quote before slash, so skip string */
-				q++;
-				while (*q != 0 && *q != '"') {
-					if (*q == '\\') q++;
-					if (*q != 0) q++;
-				}
-				if (*q == 0) break; /* oops */
-				q++;
-				p = q;
-			}
-
-			p = strchr(p, '/');
-			if (p == NULL) break; /* never mind */
-			if (q != NULL) q = strchr(q, '"');
-		}
-	}
 
      if(!er || loopfl) {
           in_line[0]='\0';
@@ -1046,12 +1013,21 @@ int rgetc(FILE *fp)
 	  	/* check for start of comment */
           	if(!inquote && c=='/')
           	{
-               		if((d=egetc(fp))!='*') {
-                    		ungetc(d,fp);
-			} else {
+			d = egetc(fp);
+
+			// C++ double slash comment
+			if (d == '/') {
+				do {
+					c = egetc(fp);
+				} while (c != '\n' && c != EOF);
+			} else
+               		if (d == '*') {
+				/* start block comment */
                     		incomment++;
 				/* convene normal processing */
 				goto restart;
+			} else {
+                    		ungetc(d,fp);
 			}
           	}
 
