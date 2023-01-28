@@ -59,7 +59,6 @@ static int pp_undef(char*);
 #define   ANZBEF    13
 #define   VALBEF    6
 
-static int ungeteof = 0;
 static int quotebs = 0;
 static int inquote = 0;
 
@@ -993,6 +992,7 @@ last line bug ... a very irritated Cameron */
 /* #define DEBUG_EGETC */
 int egetc(FILE *fp) {
 	int c;
+	static int ungeteof = 0;
 
 	c = getc(fp);
 	if (c == EOF) {
@@ -1016,47 +1016,70 @@ int egetc(FILE *fp) {
 /* smart getc that can skip C comment blocks */
 int rgetc(FILE *fp)
 {
-     static int c,cc,d,fl;
-     cc=0;
-     fl=0;
+     int incomment;
+     int c,d;
+
+     incomment=0;
 
      do
      {
+	  restart:
+
           while((c=egetc(fp))==13);  /* remove ^M for unices */
 
-          /* flag if we're in a quoted string */
-          if(c=='"' && !quotebs) inquote ^= 1;
+	  /* a newlinebreaks any quote */
+	  if (c == '\n') {
+		  inquote = 0;
+	  }
+
+	  if (!incomment) {
+		/* not in comment */
+
+          	/* flag if we're in a quoted string */
+          	if(c=='"' && !quotebs) {
+			inquote ^= 1;
+		}
 #if(0)
 /* implement backslashed quotes for 2.4 */
           if(c=='\\') quotebs=1; else quotebs=0;
 #endif
+	  	/* check for start of comment */
+          	if(!inquote && c=='/')
+          	{
+               		if((d=egetc(fp))!='*') {
+                    		ungetc(d,fp);
+			} else {
+                    		incomment++;
+				/* convene normal processing */
+				goto restart;
+			}
+          	}
 
-          if(!inquote && fl && (c=='*'))
-          {
-               if((d=egetc(fp))!='/')
-                    ungetc(d,fp);
-               else
-               {
-                    fl--;
-                    while((c=egetc(fp))==13);
-               }
+	  } else {
+		/* in comment */
+
+		/* check for end of comment */
+		/* note: incomment only set true if not quoted, and quote not changed in comment */
+          	if(c=='*')
+          	{
+               		if((d=egetc(fp))!='/') {
+                    		ungetc(d,fp);
+			} else {
+                    		incomment--;
+				/* convene normal processing */
+				goto restart;
+			}
+               	}
+
+          	/* in comment block */
+          	if(c=='\n')
+          	{
+               		flist[fsp].fline++;
+               		nlf=1;
+          	} 
           }
 
-          /* in comment block */
-          if(c=='\n')
-          {
-               flist[fsp].fline++;
-               nlf=1;
-          } else
-          if(!inquote && c=='/')
-          {
-               if((d=egetc(fp))!='*')
-                    ungetc(d,fp);
-               else
-                    fl++;
-          }
-
-     } while(fl && (c!=EOF));
+     } while(incomment && (c!=EOF));
 
      return(c-'\t'?c:' ');
 }
