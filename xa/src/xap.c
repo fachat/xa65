@@ -950,36 +950,6 @@ int pgetline(char *t)
 
 /*************************************************************************/
 
-/* this is the most disgusting code I have ever written, but Andre drove me
-to it because I can't think of any other F$%Y#*U(%&Y##^#KING way to fix the
-last line bug ... a very irritated Cameron */
-
-/* however, it also solved the problem of open #ifdefs not bugging out */
-
-/* #define DEBUG_EGETC */
-int egetc(FILE *fp) {
-	int c;
-	static int ungeteof = 0;
-
-	c = getc(fp);
-	if (c == EOF) {
-		if (ungeteof) {
-#ifdef DEBUG_EGETC
-			fprintf(stderr, "eof claimed\n");
-#endif
-			return c;
-		} else {
-#ifdef DEBUG_EGETC
-			fprintf(stderr, "got eof!!\n");
-#endif
-			ungeteof = 1;
-			return '\n';
-		}
-	}
-	ungeteof = 0;
-	return c;
-}
-
 /* smart getc that can skip C comment blocks */
 int rgetc(FILE *fp)
 {
@@ -1000,10 +970,10 @@ int rgetc(FILE *fp)
 		  c = d;
 		  d_isvalid = 0;
 	  } else {
-		  c = egetc(fp);
+		  c = getc(fp);
 	  }
           while(c==13) {
-		  c = egetc(fp);
+		  c = getc(fp);
 	  };  /* remove ^M for unices */
 
 	  /* a newlinebreaks any quote */
@@ -1017,12 +987,12 @@ int rgetc(FILE *fp)
 	  /* check for start of comment anyway, to allow for nestesd comments */
           if(!inquote && c=='/')
           {
-		d = egetc(fp);
+		d = getc(fp);
 
 		// C++ double slash comment
 		if (d == '/') {
 			do {
-				c = egetc(fp);
+				c = getc(fp);
 			} while (c != '\n' && c != EOF);
 		} else
                	if (d == '*') {
@@ -1077,7 +1047,7 @@ int rgetc(FILE *fp)
 		/* note: incomment only set true if not quoted, and quote not changed in comment */
           	if((!inquote) && (c=='*'))
           	{
-               		if((d=egetc(fp))!='/') {
+               		if((d=getc(fp))!='/') {
 				d_isvalid = 1;
 			} else {
                     		incomment--;
@@ -1087,11 +1057,16 @@ int rgetc(FILE *fp)
                	}
 
           }
-     
-	  last = c;
+    
+	  /* force newline at the end of a file */ 
+	  if (c == EOF && last != EOF) {
+		last = EOF;
+		c = '\n';
+	  } else {
+	  	last = c;
+	  }
 
      } while(incomment && (c!=EOF));
-
 
      return(c-'\t'?c:' ');
 }
