@@ -984,7 +984,10 @@ int egetc(FILE *fp) {
 int rgetc(FILE *fp)
 {
      int incomment;
-     int c,d;
+     int c;
+     static int d;
+     static int d_isvalid = 0;
+     static int last = 0;
 
      incomment=0;
 
@@ -992,54 +995,90 @@ int rgetc(FILE *fp)
      {
 	  restart:
 
-          while((c=egetc(fp))==13);  /* remove ^M for unices */
+	  /* we had a look-ahead to see if two-char sequence was received? */
+	  if (d_isvalid) {
+		  c = d;
+		  d_isvalid = 0;
+	  } else {
+		  c = egetc(fp);
+	  }
+          while(c==13) {
+		  c = egetc(fp);
+	  };  /* remove ^M for unices */
 
 	  /* a newlinebreaks any quote */
 	  if (c == '\n') {
 		  inquote = 0;
-	  }
+
+      		  flist[fsp].fline++;
+      		  nlf=1;
+       	  } 
+
+	  /* check for start of comment anyway, to allow for nestesd comments */
+          if(!inquote && c=='/')
+          {
+		d = egetc(fp);
+
+		// C++ double slash comment
+		if (d == '/') {
+			do {
+				c = egetc(fp);
+			} while (c != '\n' && c != EOF);
+		} else
+               	if (d == '*') {
+			/* start block comment */
+                   	incomment++;
+			/* convene normal processing */
+			goto restart;
+		} else {
+			d_isvalid = 1;
+		}
+          }
+
+
+	/* here we are in a dilemma. If we interpret quotes in comments,
+	 * this may break end-of-block comment when singular quotes are
+	 * in a comment. If we don't interpret quotes in a comment,
+	 * a quoted string with end-of-comment in it may break when
+	 * commented.
+	 *
+	 * Unfortunately GeckOS has quotes in comments, and in an inconsistent way.
+	 *
+	 * #define   E_FILLNAM     <-34    / * illegal name (joker "*","?","\"")    * /
+	 *
+	 * ... except if we handle backslash-escaped quotes? No, then this breaks
+	 * in apps/lsh/lsh.a65:347
+	 *
+	 * / * TODO: interpret "\" escape codes, shell variables * /
+	 *
+	 * But I guess for 2.4 it is ok to break things like this.
+	 */ 
 
 	  if (!incomment) {
 		/* not in comment */
 
-          	/* flag if we're in a quoted string */
-          	if(c=='"' && !quotebs) {
+	        /* flag if we're in a quoted string */
+		/* but only if quote isnot escaped with backslash */
+         	if(c=='"' && last!='\\' && !quotebs) {
 			inquote ^= 1;
-		}
+	 	}
+
 #if(0)
 /* implement backslashed quotes for 2.4 */
-          if(c=='\\') quotebs=1; else quotebs=0;
+	        if(c=='\\') quotebs=1; else quotebs=0;
 #endif
-	  	/* check for start of comment */
-          	if(!inquote && c=='/')
-          	{
-			d = egetc(fp);
 
-			// C++ double slash comment
-			if (d == '/') {
-				do {
-					c = egetc(fp);
-				} while (c != '\n' && c != EOF);
-			} else
-               		if (d == '*') {
-				/* start block comment */
-                    		incomment++;
-				/* convene normal processing */
-				goto restart;
-			} else {
-                    		ungetc(d,fp);
-			}
-          	}
+
 
 	  } else {
 		/* in comment */
 
 		/* check for end of comment */
 		/* note: incomment only set true if not quoted, and quote not changed in comment */
-          	if(c=='*')
+          	if((!inquote) && (c=='*'))
           	{
                		if((d=egetc(fp))!='/') {
-                    		ungetc(d,fp);
+				d_isvalid = 1;
 			} else {
                     		incomment--;
 				/* convene normal processing */
@@ -1047,15 +1086,12 @@ int rgetc(FILE *fp)
 			}
                	}
 
-          	/* in comment block */
-          	if(c=='\n')
-          	{
-               		flist[fsp].fline++;
-               		nlf=1;
-          	} 
           }
+     
+	  last = c;
 
      } while(incomment && (c!=EOF));
+
 
      return(c-'\t'?c:' ');
 }
