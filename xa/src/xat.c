@@ -1366,7 +1366,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 		j=1;
 		/* write opcode */
 		t[0] = ((n == Kmvp) ? 0x44 : 0x54);
-		while(!er && t[i]!=T_END)
+		while(!er && t[i]!=T_END && t[i]!=T_COMMENT)
 		{
 			if (wide) /* oops */
 				er = E_SYNTAX;
@@ -1393,7 +1393,7 @@ fprintf(stderr, "mvn mvp: %i %i %i %i %i\n", t[0], t[i], wide, i, j);
 			}
 			if (j > 3)
 				er=E_SYNTAX;
-			if(t[i]!=T_END && t[i]!=',')
+			if(t[i]!=T_END && t[i]!=T_COMMENT && t[i]!=',')
 				er=E_SYNTAX;
 			else
 			if(t[i]==',')
