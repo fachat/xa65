@@ -61,7 +61,6 @@ static int pp_undef(char*);
 #define   ANZBEF    13
 #define   VALBEF    6
 
-static int ungeteof = 0;
 static int quotebs = 0;
 static int inquote = 0;
 
@@ -632,6 +631,12 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 		}
 	}
 #endif
+	// catch an error situation
+	if (liste[rlist+i].replace == NULL) {
+		errout(E_ANZPAR);
+		return E_ANZPAR;
+	}
+
 	// copy over the replacement string into free memory (using mx as pointer)
 	(void)strcpy(mx, nfto);
 	// replace the pointer to the (now obsolete) old replacement with the one we just created
@@ -1078,39 +1083,6 @@ int pgetline(char *t)
 		errout(E_OPENPP);
 	}
 
-     /* handle the double-slash comment (like in C++) */
-	/* get p past any quoted strings */
-	p = strchr(in_line, '/');
-	if (p != NULL) {
-		q = strchr(in_line, '"');
-		for(;;) {
-			/* no more quotes to skip, or slashes before quotes */
-			if (q == NULL || (p < q)) {
-				if (p[1] == '/') {
-					/* truncate line, done with loop */
-					*p = 0;
-					break;
-				} else {
-					/* wasn't //, but could be later */
-					p++;
-				}
-			} else {
-				/* quote before slash, so skip string */
-				q++;
-				while (*q != 0 && *q != '"') {
-					if (*q == '\\') q++;
-					if (*q != 0) q++;
-				}
-				if (*q == 0) break; /* oops */
-				q++;
-				p = q;
-			}
-
-			p = strchr(p, '/');
-			if (p == NULL) break; /* never mind */
-			if (q != NULL) q = strchr(q, '"');
-		}
-	}
 
      if(!er || loopfl) {
           in_line[0]='\0';
@@ -1143,79 +1115,123 @@ int pgetline(char *t)
 
 /*************************************************************************/
 
-/* this is the most disgusting code I have ever written, but Andre drove me
-to it because I can't think of any other way to fix the
-last line bug ... a very irritated Cameron */
-
-/* however, it also solved the problem of open #ifdefs not bugging out */
-
-/* #define DEBUG_EGETC */
-int egetc(FILE *fp) {
-	int c;
-
-	c = getc(fp);
-	if (c == EOF) {
-		if (ungeteof) {
-#ifdef DEBUG_EGETC
-			fprintf(stderr, "eof claimed\n");
-#endif
-			return c;
-		} else {
-#ifdef DEBUG_EGETC
-			fprintf(stderr, "got eof!!\n");
-#endif
-			ungeteof = 1;
-			return '\n';
-		}
-	}
-	ungeteof = 0;
-	return c;
-}
-
 /* smart getc that can skip C comment blocks */
 int rgetc(FILE *fp)
 {
-     static int c,cc,d,fl;
-     cc=0;
-     fl=0;
+     int incomment;
+     int c;
+     static int d;
+     static int d_isvalid = 0;
+     static int last = 0;
+
+     incomment=0;
 
      do
      {
-          while((c=egetc(fp))==13);  /* remove ^M for unices */
+	  restart:
 
-          /* flag if we're in a quoted string */
-          if(c=='"' && !quotebs) inquote ^= 1;
-#if(0)
-/* implement backslashed quotes for 2.4 */
-          if(c=='\\') quotebs=1; else quotebs=0;
-#endif
+	  /* we had a look-ahead to see if two-char sequence was received? */
+	  if (d_isvalid) {
+		  c = d;
+		  d_isvalid = 0;
+	  } else {
+		  c = getc(fp);
+	  }
+          while(c==13) {
+		  c = getc(fp);
+	  };  /* remove ^M for unices */
 
-          if(!inquote && fl && (c=='*'))
-          {
-               if((d=egetc(fp))!='/')
-                    ungetc(d,fp);
-               else
-               {
-                    fl--;
-                    while((c=egetc(fp))==13);
-               }
-          }
+	  /* a newlinebreaks any quote */
+	  if (c == '\n') {
+		  inquote = 0;
 
-          /* in comment block */
-          if(c=='\n')
-          {
-               flist[fsp].fline++;
-               nlf=1;
-          } else
+      		  flist[fsp].fline++;
+      		  nlf=1;
+       	  } 
+
+	  /* check for start of comment anyway, to allow for nestesd comments */
           if(!inquote && c=='/')
           {
-               if((d=egetc(fp))!='*')
-                    ungetc(d,fp);
-               else
-                    fl++;
+		d = getc(fp);
+
+		// C++ double slash comment
+		if (d == '/') {
+			do {
+				c = getc(fp);
+			} while (c != '\n' && c != EOF);
+		} else
+               	if (d == '*') {
+			/* start block comment */
+                   	incomment++;
+			/* convene normal processing */
+			goto restart;
+		} else {
+			d_isvalid = 1;
+		}
           }
 
-     } while(fl && (c!=EOF));
+
+	/* here we are in a dilemma. If we interpret quotes in comments,
+	 * this may break end-of-block comment when singular quotes are
+	 * in a comment. If we don't interpret quotes in a comment,
+	 * a quoted string with end-of-comment in it may break when
+	 * commented.
+	 *
+	 * Unfortunately GeckOS has quotes in comments, and in an inconsistent way.
+	 *
+	 * #define   E_FILLNAM     <-34    / * illegal name (joker "*","?","\"")    * /
+	 *
+	 * ... except if we handle backslash-escaped quotes? No, then this breaks
+	 * in apps/lsh/lsh.a65:347
+	 *
+	 * / * TODO: interpret "\" escape codes, shell variables * /
+	 *
+	 * But I guess for 2.4 it is ok to break things like this.
+	 */ 
+
+	  if (!incomment) {
+		/* not in comment */
+
+	        /* flag if we're in a quoted string */
+		/* but only if quote isnot escaped with backslash */
+         	if(c=='"' && last!='\\' && !quotebs) {
+			inquote ^= 1;
+	 	}
+
+#if(0)
+/* implement backslashed quotes for 2.4 */
+	        if(c=='\\') quotebs=1; else quotebs=0;
+#endif
+
+
+
+	  } else {
+		/* in comment */
+
+		/* check for end of comment */
+		/* note: incomment only set true if not quoted, and quote not changed in comment */
+          	if((!inquote) && (c=='*'))
+          	{
+               		if((d=getc(fp))!='/') {
+				d_isvalid = 1;
+			} else {
+                    		incomment--;
+				/* convene normal processing */
+				goto restart;
+			}
+               	}
+
+          }
+    
+	  /* force newline at the end of a file */ 
+	  if (c == EOF && last != EOF) {
+		last = EOF;
+		c = '\n';
+	  } else {
+	  	last = c;
+	  }
+
+     } while(incomment && (c!=EOF));
 
      return(c-'\t'?c:' ');
 }

@@ -383,6 +383,20 @@ xa-2.3.13
 
 -- Cameron Kaiser <ckaiser@floodgap.com> 25 March 2022
 
+xa-2.3.14
+
+  * Fix a segfault when a recursive macro has a smaller arity than the
+    macro it references (thanks Emil Johansson for the report).
+  * Fix for recursive comments, which was a regression from 2.3.13 (note:
+    this may be reexamined for 2.4), and some improvements to the comment
+    parser to fix more edge cases. (Andre)
+  * Now you can just do 'make test TESTS=test,test,test' instead of running
+    ./tests/harness with specific options. ('make test' by itself of course
+    still works fine to run the whole suite.)
+  * Testsuite expanded.
+
+-- Cameron Kaiser <ckaiser@floodgap.com> 7 February 2023
+
 xa-2.x.x
 
   * Listing feature

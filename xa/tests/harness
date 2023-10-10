@@ -8,7 +8,9 @@ $ENV{'CC'} = $cc;
 $ENV{'CFLAGS'} = $cflags;
 $|++;
 
+$ntests = 0;
 $dtests = $tests || "ALL";
+$tests = '' if ($tests eq "ALL");
 
 print <<"EOF";
 CC = $cc
@@ -43,12 +45,14 @@ W: while($x = readdir(D)) {
 		}
 		system("$make clean");
 		print STDOUT "=" x 35, " PASSED! ", "=" x 35, "\n";
+		$ntests++;
 	} elsif (-e "ok" && -e "test.s") {
 		unlink("a.o65");
 		&failed("../../xa test.s");
 		&failed("../hextool -cmp=ok < a.o65");
 		unlink("a.o65");
 		print STDOUT "PASSED\n";
+		$ntests++;
 	} else {
 		print STDOUT "ignored\n";
 	}
@@ -56,8 +60,12 @@ W: while($x = readdir(D)) {
 }
 closedir(D);
 print STDOUT "=" x 79, "\n";
-print STDOUT "\n## ALL TESTS PASS ##\n";
-exit 0;
+if ($ntests) { # ntestacy is a terrible thing
+	print STDOUT "\n## ALL SELECTED TESTS PASS ($dtests, n=$ntests) ##\n";
+	exit 0;
+}
+print STDOUT "\n## NO TESTS WERE RUN ##\n";
+exit 1;
 
 sub failed {
 	system(@_);
