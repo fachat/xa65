@@ -138,8 +138,11 @@ printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
           pp+=3;
      }
      else
-     if(s[pp]==T_VALUE)
+     if(s[pp]==T_VALUE || s[pp] == T_CAST)
      {
+	  while (s[pp] == T_CAST) {
+		pp+=2;
+	  }
           *v=lval(s+pp+1);
           pp+=5;
 /*
@@ -162,7 +165,7 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
           *v=pcc;
           pp++;
 	  afl = segment;
-     }
+     } 
      else {
           er=E_SYNTAX;
 	}

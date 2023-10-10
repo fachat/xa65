@@ -897,6 +897,7 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 
 		/* optimize operand length for 24-bit quantities */
 		/* look at cast byte from t_conv */
+
                if (cast!='@' && cast!= '!')
                {
                      if(bl && !er && opt[am]>=0 && am>16) /* <<< NOTE! */
@@ -2179,7 +2180,6 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     {
 		       t[q++]=T_CAST;
 		       t[q++]=s[p];
-                       /*cast=s[p];*/
                        operand= -operand+1;
                        p++;
                     } else
