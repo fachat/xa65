@@ -756,7 +756,7 @@ int pp_replace(char *to, char *ti, int a,int b)
 	  // can (and do) appear in preprocessor replacements
           char quotefl = 0;
 	  char commentfl = 0;
-          while((t[0] != 0) && (commentfl || ((!isalpha(t[0]) && t[0]!='_')))) {
+          while((t[0] != 0) && ((quotefl && !ppinstr) || commentfl || ((!isalpha(t[0]) && t[0]!='_')))) {
                	if (t[0]=='\0') {
                     break;    /*return(E_OK);*/
 	       	} else 
@@ -974,50 +974,6 @@ int icl_open(char *tt)
      return(0);
 }
 
-/*
- * parses the current line for double-slash comments,
- * handling single- and double-quotes appropriately
- * shortens the line if a comment is found, returns
- * the new line length.
- */
-int double_slash_comments(char *line) {
-	int p = 0;
-	int qfl = 0;	// if set, contains the current quote char (others are then ignored)
-	char c;
-
-	while (line[p] != 0) {
-		c = line[p];
-		if (c == qfl) {
-			// always in quote, c==0 not possible due to loop condition
-			// found matching quote char, so end of quote
-			qfl = 0;
-		} else 
-		if ((c == '\'' || c == '"') && !qfl) {
-			// not in quote, but finding quote char
-			qfl = c;
-		}
-		if (c == '^' && qfl) {
-			// xa65 escape character in strings (quoted)
-			if (line[p+1] != 0) {
-				// skip the next char in test
-				p++;
-			}
-		}
-		if (c == '/' && !qfl) {
-			// found '/' outside quote
-			if (line[p+1] == '/') {
-				// gotcha
-				//printf("shorten at %d: %s\n", p, line);
-				// shorten line
-				line[p] = 0;
-				// return new length
-				return p;
-			}
-		}
-		p++;
-	}
-	return p;
-}
 
 int pgetline(char *t)
 {
@@ -1034,7 +990,8 @@ int pgetline(char *t)
 	int is_continuation = 0;
   	tlen = 0;	// start of current line in in_line[]
 	do {
-          c=fgetline(in_line + tlen, MAXLINE, &rlen, flist[fsp].filep);
+          c=fgetline(in_line + tlen, MAXLINE - tlen, &rlen, flist[fsp].filep);
+	  //fprintf(stderr, "fgetline -> c=%02x, rlen->%d, t->%s\n", c, rlen, in_line+tlen);
 
 	  /* check for continuation lines */
 	  is_continuation = ((c == '\n') && (rlen > 0) && (in_line[tlen + rlen - 1]=='\\'));
@@ -1043,7 +1000,6 @@ int pgetline(char *t)
 		rlen--;
 		in_line[tlen + rlen] = 0;
 	  }
-	  rlen = double_slash_comments(in_line + tlen);
 
 	  tlen += rlen;
 	} while (is_continuation);
@@ -1108,7 +1064,8 @@ int pgetline(char *t)
 
      filep=flist+fsp;
      filep->flinep=in_line;
-     
+    
+     //fprintf(stderr, "pgetline -> er=%d, t=%s\n", er, t); 
      return(er);
 }
 
@@ -1149,7 +1106,7 @@ int rgetc(FILE *fp)
       		  nlf=1;
        	  } 
 
-	  /* check for start of comment anyway, to allow for nestesd comments */
+	  /* check for start of comment anyway, to allow for nested comments */
           if(!inquote && c=='/')
           {
 		d = getc(fp);
@@ -1159,6 +1116,10 @@ int rgetc(FILE *fp)
 			do {
 				c = getc(fp);
 			} while (c != '\n' && c != EOF);
+			if (c == '\n') {
+      		  		flist[fsp].fline++;
+				nlf=1;
+			}
 		} else
                	if (d == '*') {
 			/* start block comment */

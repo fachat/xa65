@@ -2,9 +2,9 @@
 	*=$1000
 
 	// default listbytes is 8
-
+  
 	lda #$0
-
+	
 	// first without labels
 
 	.(
