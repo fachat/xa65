@@ -88,7 +88,7 @@ int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
      }
 
      *l=pp;
-/* printf("a_term: afl->%04x *pfl=%04x, (pc=%04x)\n",afl,*pfl, xpc); */
+//fprintf(stderr, "a_term: nolink=%d, noundef=%d ->er=%d; l=%d, pp=%d, afl->%04x *pfl=%04x, (pc=%04x)\n",nolink, noundef ,er, *l, pp, afl,*pfl, xpc); 
      return(er);
 }
 
@@ -98,9 +98,8 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 
      afl = 0;
 
-/*
-printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
-*/
+//fprintf(stderr, "ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
+
      while(s[pp]=='-')
      {
           pp++;
@@ -174,6 +173,7 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
 
      while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
      {
+fprintf(stderr, "ag_term while: s[pp=%d]=%02x\n", pp, s[pp]);
           er=get_op(s,&o);
 
           if(!er && pr[o]>p)

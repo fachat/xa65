@@ -432,18 +432,23 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
       * using memcpy is fine here
       */
      inp = 0;
-     /* discard label definitions before copying the buffer */
+     /* discard label definitions before copying the buffer, so we don't get
+      * label defined errors */
      while (inp<l && t[6+inp]==T_DEFINE) {
 	inp+=3;
      }
-     /* copy the buffer */
+     /* copy the buffer;
+      * t+tlen is directly after the T_LISTING buffer
+      * t+6+inp is the start of the T_LISTING buffer, after label defines
+      * l-inp is the length of the T_LISTING buffer, without label defines
+      */
      memcpy(t+tlen, t+6+inp, l-inp);
 
 #ifdef DEBUG_CONV
      printf("t_conv s:%s\n",s);
-     printf("t_conv (er=%d, t=%p, tlen=%d, inp=%d):",er, t, tlen, inp);
-     for(i=0;i<l+6;i++)
-          printf("%02x,",t[i] & 0xff);
+     printf("t_conv (er=%d, t=%p, l=%d, tlen=%d, inp=%d):",er, t, l, tlen, inp);
+     for(i=0;i<l;i++)
+          printf("%02x,",t[i+6] & 0xff);
      printf("\n");
 #endif
 
@@ -551,7 +556,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 		   i=1;
 		   wval(i,pc[SEG_TEXT], 0);
 		   t[i++]=T_END;
-		   *ll=6;
+		   *ll=7;
 	  	   er=E_OKDEF;
 		   r_mode(RMODE_RELOC);
 /*printf("     : newseg=%d, pc[newseg]=%04x, pc[abs]=%04x, pc[text]=%04x\n",
@@ -2016,6 +2021,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
      fl=0;          /* 1 = pass text thru */
      afl=0;         /* pointer flag for label */
 
+     // skip leading whitespace
      while(isspace(s[p])) p++;
 
      n=T_END;
@@ -2116,8 +2122,9 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 
           }
 
-          if(n != Kmvn && n != Kmvp && ((n & 0xff) <=Lastbef))
-               mk=1;     /* 1= nur 1 Komma erlaubt *//* = only 1 comma ok */
+          if(n != Kmvn && n != Kmvp && ((n & 0xff) <=Lastbef)) {
+               mk=1;     /* = only 1 comma ok for normal opcodes */
+	  }
      }
 
      if(s[p]=='\0' || s[p]==';')
@@ -2140,13 +2147,20 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 
           operand=1;
 
-          while(s[p]==' ') p++;
+	  // skip whitespace
+          while(isspace(s[p])) {
+		p++;
+	  }
 
           if(s[p]=='#')
           {
                mk=0;
                t[q++]=s[p++];
-               while(s[p]==' ') p++;
+
+	       // skip following whitespace
+               while(isspace(s[p])) {
+		   p++;
+	       }
           }
 
 /*
@@ -2167,7 +2181,9 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
           {
                if(fl)
                {
+		    // pass through text (e.g. for ",y")
                     t[q++]=s[p++];
+
                } else
                {
                  if(operand)
@@ -2342,8 +2358,10 @@ fprintf(stderr, "could not find %s\n", (char *)s+p);
                     if(s[p]==',')
                     {
                          t[q++]=s[p++];
-                         if(mk)
+                         if(mk) {
+			      // if only one comma, pass through all following text - esp. ",y" or ",x" etc
                               fl++;
+			 }
                          *nk+=1;
                     } else
                     switch(s[p]) {

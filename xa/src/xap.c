@@ -1010,17 +1010,18 @@ int pgetline(char *t)
 					handle this right */
 			er=pp_cpp(in_line+1);
 		} else {
-               if((er=pp_comand(in_line+1)))
-               {
-                    if(er!=1)
-                    {
-                         logout(in_line);
-                         logout("\n");
-                    }
-               }
+        	       if((er=pp_comand(in_line+1)))
+        	       {
+        	            if(er!=1)
+        	            {
+        	                 logout(in_line);
+        	                 logout("\n");
+        	            }
+        	       }
 		}
-        } else
+        } else {
                er=1;
+ 	}
 
         if(c==EOF) {
 		if (loopfl && fsp) {
