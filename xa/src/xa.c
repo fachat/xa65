@@ -240,6 +240,7 @@ int main(int argc,char *argv[])
 		    fprintf(stderr, "Compatibility set '%s' unknown - ignoring! (check case?)\n", name);
 		  }
 		}
+		break;
           case 'S':
                 ppinstr = 1;    /* preprocessor substitution in strings ok */
                 fprintf(stderr, "Warning: -S is deprecated and will be removed in 2.4+!\n");
