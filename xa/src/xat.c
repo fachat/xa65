@@ -24,6 +24,8 @@
 
 #undef LISTING_DEBUG
 #undef DEBUG_CONV
+#undef DEBUG_CAST
+
 /*
 #define DEBUG_AM
 */
@@ -856,6 +858,9 @@ fprintf(stderr, "E_NODEF pass1 xat.c\n");
 		    inp++;
 		    cast = t[inp];
 		    inp++;
+#ifdef DEBUG_CAST
+	printf("Found cast to: %c\n", cast);
+#endif
 	       }
 
 	       /* length counter set to maximum length + 1 */
@@ -1566,6 +1571,9 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 			inp++;
 			cast = t[inp];
 			inp++;
+#ifdef DEBUG_CAST
+	printf("Found cast to (2): %c\n", cast);
+#endif
 		    }
                     sy=1;
                     if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
@@ -1622,6 +1630,9 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 			inp++;
 			cast = t[inp];
 			inp++;
+#ifdef DEBUG_CAST
+	printf("Found cast to (3): %c\n", cast);
+#endif
 		    }
                     sy=7;
                     if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
@@ -1666,6 +1677,9 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 			inp++;
 			cast = t[inp];
 			inp++;
+#ifdef DEBUG_CAST
+	printf("Found cast to (4): %c\n", cast);
+#endif
 		    }
                     sy=10;
                     if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
@@ -1699,6 +1713,9 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
 			inp++;
 			cast = t[inp];
 			inp++;
+#ifdef DEBUG_CAST
+	printf("Found cast to (5): %c\n", cast);
+#endif
 		    }
                     sy=4;
                     if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
@@ -1725,7 +1742,7 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                }
                
 	       /* set bl to maximum overall length +1 as while() below starts with decrementing it */
-	       if (w65816 || (t[*ll-1]=='@' || t[*ll-1] == '!')) {
+	       if (w65816 || cast=='@' || cast== '!') {
 		       	/* for 65816 allow addressing modes up to 4 byte overall length */
                		bl=Maxbyt+1;
 	       } else {
@@ -2194,6 +2211,9 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 			   switch off "@" which are used for cheap local labels*/
                     if(s[p]=='!' || (s[p]=='@' && !ca65) || s[p]=='`')
                     {
+#ifdef DEBUG_CAST
+	printf("Setting cast to: %c\n", s[p]);
+#endif
 		       t[q++]=T_CAST;
 		       t[q++]=s[p];
                        operand= -operand+1;
