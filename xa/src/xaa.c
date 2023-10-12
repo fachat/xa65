@@ -173,7 +173,7 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
 
      while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
      {
-fprintf(stderr, "ag_term while: s[pp=%d]=%02x\n", pp, s[pp]);
+//fprintf(stderr, "ag_term while: s[pp=%d]=%02x\n", pp, s[pp]);
           er=get_op(s,&o);
 
           if(!er && pr[o]>p)
