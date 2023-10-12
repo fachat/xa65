@@ -7,4 +7,4 @@ test1:
 	../hextool -cmp=ok2 < test2.o
 
 clean:
-	rm -f *.o
+	rm -f *.o a.o65

@@ -8,9 +8,8 @@ tests: mixabs1 mixabs2 clean
 
 
 mixabs1: mixabsolute.a65
-	${XA} $<
-	hexdump -C a.o65 > a.hex
-	cmp mixabs1.out a.hex
+	@echo This should fail
+	${XA} $< || exit 0 && exit 1
 
 mixabs2: mixabsolute.a65
 	${XA} -R $<
@@ -20,5 +19,5 @@ mixabs2: mixabsolute.a65
 	cmp mixabs2.out b.hex
 
 clean:
-#	rm -f a.err a.o65 a.hex b.o65 b.hex
+	rm -f a.err a.o65 a.hex b.o65 b.hex
 

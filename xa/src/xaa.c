@@ -77,7 +77,8 @@ int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
 	  if(afl) *pfl=A_HIGH | ((afl<<8) & A_FMASK) | (*v & 255);
           *v=(*v>>8)&255;
      }
-     else {
+     else 
+     if(s[pp]!=T_END) {
           er=ag_term(s,P_START,v,&afl, label);
 	  bfl = afl & (A_MASK>>8);
 	  if(bfl && (bfl != (A_ADR>>8)) ) {
@@ -85,6 +86,8 @@ int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
 	    errout(W_ADDRACC);
 	  }
 	  if(afl) *pfl = A_ADR | ((afl<<8) & A_FMASK);
+     } else {
+	er = E_SYNTAX;
      }
 
      *l=pp;

@@ -25,6 +25,7 @@
 #undef LISTING_DEBUG
 #undef DEBUG_CONV
 #undef DEBUG_CAST
+#undef DEBUG_RELOC
 
 /*
 #define DEBUG_AM
@@ -528,17 +529,22 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
           if(n==Kpcdef)
           {
 	       int tmp;
-               if(!(er=a_term(t+1,&tmp /*&pc[SEG_ABS]*/,&l,pc[segment],&afl,&label,0)))
+	       // get parameter for *=
+	       er=a_term(t+1,&tmp,&l,pc[segment],&afl,&label,0);
+	       // found?
+               if(!er)
                {
                     i=1;
-                    wval(i,tmp /*pc[SEG_ABS]*/, 0);	/* writes T_VALUE, 3 bytes value, plus one byte */
+                    wval(i,tmp, 0);	/* writes T_VALUE, 3 bytes value, plus one byte */
                     t[i++]=T_END;
                     *ll=7;
                     er=E_OKDEF;
-/*printf("set pc=%04x, oldsegment=%d, pc[segm]=%04x, ", 
+#ifdef DEBUG_RELOC
+printf("set pc=%04x, oldsegment=%d, pc[segm]=%04x, ", 
 				pc[SEG_ABS], segment, pc[segment]);
 printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
-				t[0],t[1],t[2],t[3],t[4],t[5],t[6],t[7]);*/
+				t[0],t[1],t[2],t[3],t[4],t[5],t[6],t[7]);
+#endif
 		    if(segment==SEG_TEXT) {
 		      pc[SEG_ABS] = tmp;
 		      r_mode(RMODE_ABS);
@@ -550,10 +556,14 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 		      }
 		    }
 /*printf("newsegment=%d, pc[ABS]=%04x\n", segment, pc[SEG_ABS]);*/
-               } else {			/* TODO: different error code */
+               } else {
+		 // no param found, only "*=". 
+		 // if we ABS, we switch back to reloc
+#ifdef DEBUG_RELOC
+printf("reloc: er=%d, l=%d, segment=%d, pc[%d]=%04x, pc[abs(%d)]=%04x, pc[text(%d)]=%04x\n",
+			er, l, segment, segment, pc[segment], SEG_ABS, pc[SEG_ABS],SEG_TEXT, pc[SEG_TEXT]);
+#endif
 	         if((segment==SEG_ABS) && (er==E_SYNTAX && l==0)) {
-/*printf("reloc: oldseg=%d, pc[oldseg]=%04x, pc[abs]=%04x, pc[text]=%04x\n",
-			segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
 		   t[0]=Kreloc;
 		   i=1;
 		   wval(i,pc[SEG_TEXT], 0);
@@ -628,6 +638,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 	      t[1]=segment;
 	      *ll=2;
               er=E_OKDEF;
+	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	  } else
 	  if(n==Kdata) {
   	    if(relmode) {   
@@ -636,6 +647,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 	      t[1]=SEG_DATA;
 	      *ll=2;
               er=E_OKDEF;
+	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    } 
@@ -647,6 +659,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 	      t[1]=SEG_BSS;
 	      *ll=2;
               er=E_OKDEF;
+	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    } 
@@ -658,6 +671,7 @@ printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 	      t[1]=SEG_ZERO;
 	      *ll=2;
               er=E_OKDEF;
+	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    }  
