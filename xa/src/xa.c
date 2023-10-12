@@ -988,85 +988,86 @@ static char *ertxt[] = { "Syntax","Label definiert",
           "NewFile","CMOS-Befehl","pp:Falsche Anzahl Parameter" };
 */
 static char *ertxt[] = {
-	"Syntax",
-	"Label already defined",
-        "Label not defined",
-	"Label table full",
-        "Label expected",
-	"Out of memory",
-	"Illegal opcode",
-        "Wrong addressing mode",
-	"Branch out of range",
-        "Overflow",
-	"Division by zero",
-	"Pseudo-opcode expected",
-        "Block stack overflow",
-	"File not found",
-        "End of file",
-	"Unmatched block close",
-        "NoBlk",
-	"NoKey",
-	"NoLine",
-	"OKDef",
-	"DSB",
-	"NewLine",
-        "NewFile",
-	"CMOS instruction used with -C",
-	"pp:Wrong parameter count",
-	"Illegal pointer arithmetic (-26)", 
-	"Illegal segment",
-	"File header option too long",
-	"File option not at file start (when ROM-able)",
-	"Illegal align value",
-        "65816 mode used/required",
-	"Exceeded recursion limit for label evaluation",
-	"Unresolved preprocessor directive at end of file",
-	"Data underflow",
-	"Illegal quantity",
-	".bin",
+	"Syntax",			// E_SYNTAX	=-1
+	"Label already defined",	// E_LABDEF	=-2
+        "Label not defined",		// E_NODEF	=-3
+	"Label table full",		// E_LABFULL	=-4
+        "Label expected",		// E_LABEXP	=-5
+	"Out of memory",		// E_NOMEM	=-6
+	"Illegal opcode",		// E_ILLCODE	=-7
+        "Wrong addressing mode",	// E_ADRESS	=-8
+	"Branch out of range",		// E_RANGE	=-9
+        "Overflow",			// E_OVERFLOW	=-10
+	"Division by zero",		// E_DIV	=-11
+	"Pseudo-opcode expected",	// E_PSOEXP	=-12
+        "Block stack overflow",		// E_BLKOVR	=-13
+	"File not found",		// E_FNF	=-14
+        "End of file",			// E_EOF	=-15
+	"Unmatched block close",	// E_BLOCK	=-16
+        "NoBlk",			// E_NOBLK	=-17
+	"NoKey",			// E_NOKEY	=-18
+	"NoLine",			// E_NOLINE	=-19
+	"OKDef",			// E_OKDEF	=-20
+	"DSB",				// E_DSB	=-21
+	"NewLine",			// E_NEWLINE	=-22
+        "NewFile",			// E_NEWFILE	=-23
+	"CMOS instruction used with -C", 	// E_DMOS	=-24
+	"pp:Wrong parameter count",		// E_ANZPAR	=-25
+	"Illegal pointer arithmetic (-26)", 	// E_ILLPOINTER	=-26
+	"Illegal segment",			// E_ILLSEGMENT	=-27
+	"File header option too long",		// E_OPTLEN	=-28
+	"File option not at file start (when ROM-able)", // E_ROMOPT =-29
+	"Illegal align value",			// E_ILLALIGN	=-30
+        "65816 mode used/required",		// E_65816	=-31
+	"Exceeded recursion limit for label evaluation", // E_ORECMAC =-32
+	"Unresolved preprocessor directive at end of file", // E_OPENPP =-33
+	"Data underflow",		// E_OUTOFDATA	=-34
+	"Illegal quantity",		// E_ILLQUANT	=-35
+	".bin",				// E_BIN	=-36
 /* placeholders for future fatal errors */
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
+		"",			// -37
+		"",			// -38
+		"",			// -39
+		"",			// -40
+		"",			// -41
+		"",			// -42
+		"",			// -43
+		"",			// -44
+		"",			// -45
+		"",			// -46
+		"",			// -47
+		"",			// -48
+		"",			// -49
+		"",			// -50
+		"",			// -51
+		"",			// -52
+		"",			// -53
+		"",			// -54
+		"",			// -55
+		"",			// -56
+		"",			// -57
+		"",			// -58
+		"",			// -59
+		"",			// -60
+		"",			// -61
+		"",			// -62
+		"",			// -63
+		"",			// -64 (was missing...)
 /* warnings */
-	  "Cutting word relocation in byte value",
-	  "Byte relocation in word value",
-	  "Illegal pointer arithmetic (-66)",
-	  "Address access to low or high byte pointer",
-	  "High byte access to low byte pointer",
-	  "Low byte access to high byte pointer",
-	  "Can't optimize forward-defined label; using absolute addressing",
-	  "Open preprocessor directive at end of file (intentional?)",
-	  "Included binary data exceeds 64KB",
-	  "Included binary data exceeds 16MB",
-          "MVN/MVP $XXXX syntax is deprecated and will be removed",
+	  "Cutting word relocation in byte value",	// W_ADRRELOC	=-65
+	  "Byte relocation in word value",		// W_BYTERELOC	=-66
+	  "Illegal pointer arithmetic (-66)",		// E_WPOINTER	=-67
+	  "Address access to low or high byte pointer",	// W_ADDRACC	=-68
+	  "High byte access to low byte pointer",	// W_HIGHACC	=-69
+	  "Low byte access to high byte pointer",	// W_LOWACC	=-70
+	  "Can't optimize forward-defined label; using absolute addressing", // W_FORLAB =-71
+	  "Open preprocessor directive at end of file (intentional?)", // W_OPENPP =-72
+	  "Included binary data exceeds 64KB",		// W_OVER64K	=-73
+	  "Included binary data exceeds 16MB",		// W_OVER16M	=-74
+          "MVN/MVP $XXXX syntax is deprecated and will be removed", // W_OLDMVNS =-75
 /* more placeholders */
-		"",
-		"",
+		"",			// -76
+		"",			// -77
 
  };
 
