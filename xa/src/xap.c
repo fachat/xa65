@@ -386,7 +386,7 @@ int pp_define(char *k)
           i++;
      t+=i;
      
-     pp_replace(h,t,-1,rlist);
+     er = pp_replace(h,t,-1,rlist);
 
      t=h;     
 
@@ -467,6 +467,15 @@ static int check_name(char *t, int n) {
 /**
  * this is a break out of the original pp_replace code, as this code
  * was basically duplicated for initial and recursive calls.
+ *
+ * to -> original output buffer for overflow check (only!)
+ * t  -> where to write the output
+ * n  -> replace macro n in liste[]
+ * sl -> length of liste[n].search (= liste[n].s_len)
+ * recursive -> 
+ * l  -> 
+ * blist -> 
+ * 
  */
 static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int *l, int blist) 
 {
@@ -806,6 +815,9 @@ int pp_replace(char *to, char *ti, int a,int b)
 	       // length of name of pp definition
                sl=liste[n].s_len;
 
+#ifdef DEBUG_RECMAC
+	printf("macro entry: name=%s, sl=%d, p_anz=%d\n", liste[n].search, sl, liste[n].p_anz);
+#endif
 	       // does pp definition match what we have found?
                if(sl && (sl==l) && check_name(t, n))
                {
