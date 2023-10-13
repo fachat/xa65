@@ -413,3 +413,10 @@ xa-2.x.x
 
  -- André Fachat <afachat@gmx.de> 25 June, 2011
 
+xa-2.x.x
+
+  * -U option to allow all undefined labels in relocation mode; this
+    allows exporting them to an o65 file and link at a later time.
+
+ -- André Fachat <afachat@gmx.de> 13 October, 2023
+
