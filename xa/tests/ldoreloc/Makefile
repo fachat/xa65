@@ -1,24 +1,38 @@
 
 default: all
-all: t
+#all: t1 t2 t10
+all: t1 t2 
 
-1.o65: 1.s
-	../../xa -R -c -o 1.o65 1.s
-	../hextool 1.o65 > 1.o65.hex
+%.o65: %.s
+	../../xa -R -c -o $@ $<
 
-2.o65: 2.s
-	../../xa -R -c -o 2.o65 2.s
-	../hextool 2.o65 > 2.o65.hex
+%.hex: %.o65
+	../hextool $< > $@
 
 linked.o65: 1.o65 2.o65
-	../../ldo65 -o linked.o65 1.o65 2.o65
-	../hextool linked.o65 > linked.o65.hex
+	../../ldo65 -o $@ 1.o65 2.o65
 
-t: linked.o65
-	../../reloc65 -bt 32768 -xt -o t linked.o65
-	../hextool t > t.hex
-	../hextool -cmp=t < t.ok
+linked2.o65: 1.o65 2.o65
+	../../ldo65 -o $@ 2.o65 1.o65
+
+linked10.o65: 10.o65 2.o65
+	../../ldo65 -o $@ 10.o65 2.o65
+
+t1: linked.o65
+	../../reloc65 -bt 32768 -xt -o $@ $<
+	../hextool $@ > $@.hex
+	../hextool -cmp=$@ < t1.ok
+
+t2: linked2.o65
+	../../reloc65 -bt 32768 -xt -o $@ $<
+	../hextool $@ > $@.hex
+	../hextool -cmp=$@ < t2.ok
+
+t10: linked10.o65
+	../../reloc65 -bt 32768 -xt -o $@ $<
+	../hextool $@ > $@.hex
+	../hextool -cmp=$@ < t10.ok
 
 clean:
-	rm -f *.o65 *.hex t
+	rm -f *.o65 *.hex t1 t2
 

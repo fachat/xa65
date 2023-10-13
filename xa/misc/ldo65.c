@@ -3,7 +3,7 @@
  *
  * A part of the xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1997-2023 André Fachat (fachat@web.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,13 +34,28 @@
 #define	BUF	(9*2+8)		/* 16 bit header */
 
 #define programname	"ldo65"
-#define progversion	"v0.1.1"
+#define progversion	"v0.2.0"
 #define author		"Written by Andre Fachat"
-#define copyright	"Copyright (C) 1997-2002 Andre Fachat. Formerly ld65."
+#define copyright	"Copyright (C) 1997-2023 Andre Fachat. Formerly ld65."
+
+#define	DEBUG
+
+/*
+
+The process of linking works as follows:
+
+1. Every file is loaded in turn via load_file()
+2. Calculate new base addresses per segment
+3. Merge all globals from all files into a single table, checking for duplicates
+4. Resolve undefined labels, and merge remaining into global list
+
+*/
 
 typedef struct {
 	char	*name;
 	int	len;
+	int	newidx;		/* index in new global undef table (for reloc) */
+	int	resolved;	/* index in current global label table after resolve (-1 is not found) */
 } undefs;
 
 /* file information */
@@ -87,10 +102,12 @@ typedef struct {
 	file65	*file;		/* in which file is it? */
 } glob;
 
+
 file65 *load_file(char *fname);
 
 int read_options(unsigned char *f);
 int read_undef(unsigned char *f, file65 *fp);
+int write_undef(FILE *f, file65 *fp);
 int len_reloc_seg(unsigned char *buf, int ri);
 int reloc_seg(unsigned char *buf, int adr, int ri, int *lreloc, file65 *fp);
 unsigned char *reloc_globals(unsigned char *, file65 *fp);
@@ -98,6 +115,8 @@ int read_globals(file65 *file);
 int write_options(FILE *fp, file65 *file);
 int write_reloc(file65 *fp[], int nfp, FILE *f);
 int write_globals(FILE *fp);
+int find_global(unsigned char *name);
+int resolve_undef(file65 *file, int *remains);
 
 file65 file;
 unsigned char cmp[] = { 1, 0, 'o', '6', '5' };
@@ -128,6 +147,7 @@ int main(int argc, char *argv[]) {
 	int j, jm;
 	file65 *file, **fp = NULL;
 	FILE *fd;
+	int nundef = 0;	// counter/index in list of remaining undef'd labels
 
 	if (argc <= 1) {
 		usage(stderr);
@@ -184,6 +204,10 @@ int main(int argc, char *argv[]) {
 	    }
 	    i++;
 	}
+
+	// -------------------------------------------------------------------------
+	// step 1 - load files
+
 	/* each file is loaded first */
 	j=0; jm=0; fp=NULL;
 	while(i<argc) {
@@ -196,6 +220,10 @@ int main(int argc, char *argv[]) {
 	  }
 	  i++;
 	}
+
+	// -------------------------------------------------------------------------
+	// step 2 - calculate new segment base addresses per file, by 
+	//          concatenating the segments per type
 
 	/* now [tdbz]base holds new segment base address */
 	/* set total length to zero */
@@ -218,8 +246,39 @@ int main(int argc, char *argv[]) {
 	  tdlen += file->dlen;
 	  tblen += file->blen;
 	  tzlen += file->zlen;
+	}
 
+	// -------------------------------------------------------------------------
+	// step 3 - merge globals from all files into single table
+	//
+
+	for(i=0;i<j;i++) {
+	  file = fp[i];
+	  // merge globals into single table
 	  read_globals(file);
+	}
+
+
+	// -------------------------------------------------------------------------
+	// step 4 - for each file, resolve undefined lables, storing replacement info
+	//          in the ud label table; merge remaining undefined labels into global
+	//          undef list
+
+	for(i=0;i<j;i++) {
+	  file = fp[i];
+	  // merge globals into single table
+	  resolve_undef(file, &nundef);
+	}
+
+	// -------------------------------------------------------------------------
+	// step 5 - relocate each text and data segment, replacing the resolved 
+	//          undefined labels and re-numbering the remaining ones
+
+	// reloc globals first, so reloc_seg has current info for resolved undef'd labels
+	for(i=0;i<j;i++) {
+	  file = fp[i];
+
+	  reloc_globals(file->buf+file->gpos, file);
 	}
 
 	for(i=0;i<j;i++) {
@@ -235,7 +294,6 @@ int main(int argc, char *argv[]) {
 			file->drpos,
 			&(file->lastdreloc),
 			file);
-	  reloc_globals(file->buf+file->gpos, file);
 
 	  file->tbase += file->tdiff;
 	  file->dbase += file->ddiff;
@@ -247,6 +305,11 @@ int main(int argc, char *argv[]) {
 
 	}
 
+	// -------------------------------------------------------------------------
+	// step 7 - write out the resulting o65 file
+	//
+
+	// prepare header
 	hdr[ 6] = 0;           hdr[ 7] = 0;
 	hdr[ 8] = tbase & 255; hdr[ 9] = (tbase>>8) & 255;
 	hdr[10] = ttlen & 255; hdr[11] = (ttlen >>8)& 255;
@@ -258,27 +321,46 @@ int main(int argc, char *argv[]) {
 	hdr[22] = tzlen & 255; hdr[23] = (tzlen >>8)& 255;
 	hdr[24] = 0;           hdr[25] = 0;
 
+	// open file
 	fd = fopen(outfile, "wb");
 	if(!fd) {
 	  fprintf(stderr,"Couldn't open output file %s (%s)\n",
 		outfile, strerror(errno));
 	  exit(2);
 	}
+
+	// write header
 	fwrite(hdr, 1, 26, fd);
-	/* this writes _all_ options from _all_files! */
+
+	// write options - this writes _all_ options from _all_files! 
 	for(i=0;i<j;i++) {
 	  write_options(fd, fp[i]);
 	}
 	fputc(0,fd);
-	/* write text segment */
+
+	// write text segment 
 	for(i=0;i<j;i++) {
 	  fwrite(fp[i]->buf + fp[i]->tpos, 1, fp[i]->tlen, fd);
 	}
-	/* write data segment */
+
+	// write data segment 
 	for(i=0;i<j;i++) {
 	  fwrite(fp[i]->buf + fp[i]->dpos, 1, fp[i]->dlen, fd);
 	}
+
+	// write list of undefined labels
+	fputc(nundef & 0xff,fd);
+	fputc((nundef >> 8) & 0xff,fd);
+	if (nundef > 0) {
+		for(i=0;i<j;i++) {
+			write_undef(fd, fp[i]);
+		}
+	}
+
+	// write relocation tables
 	write_reloc(fp, j, fd);
+
+	// write globals
 	if(!noglob) { 
 	  write_globals(fd);
 	} else {
@@ -308,34 +390,90 @@ int read_options(unsigned char *buf) {
 	return ++l;
 }
 
+/***************************************************************************/
+
 int read_undef(unsigned char *buf, file65 *file) {
-	int i, n, l = 2, ll;
+	int bufp;	// pointer in input buffer
+	int startp;	// pointer to start of label name
+	int nlabels;	// number of labels in file
+	undefs *current = NULL;
+	int i;
 
-	n = buf[0] + 256*buf[1];
+	bufp = 0;
+	nlabels = buf[bufp] + 256*buf[bufp+1];
+	bufp += 2;
 
-	file->nundef = n;
+	file->nundef = nlabels;
 
-	if (n == 0) {
+	if (nlabels == 0) {
 		file->ud = NULL;
 	} else {	
-		file->ud = malloc(n*sizeof(undefs));
+		file->ud = malloc(nlabels*sizeof(undefs));
 		if(!file->ud) {
 		  fprintf(stderr,"Oops, no more memory\n");
 		  exit(1);
 		}
 		i=0;
-		while(i<n){
-		  file->ud[i].name = (char*) buf+l;
-		  ll=l;
-		  while(buf[l++]);
-		  file->ud[i].len = l-ll-1;
+		while(i<nlabels){
+		  // find length of label name
+		  startp = bufp;
+		  while(buf[bufp++]);
+		  // store label info
+		  current = &file->ud[i];
+		  current->name = (char*) buf+startp;
+		  current->len = bufp-startp-1;
+		  current->resolved = -1;
 /*printf("read undef '%s'(%p), len=%d, ll=%d, l=%d, buf[l]=%d\n",
 		file->ud[i].name, file->ud[i].name, file->ud[i].len,ll,l,buf[l]);*/
 		  i++;
 		}
 	}
-	return l;
+	return bufp;
 }
+
+int resolve_undef(file65 *file, int *remains) {
+
+	int nlabels = file->nundef;
+#ifdef DEBUG
+printf("resolved undef file %s (%d undef'd)\n", file->fname, nlabels);
+#endif
+	if (nlabels == 0) {
+		return 0;
+	}
+	undefs *current = file->ud;
+
+	for (int i = 0; i < nlabels; i++) {
+		// store pointer to global in label info
+		// if NULL is returned, is not resolved
+		current->resolved = find_global(current->name);
+#ifdef DEBUG
+printf("resolved undef label %s to: resolved=%d, newidx=%d\n", current->name, current->resolved, *remains);
+#endif
+		if (current->resolved == -1) {
+			// keep in global undef list
+			current->newidx = *remains;
+			*remains += 1;
+		}
+		current++;
+	}
+	return 0;
+}
+
+
+int write_undef(FILE *f, file65 *fp) {
+
+	for (int i = 0; i < fp->nundef; i++) {
+		undefs *current = &fp->ud[i];
+
+		if (current->resolved == -1) {
+			// only write unresolved entries
+			fprintf(f, "%s%c", current->name, 0);
+		}
+	}
+}
+
+
+/***************************************************************************/
 
 /* compute and return the length of the relocation table */
 int len_reloc_seg(unsigned char *buf, int ri) {
@@ -457,18 +595,130 @@ file65 *load_file(char *fname) {
 
 /***************************************************************************/
 
+// global list of all global labels
 glob *gp = NULL;
-int gm=0;
+// number of global labels
 int g=0;
+// number of globals for which memory is already allocated
+int gm=0;
+
+
+int write_globals(FILE *fp) {
+	int i;
+
+	fputc(g&255, fp);
+	fputc((g>>8)&255, fp);
+
+	for(i=0;i<g;i++) {
+	  fprintf(fp,"%s%c%c%c%c",gp[i].name,0,gp[i].seg, 
+			gp[i].val & 255, (gp[i].val>>8)&255);
+	}
+	return 0;
+}
+
+int read_globals(file65 *fp) {
+	int i, l, n, old, new, seg, ll;
+	char *name;
+	unsigned char *buf = fp->buf + fp->gpos;
+
+	n = buf[0] + 256*buf[1];
+	buf +=2;
+
+	while(n) {
+/*printf("reading %s, ", buf);*/
+	  name = (char*) buf;
+	  l=0;
+	  while(buf[l++]);
+	  buf+=l;
+	  ll=l-1;
+	  seg = *buf;
+	  old = buf[1] + 256*buf[2];
+	  new = old + reldiff(seg);
+/*printf("old=%04x, seg=%d, rel=%04x, new=%04x\n", old, seg, reldiff(seg), new);*/
+
+	  /* multiply defined? */
+	  for(i=0;i<g;i++) {
+	    if(ll==gp[i].len && !strcmp(name, gp[i].name)) {
+	      fprintf(stderr,"Warning: label '%s' multiply defined (%s and %s)\n",
+			name, fp->fname, gp[i].file->fname);
+	      gp[i].fl = 1;
+	      break;
+	    }
+	  }
+	  /* not already defined */
+	  if(i>=g) {
+	    if(g>=gm) {
+	      gp = realloc(gp, (gm=(gm?2*gm:40))*sizeof(glob));
+	      if(!gp) {
+	        fprintf(stderr,"Oops, no more memory\n");
+	        exit(1);
+	      }
+	    }
+	    if(g>=0x10000) {
+	      fprintf(stderr,"Outch, maximum number of labels (65536) exceeded!\n");
+	      exit(3);
+	    }
+	    gp[g].name = name;
+	    gp[g].len = ll;
+	    gp[g].seg = seg;
+	    gp[g].val = new;
+	    gp[g].fl = 0;
+	    gp[g].file = fp;
+#ifdef DEBUG
+printf("set global label '%s' (l=%d, seg=%d, val=%04x)\n", gp[g].name,
+					gp[g].len, gp[g].seg, gp[g].val);
+#endif
+	    g++;
+	  }
+
+	  buf +=3;
+	  n--;
+	}
+	return 0;
+}
+
+int find_global(unsigned char *name) {
+
+	for (int i = 0; i < g; i++) {
+
+		if (!strcmp(gp[i].name, name)) {
+			// found
+			return i;
+		}
+	}
+	return -1;
+}
+
+// searches for a global label in a file by name.
+// returns the value of a found global value
+int find_file_global(unsigned char *bp, file65 *fp, int *seg) {
+	int i,l;
+	char *n;
+	int nl = bp[0]+256*bp[1];
+
+	l=fp->ud[nl].len;
+	n=fp->ud[nl].name;
+/*printf("find_global(%s (len=%d))\n",n,l);*/
+
+	for(i=0;i<g;i++) {
+	  if(gp[i].len == l && !strcmp(gp[i].name, n)) {
+	    *seg = gp[i].seg;
+	    bp[0] = i & 255; bp[1] = (i>>8) & 255;
+/*printf("return gp[%d]=%s (len=%d), val=%04x\n",i,gp[i].name,gp[i].len,gp[i].val);*/
+	    return gp[i].val;
+	  }
+	}
+	fprintf(stderr,"Warning: undefined label '%s' in file %s\n",
+		 n, fp->fname);
+	return 0;
+}
+
+/***************************************************************************/
 
 int write_reloc(file65 *fp[], int nfp, FILE *f) {
 	int tpc, pc, i;
 	unsigned char *p;
 	int low = 0, seg, typ, lab;
-
-	/* no undefined labels ? TODO */
-	fputc(0,f);
-	fputc(0,f);
 
 	tpc = fp[0]->tbase-1;
 
@@ -541,158 +791,164 @@ int write_reloc(file65 *fp[], int nfp, FILE *f) {
 	return 0;
 }
 
-int write_globals(FILE *fp) {
-	int i;
-
-	fputc(g&255, fp);
-	fputc((g>>8)&255, fp);
-
-	for(i=0;i<g;i++) {
-	  fprintf(fp,"%s%c%c%c%c",gp[i].name,0,gp[i].seg, 
-			gp[i].val & 255, (gp[i].val>>8)&255);
-	}
-	return 0;
-}
-
-int read_globals(file65 *fp) {
-	int i, l, n, old, new, seg, ll;
-	char *name;
-	unsigned char *buf = fp->buf + fp->gpos;
-
-	n = buf[0] + 256*buf[1];
-	buf +=2;
-
-	while(n) {
-/*printf("reading %s, ", buf);*/
-	  name = (char*) buf;
-	  l=0;
-	  while(buf[l++]);
-	  buf+=l;
-	  ll=l-1;
-	  seg = *buf;
-	  old = buf[1] + 256*buf[2];
-	  new = old + reldiff(seg);
-/*printf("old=%04x, seg=%d, rel=%04x, new=%04x\n", old, seg, reldiff(seg), new);*/
-
-	  /* multiply defined? */
-	  for(i=0;i<g;i++) {
-	    if(ll==gp[i].len && !strcmp(name, gp[i].name)) {
-	      fprintf(stderr,"Warning: label '%s' multiply defined (%s and %s)\n",
-			name, fp->fname, gp[i].file->fname);
-	      gp[i].fl = 1;
-	      break;
-	    }
-	  }
-	  /* not already defined */
-	  if(i>=g) {
-	    if(g>=gm) {
-	      gp = realloc(gp, (gm=(gm?2*gm:40))*sizeof(glob));
-	      if(!gp) {
-	        fprintf(stderr,"Oops, no more memory\n");
-	        exit(1);
-	      }
-	    }
-	    if(g>=0x10000) {
-	      fprintf(stderr,"Outch, maximum number of labels (65536) exceeded!\n");
-	      exit(3);
-	    }
-	    gp[g].name = name;
-	    gp[g].len = ll;
-	    gp[g].seg = seg;
-	    gp[g].val = new;
-	    gp[g].fl = 0;
-	    gp[g].file = fp;
-/*printf("set label '%s' (l=%d, seg=%d, val=%04x)\n", gp[g].name,
-					gp[g].len, gp[g].seg, gp[g].val);*/
-	    g++;
-	  }
-
-	  buf +=3;
-	  n--;
-	}
-	return 0;
-}
-
-int find_global(unsigned char *bp, file65 *fp, int *seg) {
-	int i,l;
-	char *n;
-	int nl = bp[0]+256*bp[1];
-
-	l=fp->ud[nl].len;
-	n=fp->ud[nl].name;
-/*printf("find_global(%s (len=%d))\n",n,l);*/
-
-	for(i=0;i<g;i++) {
-	  if(gp[i].len == l && !strcmp(gp[i].name, n)) {
-	    *seg = gp[i].seg;
-	    bp[0] = i & 255; bp[1] = (i>>8) & 255;
-/*printf("return gp[%d]=%s (len=%d), val=%04x\n",i,gp[i].name,gp[i].len,gp[i].val);*/
-	    return gp[i].val;
-	  }
-	}
-	fprintf(stderr,"Warning: undefined label '%s' in file %s\n",
-		 n, fp->fname);
-	return 0;
-}
+#define	forwardpos()	\
+	while(pos-lastpos>254){buf[ro++]=255;lastpos+=254;}buf[ro++]=pos-lastpos;lastpos=pos
 
 int reloc_seg(unsigned char *buf, int pos, int ri, int *lreloc, file65 *fp) {
-	int type, seg, old, new;
+	int type, seg, old, new, ro, lastpos, diff;
 
 	/* 
 	   pos = position of segment in *buf
-	   ri  = position of relocation table in *buf
+	   ri  = position of relocation table in *buf for reading the reloc entries
+ 	   ro  = position of relocation table entry for writing the modified entries
 	*/
 	pos--;
-/*printf("reloc_seg: adr=%04x, tdiff=%04x, ddiff=%04x, bdiff=%04x, zdiff=%04x\n", pos, fp->tdiff, fp->ddiff, fp->bdiff, fp->zdiff); */
+#ifdef DEBUG
+printf("reloc_seg: adr=%04x, tdiff=%04x, ddiff=%04x, bdiff=%04x, zdiff=%04x\n", pos, fp->tdiff, fp->ddiff, fp->bdiff, fp->zdiff); 
+#endif
+	ro = ri;
+	lastpos = pos;
 	while(buf[ri]) {
+	  // still reloc entry
 	  if((buf[ri] & 255) == 255) {
 	    pos += 254;
 	    ri++;
 	  } else {
 	    pos += buf[ri] & 255;
-	    ri++;
-	    type = buf[ri] & 0xe0;
-	    seg = buf[ri] & 0x07;
-/*printf("reloc entry @ ri=%04x, pos=%04x, type=%02x, seg=%d\n",ri, pos, type, seg);*/
-	    ri++;
+	    type = buf[ri+1] & 0xe0;
+	    seg = buf[ri+1] & 0x07;
+//printf("reloc entry @ ri=%04x, pos=%04x, type=%02x, seg=%d\n",ri, pos, type, seg);
 	    switch(type) {
 	    case 0x80:
 		old = buf[pos] + 256*buf[pos+1];
 		if(seg) {
 			new = old + reldiff(seg);
+			ri++;			// skip position byte
+			forwardpos();		// re-write position offset
+			buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
 		} else {
-			new = old + find_global(buf+ri, fp, &seg);
-			ri += 2;	/* account for label number */
+			// undefined
+			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+#ifdef DEBUG
+printf("found undef'd label %s, resolved=%d, newidx=%d, (ri=%d, ro=%d)\n", u->name, u->resolved, u->newidx, ri, ro);
+#endif
+			if (u->resolved == -1) {
+				// not resolved
+				ri++;			// skip position byte
+				forwardpos();		// re-write position offset
+				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
+				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				buf[ro++] = (u->newidx >> 8) & 0xff;
+				ri += 2;	// acount for label number in input
+			} else {
+				// resolved from global list
+				glob *gl = &gp[u->resolved];
+				new = old + gl->val;
+				seg = gl->seg;
+				if (seg != 1) {
+					// not an absolute value
+					forwardpos();		// re-write position offset
+					buf[ro++] = 0x80 | seg;	// relocation byte for new segment	
+				} else {
+					// absolute value - do not write a new relocation entry
+				}
+				ri += 4;	// account for position, segment byte, label number in reloc table 
+			}
 		}
 /*printf("old=%04x, new=%04x\n",old,new);*/
 		buf[pos] = new & 255;
 		buf[pos+1] = (new>>8)&255;
 		break;
 	    case 0x40:
-		old = buf[pos]*256 + buf[ri];
 		if(seg) {
+			old = buf[pos]*256 + buf[ri+2];
 			new = old + reldiff(seg);
+			buf[ri+2] = new & 255;
+			forwardpos();	// re-write position offset
+			buf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
+			ri += 3;	// skip position, segment, and low byte
 		} else {
-			new = old + find_global(buf+ri+1, fp, &seg);
+			old = buf[pos]*256 + buf[ri+4];
+			// undefined
+			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+			if (u->resolved == -1) {
+				// not resolved
+				ri++;			// skip position byte
+				forwardpos();		// re-write position offset
+				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
+				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				buf[ro++] = (u->newidx >> 8) & 0xff;
+				ri += 2;	// acount for label number in input
+				buf[ro++] = buf[ri++];	// low byte for relocation
+			} else {
+				// resolved from global list
+				glob *gl = &gp[u->resolved];
+				new = old + gl->val;
+				seg = gl->seg;
+				if (seg != 1) {
+					// not an absolute value
+					forwardpos();		// re-write position offset
+					buf[ro++] = 0x40 | seg;	// relocation byte for new segment
+					buf[ro++] = new & 0xff;	// low byte for relocation
+				} else {
+					// absolute value - do not write a new relocation entry
+				}
+				ri += 5;// account for position, segment byte, label number in reloc table, low byte 
+			}
+			new = old + find_file_global(buf+ri+1, fp, &seg);
 			ri += 2;	/* account for label number */
 		}
 		buf[pos] = (new>>8)&255;
-		buf[ri] = new & 255;
-		ri++;
 		break;
 	    case 0x20:
 		old = buf[pos];
+		diff = 0;
 		if(seg) {
-			new = old + reldiff(seg);
+			diff = reldiff(seg);
+			forwardpos();
+			buf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
+			ri += 2;	// account for position & segment
 		} else {
-			new = old + find_global(buf+ri, fp, &seg);
-			ri += 2;	/* account for label number */
+			// undefined
+			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+			if (u->resolved == -1) {
+				// not resolved
+				ri++;			// skip position byte
+				forwardpos();		// re-write position offset
+				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
+				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				buf[ro++] = (u->newidx >> 8) & 0xff;
+				ri += 2;	// acount for label number in input
+			} else {
+				// resolved from global list
+				glob *gl = &gp[u->resolved];
+				diff = gl->val;
+				seg = gl->seg;
+				if (seg != 1) {
+					// not an absolute value
+					forwardpos();		// re-write position offset
+					buf[ro++] = 0x20 | seg;	// relocation byte for new segment
+				} else {
+					// absolute value - do not write a new relocation entry
+				}
+				ri += 4;// account for position, segment byte, label number in reloc table
+			}
+		}
+		new = old + diff;
+		if (((diff & 0xff) + (old & 0xff)) > 0xff) {
+			fprintf(stderr,"Warning: overflow in byte relocation at %04x in file %s\n",
+				pos, fp->fname);
 		}
 		buf[pos] = new & 255;
 		break;
 	    }
 	  }
 	}
+	buf[ro++] = 0;
+
 	*lreloc = pos;
 	return ++ri;
 }
+
+
+
