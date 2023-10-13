@@ -55,6 +55,7 @@ typedef struct LabOcc {
  */
 typedef struct {
 	int blk;
+	int origblk;	// only for fl=3
 	int val;
 	int len;
 	int fl;		/* 0 = label value not valid/known,

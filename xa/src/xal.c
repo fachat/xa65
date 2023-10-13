@@ -200,6 +200,7 @@ int lg_toglobal(char *s ) {
 	        ltp=afile->la.lt+n;
         	ltp->fl=3;
         	ltp->afl=SEG_UNDEF;
+		ltp->origblk=ltp->blk;
 		ltp->blk=0;
       	}
 	return er;
@@ -297,11 +298,21 @@ int l_def(char *s, int *l, int *x, int *f)
 		    /* redefinition of label */
                     *l=ltp->len+i;
                } else
-               if(ltp->fl == 0 || ltp->fl == 3)
+               if(ltp->fl == 0)
                {
 		    /* label has not been defined yet, (e.g. pass1 forward ref), so we try to set it. */
                     *l=ltp->len+i;
                     if(b_ltest(ltp->blk,b))
+                         er=E_LABDEF;
+                    else
+                         ltp->blk=b;
+
+               } else
+               if(ltp->fl == 3)
+               {
+		    /* label has been defined as -U undef'd label so far - we need to check */
+                    *l=ltp->len+i;
+                    if(b_ltest(ltp->origblk,b))
                          er=E_LABDEF;
                     else
                          ltp->blk=b;
@@ -319,6 +330,7 @@ int l_def(char *s, int *l, int *x, int *f)
                     ltp->fl=0;
 		    ltp->is_cll=cll_fl;
                }
+	       //printf("l_def NODEF: n=%d, s=%s\n", n, ltp->n);
           } 
 
           *x=n;
@@ -523,6 +535,7 @@ void l_set(int n, int v, int afl)
      ltp->val = v;
      ltp->fl = 1;
      ltp->afl = afl;
+
 //printf("l_set('%s'(%d), v=$%04x, afl=%d\n",ltp->n, n, v, afl);
 }
 
