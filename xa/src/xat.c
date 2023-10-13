@@ -26,10 +26,7 @@
 #undef DEBUG_CONV
 #undef DEBUG_CAST
 #undef DEBUG_RELOC
-
-/*
-#define DEBUG_AM
-*/
+#undef DEBUG_AM
 
 #include <ctype.h>
 #include <stdio.h>
@@ -819,6 +816,9 @@ fprintf(stderr, "E_OK ... t_p2 xat.c %i %i\n", t[0], *ll);
 	       /* this actually calls pass2 on the current tokenization stream,
  		* but without including the Klisting token listing */
                er=t_p2(t,ll,(0 | byte), al);
+#ifdef DEBUG_AM
+fprintf(stderr, "... --> er=%d\n", er);
+#endif
 	}
           
      } else
@@ -2267,16 +2267,10 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
 			} else {
 			 //m=n;
                          er=l_search((char*)s+p,&ll,&n,&v,&afl);
-/*
-                         if(m==Kglobl || m==Kextzero) {
-                              if(er==E_NODEF) {
-                                  er=E_OK;
-                              }
-                              t[q++]=T_LABEL;
-                              t[q++]=n & 255;
-                              t[q++]=(n>>8) & 255;
-                         } else
-*/
+
+			 if (er == E_NODEF && undefok) {
+				lg_toglobal(s+p);
+			 }
 
                          if(!er)
                          {

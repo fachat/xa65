@@ -58,26 +58,6 @@ static int cll_get();
 static void cll_clear();
 static int cll_getcur();
 
-/*
-static void unn_init();
-static int unn_get();
-static void unn_clear();
-*/
-
-/* local variables */
-
-/*
-static int hashindex[256];
-static Labtab *lt = NULL;
-static int    lti = 0;
-static int    ltm = 0;
-*/
-
-/*
-static char   *ln;
-static unsigned long lni;
-static long   sl;
-*/
 
 static Labtab *ltp;
 
@@ -86,24 +66,6 @@ int l_init(void)
 	cll_init();
 	//unn_init();
 	return 0;
-#if 0
-     int er;
-
-     for(er=0;er<256;er++)
-          hashindex[er]=0;
-
-     /*sl=(long)sizeof(Labtab);*/
-     
-/*     if(!(er=m_alloc((long)(sizeof(Labtab)*ANZLAB),(char**)&lt)))
-          er=m_alloc((long)LABMEM,&ln);*/
-
-     er=m_alloc((long)(sizeof(Labtab)*ANZLAB),(char**)&lt);
-          
-     lti=0;
-/*     lni=0L;*/
-
-     return(er);
-#endif
 }
 
 int ga_lab(void)
@@ -224,6 +186,26 @@ int lg_import(int n) {
 	return er;
 }
 
+/*
+ * re-define a previously undef'd label as globally undefined 
+ * (for -U option)
+ */
+int lg_toglobal(char *s ) {
+	int n, er;
+
+//printf("lg_toglobal(%s)\n", s);
+	er = ll_search(s,&n, STD);
+
+	if(er==E_OK) {
+	        ltp=afile->la.lt+n;
+        	ltp->fl=3;
+        	ltp->afl=SEG_UNDEF;
+		ltp->blk=0;
+      	}
+	return er;
+}
+
+
 /**
  * define a global zeropage label (from the .importzp pseudo opcode))
  * "s" is a pointer to the first label character, end is at \0
@@ -306,6 +288,7 @@ int l_def(char *s, int *l, int *x, int *f)
                
           if(er==E_OK)
           {
+	       //printf("l_def OK: cll_fl=%d, i=%d, s=%s\n", cll_fl, i, s);
 	       /* we actually found an existing label in the same scope */
                ltp=afile->la.lt+n;
                
@@ -314,7 +297,7 @@ int l_def(char *s, int *l, int *x, int *f)
 		    /* redefinition of label */
                     *l=ltp->len+i;
                } else
-               if(ltp->fl==0)
+               if(ltp->fl == 0 || ltp->fl == 3)
                {
 		    /* label has not been defined yet, (e.g. pass1 forward ref), so we try to set it. */
                     *l=ltp->len+i;
@@ -540,7 +523,7 @@ void l_set(int n, int v, int afl)
      ltp->val = v;
      ltp->fl = 1;
      ltp->afl = afl;
-/*printf("l_set('%s'(%d), v=$%04x, afl=%d\n",ltp->n, n, v, afl);*/
+//printf("l_set('%s'(%d), v=$%04x, afl=%d\n",ltp->n, n, v, afl);
 }
 
 static void ll_exblk(int a, int b)
@@ -665,6 +648,7 @@ int ll_search(char *s, int *n, label_t cll_fl)          /* search Label in Tabel
 	       if (cll_fl == UNNAMED) {
 			// TODO
 	       } else {
+//printf("ll_search:match labels %s with %p (%s) from block %d, block check is %d\n", s, ltp, ltp->n, ltp->blk, b_test(ltp->blk));
 		       /* check if the found label is in any of the blocks in the
  			  current block stack */
                		if((j==k)&&(!b_test(ltp->blk)))
@@ -691,6 +675,8 @@ int ll_search(char *s, int *n, label_t cll_fl)          /* search Label in Tabel
           getchar();
      }
 #endif
+//printf("l_search(%s) returns er=%d, n=%d\n", s, er, *n);
+
      return(er);
 }
 

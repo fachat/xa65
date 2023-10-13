@@ -60,6 +60,7 @@ typedef struct {
 	int fl;		/* 0 = label value not valid/known,
 			 * 1 = label value known
 			 * 2 = label value not known, external global label (imported on link)
+			 * 3 = label value not known, temporarily on external global label list (for -U)
 			 */
 	int afl;	/* 0 = no address (no relocation), 1 = address label */
 	int nextindex;

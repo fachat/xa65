@@ -30,6 +30,8 @@
 #include "xao.h"
 #include "xau.h"
 
+#undef	DEBUG_RELOC
+
 File *afile = NULL;
 
 int rmode = RMODE_RELOC;
@@ -43,8 +45,10 @@ int r_set(int pc, int afl, int l) {
 */
 
 int u_set(int pc, int afl, int label, int l) {
-/*printf("set relocation @$%04x, l=%d, afl=%04x, segment=%d, label=%d\n",
-					pc, l, afl,segment, label);*/
+#ifdef DEBUG_RELOC
+printf("set relocation @$%04x, l=%d, afl=%04x, segment=%d, label=%d\n",
+					pc, l, afl,segment, label);
+#endif
 	if(((afl & A_FMASK) == (SEG_UNDEF<<8))
 		|| ((afl & A_FMASK) == (SEG_UNDEFZP<<8))
 		)  {

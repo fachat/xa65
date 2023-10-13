@@ -123,12 +123,13 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
      if(s[pp]==T_LABEL)
      {
           er=l_get(cval(s+pp+1),v, &afl);
+
 /*
  printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
 			er, segment, afl, nolink, fundef);
 */
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( (nolink && !noundef) || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
+	    if( nolink || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
 	      *v = 0;
 	      if(afl!=SEG_UNDEFZP) {

@@ -37,6 +37,8 @@ long ga_labm(void);
 int lg_set(char *);
 int lg_import(int);
 int lg_importzp(int);
+// used to re-define undef'd labels as global for -U option
+int lg_toglobal(char *);
 
 int b_init(void);
 int b_depth(void);
