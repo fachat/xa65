@@ -38,7 +38,7 @@
 #define author		"Written by Andre Fachat"
 #define copyright	"Copyright (C) 1997-2023 Andre Fachat. Formerly ld65."
 
-#define	DEBUG
+#undef	DEBUG
 
 /*
 
@@ -85,9 +85,6 @@ typedef struct {
 	int		drpos;		/* position of data reloc tab in file */
 	int		gpos;		/* position of globals list in file */
 
-	int		lasttreloc;
-	int		lastdreloc;
-
 	int		nundef;		/* number of undefined labels */
 	undefs 		*ud;		/* undefined labels list NULL if none */
 } file65;
@@ -109,7 +106,7 @@ int read_options(unsigned char *f);
 int read_undef(unsigned char *f, file65 *fp);
 int write_undef(FILE *f, file65 *fp);
 int len_reloc_seg(unsigned char *buf, int ri);
-int reloc_seg(unsigned char *buf, int adr, int ri, int *lreloc, file65 *fp);
+int reloc_seg(unsigned char *buf, int pos, int addr, int rdiff, int ri, unsigned char *obuf, int *lastaddrp, int *rop, file65 *fp);
 unsigned char *reloc_globals(unsigned char *, file65 *fp);
 int read_globals(file65 *file);
 int write_options(FILE *fp, file65 *file);
@@ -217,7 +214,9 @@ int main(int argc, char *argv[]) {
 	    if(j>=jm) fp=realloc(fp, (jm=(jm?jm*2:10))*sizeof(file65*));
 	    if(!fp) { fprintf(stderr,"Oops, no more memory\n"); exit(1); }
 	    fp[j++] = f;
-	  }
+	  } else {
+	    exit(1);
+	  } 
 	  i++;
 	}
 
@@ -275,35 +274,67 @@ int main(int argc, char *argv[]) {
 	//          undefined labels and re-numbering the remaining ones
 
 	// reloc globals first, so reloc_seg has current info for resolved undef'd labels
+
+	int routtlen = 1;	// end-of-table byte
+	int routdlen = 1;	// end-of-table byte
+
 	for(i=0;i<j;i++) {
 	  file = fp[i];
+
+	  routtlen += (file->drpos - file->trpos);
+	  routdlen += (file->gpos - file->drpos);
 
 	  reloc_globals(file->buf+file->gpos, file);
 	}
 
+	// prep global reloc tables
+	unsigned char *treloc = malloc(routtlen);
+	unsigned char *dreloc = malloc(routdlen);
+
+#ifdef DEBUG
+	printf("prep'd text reloc table at %p (%d bytes)\n", treloc, routtlen);
+	printf("prep'd data reloc table at %p (%d bytes)\n", dreloc, routdlen);
+#endif
+	int tro = 0;
+	int dro = 0;
+
+	// segment position of last relocation entry to compute offsets across files
+	int lasttaddr = tbase - 1;
+	int lastdaddr = dbase - 1;
+
 	for(i=0;i<j;i++) {
 	  file = fp[i];
 
-	  reloc_seg(file->buf, 
-			file->tpos, 
-			file->trpos,
-			&(file->lasttreloc),
+	  reloc_seg(file->buf,		// input buffer
+			file->tpos,	// position of segment in input buffer 
+			file->tbase, 	// segment base address
+			file->tdiff,	// reloc difference
+			file->trpos,	// position of reloc table in input
+			treloc,		// output reloc buffer
+			&lasttaddr,	// last relocated target address
+			&tro,		// pointer in output reloc bufer
 			file);
+#if 0
 	  reloc_seg(file->buf,
 			file->dpos,
+			file->dbase,
+			file->ddiff,
 			file->drpos,
-			&(file->lastdreloc),
+			treloc,
+			&lastdaddr,
+			&dro,
 			file);
-
+#endif
+	  // change file information to relocated values
 	  file->tbase += file->tdiff;
 	  file->dbase += file->ddiff;
 	  file->bbase += file->bdiff;
 	  file->zbase += file->zdiff;
-
-	  file->lasttreloc += file->tbase - file->tpos;
-	  file->lastdreloc += file->dbase - file->dpos;
-
 	}
+
+	// finalize global reloc table
+	treloc[tro++] = 0;
+	dreloc[dro++] = 0;
 
 	// -------------------------------------------------------------------------
 	// step 7 - write out the resulting o65 file
@@ -358,7 +389,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	// write relocation tables
-	write_reloc(fp, j, fd);
+	fwrite(treloc, tro, 1, fd);
+	fwrite(dreloc, dro, 1, fd);
 
 	// write globals
 	if(!noglob) { 
@@ -585,11 +617,14 @@ file65 *load_file(char *fname) {
 	      file->drpos= len_reloc_seg(file->buf, file->trpos);
 	      file->gpos = len_reloc_seg(file->buf, file->drpos);
 	    }
-	  } else
-	    fprintf(stderr,"file65: %s: %s\n", fname, strerror(errno));
-	} else
+	  } else {
+	    fprintf(stderr,"Error: %s: not an o65 file\n", fname);
+	    return NULL;
+	  }
+	} else {
 	  fprintf(stderr,"file65: %s: %s\n", fname, strerror(errno));
-
+	  return NULL;
+	}
 	return file;
 }
 
@@ -715,117 +750,51 @@ int find_file_global(unsigned char *bp, file65 *fp, int *seg) {
 
 /***************************************************************************/
 
-int write_reloc(file65 *fp[], int nfp, FILE *f) {
-	int tpc, pc, i;
-	unsigned char *p;
-	int low = 0, seg, typ, lab;
-
-	tpc = fp[0]->tbase-1;
-
-	for(i=0;i<nfp;i++) {
-	  pc = fp[i]->tbase-1;
-	  p = fp[i]->buf + fp[i]->trpos;
-
-	  while(*p) {
-	    while((*p)==255) { pc+=254; p++; }
-	    pc+=*(p++);
-	    seg=(*p)&7;
-	    typ=(*p)&0xe0;
-	    if(typ==0x40) low=*(++p);
-	    p++;
-	    if(seg==0) {
-	      lab=p[0]+256*p[1];
-	      seg=gp[lab].seg;
-	      p+=2;
-	    }
-	    if(seg>1) {
-	      while(pc-tpc>254) {
-		fputc(255,f);
-		tpc+=254;
-	      }
-	      fputc(pc-tpc, f);
-	      tpc=pc;
-	      fputc(typ | seg, f);
-	      if(typ==0x40) {
-		fputc(low,f);
-	      }
-	    }
-	  }
-	}
-	fputc(0,f);
-
-	tpc = fp[0]->dbase-1;
-
-	for(i=0;i<nfp;i++) {
-	  pc = fp[i]->dbase-1;
-	  p = fp[i]->buf + fp[i]->drpos;
-
-	  while(*p) {
-	    while((*p)==255) { pc+=254; p++; }
-	    pc+=*(p++);
-	    seg=(*p)&7;
-	    typ=(*p)&0xe0;
-	    if(typ==0x40) low=*(++p);
-	    p++;
-	    if(seg==0) {
-	      lab=p[0]+256*p[1];
-	      seg=gp[lab].seg;
-	      p+=2;
-	    }
-	    if(seg>1) {
-	      while(pc-tpc>254) {
-		fputc(255,f);
-		tpc+=254;
-	      }
-	      fputc(pc-tpc, f);
-	      tpc=pc;
-	      fputc(typ | seg, f);
-	      if(typ==0x40) {
-		fputc(low,f);
-	      }
-	    }
-	  }
-	}
-	fputc(0,f);
-
-	return 0;
-}
-
 #define	forwardpos()	\
-	while(pos-lastpos>254){buf[ro++]=255;lastpos+=254;}buf[ro++]=pos-lastpos;lastpos=pos
+	printf("fwd lastaddr=%04x to addr=%04x\n", lastaddr, addr);while(addr-lastaddr>254){obuf[ro++]=255;lastaddr+=254;}obuf[ro++]=addr-lastaddr;lastaddr=addr
 
-int reloc_seg(unsigned char *buf, int pos, int ri, int *lreloc, file65 *fp) {
-	int type, seg, old, new, ro, lastpos, diff;
+int reloc_seg(unsigned char *buf, int pos, int addr, int rdiff, int ri,
+		unsigned char *obuf, int *lastaddrp, int *rop, file65 *fp) {
+	int type, seg, old, new, ro, lastaddr, diff;
+	int base;
 
 	/* 
-	   pos = position of segment in *buf
+	   pos = address of current position
 	   ri  = position of relocation table in *buf for reading the reloc entries
- 	   ro  = position of relocation table entry for writing the modified entries
+ 	   ro(p)  = position of relocation table entry for writing the modified entries
 	*/
-	pos--;
+	base = addr;
+	addr--;
+	ro = *rop;
+	lastaddr = *lastaddrp - rdiff;
+
 #ifdef DEBUG
-printf("reloc_seg: adr=%04x, tdiff=%04x, ddiff=%04x, bdiff=%04x, zdiff=%04x\n", pos, fp->tdiff, fp->ddiff, fp->bdiff, fp->zdiff); 
+printf("reloc_seg: %s: addr=%04x, pos=%04x, lastaddr=%04x (%04x - %04x)\n", 
+		fp->fname, addr, pos, lastaddr, *lastaddrp, rdiff); 
 #endif
-	ro = ri;
-	lastpos = pos;
+
 	while(buf[ri]) {
 	  // still reloc entry
 	  if((buf[ri] & 255) == 255) {
-	    pos += 254;
+	    addr += 254;
 	    ri++;
 	  } else {
-	    pos += buf[ri] & 255;
+	    addr += buf[ri] & 255;
 	    type = buf[ri+1] & 0xe0;
 	    seg = buf[ri+1] & 0x07;
-//printf("reloc entry @ ri=%04x, pos=%04x, type=%02x, seg=%d\n",ri, pos, type, seg);
+#ifdef DEBUG
+printf("reloc entry @ ri=%04x, pos=%04x, type=%02x, seg=%d, offset=%d, reldiff=%04x\n",
+		ri, pos, type, seg, addr-lastaddr, reldiff(seg));
+#endif
 	    switch(type) {
 	    case 0x80:
-		old = buf[pos] + 256*buf[pos+1];
+		// address (word) relocation
+		old = buf[addr-base+pos] + 256*buf[addr-base+pos+1];
 		if(seg) {
-			new = old + reldiff(seg);
+			diff = reldiff(seg);
 			ri++;			// skip position byte
 			forwardpos();		// re-write position offset
-			buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
+			obuf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
 		} else {
 			// undefined
 			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
@@ -834,90 +803,12 @@ printf("found undef'd label %s, resolved=%d, newidx=%d, (ri=%d, ro=%d)\n", u->na
 #endif
 			if (u->resolved == -1) {
 				// not resolved
+				diff = 0;
 				ri++;			// skip position byte
 				forwardpos();		// re-write position offset
-				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
-				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
-				buf[ro++] = (u->newidx >> 8) & 0xff;
-				ri += 2;	// acount for label number in input
-			} else {
-				// resolved from global list
-				glob *gl = &gp[u->resolved];
-				new = old + gl->val;
-				seg = gl->seg;
-				if (seg != 1) {
-					// not an absolute value
-					forwardpos();		// re-write position offset
-					buf[ro++] = 0x80 | seg;	// relocation byte for new segment	
-				} else {
-					// absolute value - do not write a new relocation entry
-				}
-				ri += 4;	// account for position, segment byte, label number in reloc table 
-			}
-		}
-/*printf("old=%04x, new=%04x\n",old,new);*/
-		buf[pos] = new & 255;
-		buf[pos+1] = (new>>8)&255;
-		break;
-	    case 0x40:
-		if(seg) {
-			old = buf[pos]*256 + buf[ri+2];
-			new = old + reldiff(seg);
-			buf[ri+2] = new & 255;
-			forwardpos();	// re-write position offset
-			buf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
-			ri += 3;	// skip position, segment, and low byte
-		} else {
-			old = buf[pos]*256 + buf[ri+4];
-			// undefined
-			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
-			if (u->resolved == -1) {
-				// not resolved
-				ri++;			// skip position byte
-				forwardpos();		// re-write position offset
-				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
-				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
-				buf[ro++] = (u->newidx >> 8) & 0xff;
-				ri += 2;	// acount for label number in input
-				buf[ro++] = buf[ri++];	// low byte for relocation
-			} else {
-				// resolved from global list
-				glob *gl = &gp[u->resolved];
-				new = old + gl->val;
-				seg = gl->seg;
-				if (seg != 1) {
-					// not an absolute value
-					forwardpos();		// re-write position offset
-					buf[ro++] = 0x40 | seg;	// relocation byte for new segment
-					buf[ro++] = new & 0xff;	// low byte for relocation
-				} else {
-					// absolute value - do not write a new relocation entry
-				}
-				ri += 5;// account for position, segment byte, label number in reloc table, low byte 
-			}
-			new = old + find_file_global(buf+ri+1, fp, &seg);
-			ri += 2;	/* account for label number */
-		}
-		buf[pos] = (new>>8)&255;
-		break;
-	    case 0x20:
-		old = buf[pos];
-		diff = 0;
-		if(seg) {
-			diff = reldiff(seg);
-			forwardpos();
-			buf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
-			ri += 2;	// account for position & segment
-		} else {
-			// undefined
-			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
-			if (u->resolved == -1) {
-				// not resolved
-				ri++;			// skip position byte
-				forwardpos();		// re-write position offset
-				buf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
-				buf[ro++] = u->newidx & 0xff;	// output label number lo/hi
-				buf[ro++] = (u->newidx >> 8) & 0xff;
+				obuf[ro++] = buf[ri++];	// relocation byte ($8x for segments text, data, bss, zp)
+				obuf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				obuf[ro++] = (u->newidx >> 8) & 0xff;
 				ri += 2;	// acount for label number in input
 			} else {
 				// resolved from global list
@@ -927,26 +818,108 @@ printf("found undef'd label %s, resolved=%d, newidx=%d, (ri=%d, ro=%d)\n", u->na
 				if (seg != 1) {
 					// not an absolute value
 					forwardpos();		// re-write position offset
-					buf[ro++] = 0x20 | seg;	// relocation byte for new segment
+					obuf[ro++] = 0x80 | seg;// relocation byte for new segment	
 				} else {
 					// absolute value - do not write a new relocation entry
 				}
-				ri += 4;// account for position, segment byte, label number in reloc table
+				ri += 4;	// account for position, segment byte, label number in reloc table 
 			}
+		}
+		new = old + diff;
+/*printf("old=%04x, new=%04x\n",old,new);*/
+		buf[addr-base+pos] = new & 255;
+		buf[addr-base+pos+1] = (new>>8)&255;
+		break;
+	    case 0x40:
+		// high byte relocation
+		if(seg) {
+			old = buf[addr-base+pos]*256 + buf[ri+2];
+			diff = reldiff(seg);
+			forwardpos();	// re-write position offset
+			obuf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
+			obuf[ro++] = (old + diff) & 255;
+			ri += 3;	// skip position, segment, and low byte
+		} else {
+			old = buf[addr-base+pos]*256 + buf[ri+4];
+			// undefined
+			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+			if (u->resolved == -1) {
+				// not resolved
+				diff = 0;
+				forwardpos();		// re-write position offset
+				obuf[ro++] = buf[ri+1];	// relocation byte ($8x for segments text, data, bss, zp)
+				obuf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				obuf[ro++] = (u->newidx >> 8) & 0xff;
+				obuf[ro++] = buf[ri+4];	// low byte for relocation
+			} else {
+				// resolved from global list
+				glob *gl = &gp[u->resolved];
+				diff = gl->val;
+				seg = gl->seg;
+				if (seg != 1) {
+					// not an absolute value
+					forwardpos();		// re-write position offset
+					obuf[ro++] = 0x40 | seg;	// relocation byte for new segment
+					obuf[ro++] = (old + diff) & 0xff;	// low byte for relocation
+				} else {
+					// absolute value - do not write a new relocation entry
+				}
+			}
+			ri += 5; // account for position, segment byte, label number in reloc table, low byte 
+		}
+		new = old + diff;
+		buf[addr-base+pos] = (new>>8)&255;
+		break;
+	    case 0x20:
+		// low byte relocation
+		old = buf[addr-base+pos];
+		diff = 0;
+		if(seg) {
+			diff = reldiff(seg);
+			forwardpos();
+			obuf[ro++] = buf[ri+1];	// relocation byte ($4x for segments text, data, bss, zp)
+			ri += 2;	// account for position & segment
+		} else {
+			// undefined
+			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+			if (u->resolved == -1) {
+				// not resolved
+				diff = 0;
+				forwardpos();		// re-write position offset
+				obuf[ro++] = buf[ri+1];	// relocation byte ($8x for segments text, data, bss, zp)
+				obuf[ro++] = u->newidx & 0xff;	// output label number lo/hi
+				obuf[ro++] = (u->newidx >> 8) & 0xff;
+			} else {
+				// resolved from global list
+				glob *gl = &gp[u->resolved];
+				diff = gl->val;
+				seg = gl->seg;
+				if (seg != 1) {
+					// not an absolute value
+					forwardpos();		// re-write position offset
+					obuf[ro++] = 0x20 | seg;	// relocation byte for new segment
+				} else {
+					// absolute value - do not write a new relocation entry
+				}
+			}
+			ri += 4;// account for position, segment byte, label number in reloc table
 		}
 		new = old + diff;
 		if (((diff & 0xff) + (old & 0xff)) > 0xff) {
 			fprintf(stderr,"Warning: overflow in byte relocation at %04x in file %s\n",
 				pos, fp->fname);
 		}
-		buf[pos] = new & 255;
+		buf[addr-base+pos] = new & 255;
 		break;
 	    }
 	  }
 	}
-	buf[ro++] = 0;
 
-	*lreloc = pos;
+	*lastaddrp = lastaddr + rdiff;
+ 	*rop = ro;
+#ifdef DEBUG
+	printf(" --> lastaddr=%04x (%04x - %04x), rop=%d\n", lastaddr, *lastaddrp, rdiff, ro);
+#endif
 	return ++ri;
 }
 
