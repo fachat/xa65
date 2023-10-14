@@ -130,6 +130,8 @@ void usage(FILE *fp)
 		"               address `addr'\n"
 		"  -o file    uses `file' as output file. Default is `a.o65'\n"
 		"  -G         suppress writing of globals\n"
+		"  -U         accept any undef'd labels after linking\n"
+//		"  -L<name>   accept specific given undef'd labels after linking\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n",
 		programname);
@@ -137,6 +139,7 @@ void usage(FILE *fp)
 
 int main(int argc, char *argv[]) {
 	int noglob=0;
+	int undefok=0;
 	int i = 1;
 	int tbase = 0x0400, dbase = 0x1000, bbase = 0x4000, zbase = 0x0002;
 	int ttlen, tdlen, tblen, tzlen;
@@ -167,6 +170,9 @@ int main(int argc, char *argv[]) {
 	    switch(argv[i][1]) {
 	    case 'G':
 		noglob=1;
+		break;
+	    case 'U':
+		undefok=1;
 		break;
 	    case 'o':
 		if(argv[i][2]) outfile=argv[i]+2;
@@ -339,6 +345,13 @@ int main(int argc, char *argv[]) {
 	// -------------------------------------------------------------------------
 	// step 7 - write out the resulting o65 file
 	//
+
+	if (nundef > 0) {
+		if (!undefok) {
+			fprintf(stderr, "%d Undefined labels remain - aborting\n", nundef);
+			exit(1);
+		}
+	}
 
 	// prepare header
 	hdr[ 6] = 0;           hdr[ 7] = 0;
@@ -751,7 +764,7 @@ int find_file_global(unsigned char *bp, file65 *fp, int *seg) {
 /***************************************************************************/
 
 #define	forwardpos()	\
-	printf("fwd lastaddr=%04x to addr=%04x\n", lastaddr, addr);while(addr-lastaddr>254){obuf[ro++]=255;lastaddr+=254;}obuf[ro++]=addr-lastaddr;lastaddr=addr
+	while(addr-lastaddr>254){obuf[ro++]=255;lastaddr+=254;}obuf[ro++]=addr-lastaddr;lastaddr=addr
 
 int reloc_seg(unsigned char *buf, int pos, int addr, int rdiff, int ri,
 		unsigned char *obuf, int *lastaddrp, int *rop, file65 *fp) {
