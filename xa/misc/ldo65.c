@@ -48,6 +48,9 @@ The process of linking works as follows:
 2. Calculate new base addresses per segment
 3. Merge all globals from all files into a single table, checking for duplicates
 4. Resolve undefined labels, and merge remaining into global list
+5. relocate all segments, create global relocation tables
+6. verify undefined labels
+7. write out target file
 
 */
 
@@ -105,6 +108,7 @@ file65 *load_file(char *fname);
 int read_options(unsigned char *f);
 int read_undef(unsigned char *f, file65 *fp);
 int write_undef(FILE *f, file65 *fp);
+int check_undef(file65 *fp, char *defined[], int ndefined);
 int len_reloc_seg(unsigned char *buf, int ri);
 int reloc_seg(unsigned char *buf, int pos, int addr, int rdiff, int ri, unsigned char *obuf, int *lastaddrp, int *rop, file65 *fp);
 unsigned char *reloc_globals(unsigned char *, file65 *fp);
@@ -149,6 +153,11 @@ int main(int argc, char *argv[]) {
 	FILE *fd;
 	int nundef = 0;	// counter/index in list of remaining undef'd labels
 
+	char **defined = NULL;	
+	char *arg;
+	int ndefined = 0;
+	int ndefalloc = 0;
+	
 	if (argc <= 1) {
 		usage(stderr);
 		exit(1);
@@ -177,6 +186,19 @@ int main(int argc, char *argv[]) {
 	    case 'o':
 		if(argv[i][2]) outfile=argv[i]+2;
 		else outfile=argv[++i];
+		break;
+	    case 'L':
+		if(argv[i][2]) arg=argv[i]+2;
+		else arg=argv[++i];
+		if (ndefalloc == 0) {
+			ndefalloc = 20;
+			defined = malloc(ndefalloc * sizeof(char*));
+		} else
+		if (ndefined >= ndefalloc) {
+			ndefalloc *= 2;
+			defined = realloc(defined, ndefalloc * sizeof(char*));
+		}
+		defined[ndefined++] = arg;
 		break;
 	    case 'b':
 		switch(argv[i][2]) {
@@ -343,15 +365,27 @@ int main(int argc, char *argv[]) {
 	dreloc[dro++] = 0;
 
 	// -------------------------------------------------------------------------
-	// step 7 - write out the resulting o65 file
+	// step 6 - validate undefined labels
 	//
 
-	if (nundef > 0) {
-		if (!undefok) {
+	if (nundef > 0 && !undefok) {
+		int er = 0;
+		// we have undefined labels, but it's not ok (no -U)
+		// check -L defined labels
+		for(i=0;i<j;i++) {
+			if (check_undef(fp[i], defined, ndefined)) {
+				er = -1;
+			}
+		}
+		if (er) {
 			fprintf(stderr, "%d Undefined labels remain - aborting\n", nundef);
 			exit(1);
 		}
 	}
+
+	// -------------------------------------------------------------------------
+	// step 7 - write out the resulting o65 file
+	//
 
 	// prepare header
 	hdr[ 6] = 0;           hdr[ 7] = 0;
@@ -515,6 +549,34 @@ int write_undef(FILE *f, file65 *fp) {
 			fprintf(f, "%s%c", current->name, 0);
 		}
 	}
+	return 0;
+}
+
+int check_undef(file65 *fp, char *defined[], int ndefined) {
+
+	int er = 0;
+	
+	for (int i = 0; i < fp->nundef; i++) {
+		undefs *current = &fp->ud[i];
+
+		if (current->resolved == -1) {
+			// only check unresolved entries
+			int found = 0;
+			for (int j = 0; j < ndefined; j++) {
+				if (defined && !strcmp(defined[j], current->name)) {
+					// label is found, so it's ok
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				fprintf(stderr, "Unresolved label '%s' from file '%s'\n", 
+					current->name, fp->fname);
+				er = -1;
+			}
+		}
+	}
+	return er;
 }
 
 

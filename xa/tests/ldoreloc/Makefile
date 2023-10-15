@@ -21,10 +21,13 @@ linked11.o65: 10.o65 2.o65
 	../../ldo65 -U -o $@ 2.o65 10.o65
 
 linked20.o65: 20.o65 2.o65
-	../../ldo65 -U -o $@ 2.o65 20.o65
+	../../ldo65 -Ll1 -o $@ 2.o65 20.o65
 
 linked21.o65: 20.o65 2.o65
-	../../ldo65 -U -o $@ 20.o65 2.o65
+	../../ldo65 -L l1 -o $@ 20.o65 2.o65
+
+linked22.o65: 20.o65 2.o65
+	../../ldo65 -o $@ 20.o65 2.o65 && exit 1 || exit 0
 
 linked30.o65: 30.o65 31.o65
 	../../ldo65 -o $@ 30.o65 31.o65
@@ -73,6 +76,9 @@ t21: linked21.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
 	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t21.ok
+
+t22: linked22.o65
+	# should fail, so no action
 
 t30: linked30.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
