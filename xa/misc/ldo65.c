@@ -320,17 +320,17 @@ int main(int argc, char *argv[]) {
 			&lasttaddr,	// last relocated target address
 			&tro,		// pointer in output reloc bufer
 			file);
-#if 0
+
 	  reloc_seg(file->buf,
 			file->dpos,
 			file->dbase,
 			file->ddiff,
 			file->drpos,
-			treloc,
+			dreloc,
 			&lastdaddr,
 			&dro,
 			file);
-#endif
+
 	  // change file information to relocated values
 	  file->tbase += file->tdiff;
 	  file->dbase += file->ddiff;
