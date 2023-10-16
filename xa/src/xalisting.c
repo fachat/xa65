@@ -31,6 +31,8 @@
 #include "xal.h"
 #include "xat.h"
 
+#include "xalisting.h"
+
 
 /*********************************************************************************************/
 /* this is the listing code
@@ -46,6 +48,7 @@ static int list_last_lineno = 0;	/* current line number */
 static char *list_filenamep = NULL;	/* current file name pointer */
 
 static int list_numbytes = 8;
+static int list_lint = 0;
 
 static int list_string(char *buf, char *string);
 static int list_tokens(char *buf, signed char *input, int len);
@@ -175,8 +178,17 @@ void list_flush() {
 void list_start(const char *formatname) {
 	formatp = &def_format;
 
-	if (formatname != NULL && strcmp("html", formatname) == 0) {
-		formatp = &html_format;
+	if (formatname != NULL) {
+		if (strcmp("linthtml", formatname) == 0) {
+			formatp = &html_format;
+			list_setlint();
+		} else
+		if (strcmp("html", formatname) == 0) {
+			formatp = &html_format;
+		} else
+		if (strcmp("lint", formatname) == 0) {
+			list_setlint();
+		} 
 	}
 
 	if (listfp != NULL) {
@@ -195,6 +207,11 @@ void list_setbytes(int number_of_bytes_per_line) {
 	list_numbytes = number_of_bytes_per_line;
 }
 
+// set to lint mode
+void list_setlint() {
+	list_lint = 1;
+}
+
 /* set line number for the coming listing output */
 void list_line(int l) {
 	list_lineno = l;
@@ -208,7 +225,7 @@ void list_filename(char *fname) {
 		list_last_lineno = 0;
 
 		/* Hack */
-		if (listfp != NULL) {
+		if (listfp != NULL && !list_lint) {
 			fprintf(listfp, "\n%s\n\n", fname);
 		}
 	}
@@ -284,8 +301,6 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 	// could be extended to include the preamble...
 	if (formatp->start_line != NULL) formatp->start_line();
 
-	buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
-
 	// check if we have labels, so we can adjust the max printable number of 
 	// bytes in the last line
 	int num_last_line = 11;
@@ -294,54 +309,62 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 		// we have label definition
 		num_last_line = 8;
 	}
-	int overflow = 0;
 
-	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
-	n_hexb = bincode_len;
-	if (list_numbytes != 0 && n_hexb >= list_numbytes) {
-		n_hexb = list_numbytes-1;
-		overflow = 1;
-	}
-	for (i = 0; i < n_hexb; i++) {
-		buf = buf + list_byte(buf, bincode[i]);
-		buf = buf + list_sp(buf);
-		if ( (i%16) == 15) {
-			// make a break
+	if (list_lint) {
+		buf = buf + list_nchar(buf, ' ', (num_last_line - 8) * 3);
+	} else {
+		buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
+
+		int overflow = 0;
+
+		/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
+		n_hexb = bincode_len;
+		if (list_numbytes != 0 && n_hexb >= list_numbytes) {
+			n_hexb = list_numbytes-1;
+			overflow = 1;
+		}
+		for (i = 0; i < n_hexb; i++) {
+			buf = buf + list_byte(buf, bincode[i]);
+			buf = buf + list_sp(buf);
+			if ( (i%16) == 15) {
+				// make a break
+				buf[0] = 0;
+				fprintf(listfp, "%s\n", outline);
+				if (formatp->end_line != NULL) formatp->end_line();
+				if (formatp->start_line != NULL) formatp->start_line();
+				buf = outline;
+				buf = list_preamble(buf, list_lineno, lst_seg, lst_pc + i + 1);
+			}
+		}
+		if (overflow) {
+			// are we at the last byte?
+			if (n_hexb + 1 == bincode_len) {
+				// just print the last byte
+				buf = buf + list_byte(buf, bincode[i]);
+				buf = buf + list_sp(buf);
+			} else {
+				// display "..."
+				buf = buf + list_nchar(buf, '.', 3);
+			}
+			n_hexb++;
+		}
+		i = n_hexb % 16;
+		if (i > num_last_line) {
+			// make a break (Note: with original PC, as now the assembler text follows
 			buf[0] = 0;
 			fprintf(listfp, "%s\n", outline);
 			if (formatp->end_line != NULL) formatp->end_line();
 			if (formatp->start_line != NULL) formatp->start_line();
 			buf = outline;
-			buf = list_preamble(buf, list_lineno, lst_seg, lst_pc + i + 1);
-		}
-	}
-	if (overflow) {
-		// are we at the last byte?
-		if (n_hexb + 1 == bincode_len) {
-			// just print the last byte
-			buf = buf + list_byte(buf, bincode[i]);
-			buf = buf + list_sp(buf);
-		} else {
-			// display "..."
-			buf = buf + list_nchar(buf, '.', 3);
-		}
-		n_hexb++;
-	}
-	i = n_hexb % 16;
-	if (i > num_last_line) {
-		// make a break (Note: with original PC, as now the assembler text follows
-		buf[0] = 0;
-		fprintf(listfp, "%s\n", outline);
-		if (formatp->end_line != NULL) formatp->end_line();
-		if (formatp->start_line != NULL) formatp->start_line();
-		buf = outline;
-		buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
-		i = 0;
-	} 
-	i = num_last_line - i;
-	buf = buf + list_nchar(buf, ' ', i * 3);
+			buf = list_preamble(buf, list_lineno, lst_seg, lst_pc);
+			i = 0;
+		} 
+		i = num_last_line - i;
+		buf = buf + list_nchar(buf, ' ', i * 3);
 
-	buf = buf + list_sp(buf);
+		buf = buf + list_sp(buf);
+
+	} // end list_lint
 
 	buf += list_tokens(buf, listing + 3, listing_len - 3);
 

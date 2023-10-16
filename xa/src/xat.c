@@ -56,9 +56,6 @@ static void tg_hex(signed char*,int*,int*);
 static void tg_oct(signed char*,int*,int*);
 static void tg_bin(signed char*,int*,int*);
 static int t_p2(signed char *t, int *ll, int fl, int *al);
-//static void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
-
-void list_setbytes(int number_of_bytes_per_line);
 
 /* assembly mnemonics and pseudo-op tokens */
 /* ina and dea don't work yet */

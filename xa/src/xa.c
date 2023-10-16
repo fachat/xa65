@@ -945,7 +945,7 @@ static void usage(int default816, FILE *fp)
 	    " -l filename  sets labellist filename, default is none\n"
 	    " -P filename  sets filename for listing, default is none, '-' is stdout\n"
 	    " -F format    sets format for listing, default is plain, 'html' is current only other\n"
-	    "              supported format\n"
+	    "              supported format. Use 'lint' resp. 'linthtml' for linted source output\n"
 	    " -r           adds crossreference list to labellist (if `-l' given)\n"
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"

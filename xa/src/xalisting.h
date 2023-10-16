@@ -19,7 +19,7 @@
 #ifndef __XA65_XALISTING_H__
 #define __XA65_XALISTING_H__
 
-void list_start(char *formatname);	//either NULL or "html"
+void list_start(const char *formatname);	//either NULL or "html"
 void list_end();
 
 void list_flush();			// debug helper
@@ -30,5 +30,8 @@ void list_filename(char *fname);/* set file name for the coming listing output *
 
 // list a single line/token set
 void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
+
+void list_setbytes(int number_of_bytes_per_line);
+void list_setlint();
 
 #endif /* __XA65_XALISTING_H__ */
