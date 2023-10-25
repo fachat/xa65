@@ -1,11 +1,21 @@
 #!/usr/bin/perl -s
 
-$make ||= "make";
 $cc ||= "cc";
+$make ||= "make";
 $cflags ||= '';
-$ENV{'MAKE'} = $make;
+$makeflags ||= '';
+
+# defeat multiple jobs, this doesn't do parallel right now
+#$make =~ s/-j\d*(\s|$)//;
+#$make =~ s/--jobserver-[^\s]+//;
+#$makeflags =~ s/-j\d*(\s|$)//;
+#$makeflags =~ s/--jobserver-[^\s]+//;
+
 $ENV{'CC'} = $cc;
+$ENV{'MAKE'} = $make;
 $ENV{'CFLAGS'} = $cflags;
+$ENV{'MFLAGS'} = $makeflags;
+$ENV{'MAKEFLAGS'} = $makeflags;
 $|++;
 
 $ntests = 0;
@@ -16,6 +26,7 @@ print <<"EOF";
 CC = $cc
 CFLAGS = $cflags
 MAKE = $make
+MAKEFLAGS = $makeflags
 tests to run: $dtests
 
 EOF

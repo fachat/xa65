@@ -3,10 +3,12 @@ derivatives). xa is a small, fast, portable two-pass assembler that compiles
 under most ANSI C compilers. It is distributed under the GNU Public License
 (see COPYING).
 
-The current version is 2.3.10, a bug fix to the long-lived 2.3.0, itself with
-compatibility improvements and new man-based documentation. It also completed
-the merge of the 65816 and 6502/R65C02 versions and thus the current xa can
-generate code for all targets now.
+The current version is 2.4.0, the first new feature release literally in
+years. It builds upon the improvements in 2.3.x and its unified 6502/65816
+assembler core, removes deprecated features, and adds listing capability,
+greater flexibility with relocatable objects, and greater cross-compatibility
+with other popular cross-assemblers (notably ca65) because once you use xa,
+you'll want to keep on using it. :)
 
 To install on a generic Unixy thing, you should be able to just type
 

@@ -33,6 +33,8 @@ ppstrings/	Don't substitute inside strings (unless -S)
 neg_offset/	Test negative offsets/values with/without relocation
 chppch/		Changing preprocessor characters (-p)
 charset/	Tests of when charsets should be honoured and when not
+ca65/		Compatibility tests for ca65 compatibility
+relmode/	tests concerning switches between segments and absolute mode
 mvnmvp/		Test MVN MVP unusual addressing mode ('816)
 dos51/		Regression test, label scoping, "real world code"
 cpktest/	Regression test, label listing, "real world code"
@@ -46,6 +48,7 @@ math/		Math tests (currently divide by zero, thanks Frederic Cambus)
 alxl/		Various '816 width tests (includes Samuel Falvo's test)
 pparity/	Tests of preprocessor macro arity (with Emil Johansson's test)
 recucom/	Recursive comments test
+aserror/	Tests of .assert and #error syntax/function
 
 Cameron Kaiser, André Fachat
 

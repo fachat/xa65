@@ -20,7 +20,7 @@ test2.o65: test2.a65
 	../../xa -R -o test2.o65 test2.a65
 	../hextool test2.o65 > test2.o65.hex
 
-compare:
+compare: a.o65 b.o65
 	../hextool -cmp=a.ok < a.o65
 	../hextool -cmp=b.ok < b.o65
 

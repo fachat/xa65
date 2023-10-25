@@ -74,6 +74,7 @@ void usage(FILE *fp)
 		"  -X         extracts the file such that text and data\n"
 		"               segments are chained, i.e. possibly relocating\n"
 		"               the data segment to the end of the text segment\n" 
+		"  -v         verbose output\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n");
 }
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
 	int *base;
 	char *outfile = "a.o65";
 	int extract = 0;
+	int verbose = 0;
 
 	if (argc <= 1) {
 	  usage(stderr);
@@ -107,6 +109,9 @@ int main(int argc, char *argv[]) {
 	  if(argv[i][0]=='-') {
 	    /* process options */
 	    switch(argv[i][1]) {
+	    case 'v':
+		verbose = 1;
+		break;
 	    case 'o':
 		if(argv[i][2]) outfile=argv[i]+2;
 		else if(i + 1 < argc) outfile=argv[++i];
@@ -192,25 +197,53 @@ int main(int argc, char *argv[]) {
 		  
 		  file.tbase = file.buf[ 9]*256+file.buf[ 8];
 		  file.tlen  = file.buf[11]*256+file.buf[10];
-		  file.tdiff = tflag? tbase - file.tbase : 0;
+		  file.tdiff = tflag ? tbase - file.tbase : 0;
+
 		  file.dbase = file.buf[13]*256+file.buf[12];
 		  file.dlen  = file.buf[15]*256+file.buf[14];
+		  file.ddiff = dflag ? dbase - file.dbase : 0;
 		  if (extract == 3) {
 		    if (dflag) {
-	              fprintf(stderr,"reloc65: %s: Warning: data segment address ignored for -X option\n", argv[i]);
-		    } 
-		    dbase = file.tbase + file.tdiff + file.tlen;
-		    file.ddiff = dbase - file.dbase;
-		  } else {
-		    file.ddiff = dflag? dbase - file.dbase : 0;
+	              fprintf(stderr,"reloc65: %s: Warning: data segment address overrides -X option\n", argv[i]);
+		    } else {
+		      dbase = file.tbase + file.tdiff + file.tlen;
+		      file.ddiff = dbase - file.dbase;
+		    }
 		  }
+
 		  file.bbase = file.buf[17]*256+file.buf[16];
 		  file.blen  = file.buf[19]*256+file.buf[18];
-		  file.bdiff = bflag? bbase - file.bbase : 0;
-		  file.zbase = file.buf[21]*256+file.buf[20];
-		  file.zlen  = file.buf[23]*256+file.buf[21];
-		  file.zdiff = zflag? zbase - file.zbase : 0;
+		  file.bdiff = bflag ? bbase - file.bbase : 0;
+		  if (extract == 3) {
+		    if (bflag) {
+	              fprintf(stderr,"reloc65: %s: Warning: bss segment address overrides -X option\n", argv[i]);
+		    }  else {
+		      bbase = file.dbase + file.ddiff + file.dlen;
+		      file.bdiff = bbase - file.bbase;
+		    }
+		  }
 
+		  file.zbase = file.buf[21]*256+file.buf[20];
+		  file.zlen  = file.buf[23]*256+file.buf[22];
+		  file.zdiff = zflag ? zbase - file.zbase : 0;
+
+		  if (verbose) {
+			printf("Relocating segments to:\n");
+			printf("text segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
+				file.tbase + file.tdiff, file.tbase + file.tdiff + file.tlen, 
+				file.tlen, file.tlen, file.tdiff, file.tdiff & 0xffff);
+			printf("data segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
+				file.dbase + file.ddiff, file.dbase + file.ddiff + file.dlen,
+				file.dlen, file.dlen, file.ddiff, file.ddiff & 0xffff);
+			printf("bss  segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
+				file.bbase + file.bdiff, file.bbase + file.bdiff + file.blen,
+				file.blen, file.blen, file.bdiff, file.bdiff & 0xffff);
+			printf("zero segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
+				file.zbase + file.zdiff, file.zbase + file.zdiff + file.zlen,
+				file.zlen, file.zlen, file.zdiff, file.zdiff & 0xffff);
+		  }
+
+		  /* pointer of position in file */
 		  file.segt  = file.buf + hlen;
 		  file.segd  = file.segt + file.tlen;
 		  file.utab  = file.segd + file.dlen;

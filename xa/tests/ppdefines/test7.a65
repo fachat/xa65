@@ -1,0 +1,23 @@
+
+// due to a bug, the first definition was not behaving correct with the
+// parameters during evaluation (which wasn't tested in test6*). 
+// With max3420e_enable2() first, the code would work, as it
+// was not used, with the used max3420e_enable() first it would break.
+
+#define max3420e_enable()       nop
+
+#define max3420e_enable2()       nop
+
+#define wrac(reg)               \
+        max3420e_enable()       :\
+        lda #(reg)       
+
+// just the definition of this macro hangs the xa indefinitely...
+
+#define CLRBIT(reg, val)        \
+        wrac(reg)
+
+
+	*=$c000
+	CLRBIT(1,2)
+

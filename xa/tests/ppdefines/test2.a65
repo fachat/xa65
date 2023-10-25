@@ -1,0 +1,33 @@
+
+
+/*
+ * tests the definition of macro parameters with spaces
+ * between the name and the brackers / comma
+ */
+
+#define wreg(reg, val)          \
+        lda #(reg) | 0x02       :\
+        lda #(val)
+
+#define wreg2( reg , val , val2 )   \
+        lda #(reg) | 0x02       :\
+        lda #(val)		:\
+	ldx #(val2)
+
+#define	wreg3(reg, val, val2)	\
+	.byt reg, val, val2
+
+#define	P1	1
+#define	P2	2
+#define	P3	3
+
+
+	*=$c000
+
+	wreg(P1, P2)
+
+	wreg2(P1, P2, P3)
+
+	wreg3( P1 , P2 , P3 )
+
+

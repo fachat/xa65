@@ -397,3 +397,27 @@ xa-2.3.14
 
 -- Cameron Kaiser <ckaiser@floodgap.com> 7 February 2023
 
+xa-2.4.0
+
+  * Listing feature.
+  * Add -E commandline option to not stop after 20 errors, but show all
+    of them
+  * Introduce -X compatibility set commandline option, to distinguish 
+    between MASM and CA65 compatibility options.
+  * Implement CA65 "cheap local labels", ":=" label definitions,
+    and various pseudo opcodes (.include, .import, .importzp,
+    .zeropage, .proc (anonymous only), .endproc, .code, .org, .reloc).
+  * -U option to allow all undefined labels in relocation mode; this
+    allows exporting them to an o65 file and link at a later time.
+  * Testsuite expanded.
+
+ -- André Fachat <afachat@gmx.de> 13 October, 2023
+
+  * Deprecated options (16-bit mvn/mvp argument, -S, -x) finally removed.
+    If you need this support, you must use 2.3.x.
+  * Makefile fixes.
+  * Parallel make disabled for testing (fixes failures, makes output
+    easier to parse). Parallel make obviously works fine for building.
+
+ -- Cameron Kaiser <ckaiser@floodgap.com> XXX
+

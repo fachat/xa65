@@ -31,11 +31,12 @@
 
 #define cval(s)		256 * ((s)[1] & 255) + ((s)[0]&255)
 #define lval(s)		65536 * ((s)[2] & 255) + 256 * ((s)[1] & 255) + ((s)[0] & 255)
-#define wval(i, v)	do {						\
+#define wval(i, v, f)	do {						\
 				t[i++] = T_VALUE;			\
 				t[i++] = v & 255;			\
 				t[i++] = (v >> 8) & 255;		\
 				t[i++] = (v >> 16) & 255;		\
+				t[i++] = f & 255;			\
 			} while (0)
 
 #endif /* __XA65_XAD_H__ */

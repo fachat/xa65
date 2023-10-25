@@ -1,0 +1,24 @@
+<html><head><title>(null)</title></head><body><pre>
+
+listblocks.a65
+
+
+    5 A:1000                                     *= $1000
+
+    7 A:1000  a9 00                    <a name="0_label1"> </a>label1    lda #$00
+
+    9 A:1002                                     .( 
+   10 A:1002  85 02                    <a name="1_label2"> </a>label2    sta $02
+   11 A:1004  d0 fc                              bne <a href="#1_label2">label2</a>
+   12 A:1006                                     .) 
+
+   14 A:1006                                     .( 
+   15 A:1006  a5 02                    <a name="2_label2"> </a>label2    lda $02           ; again!
+   16 A:1008  d0 fc                              bne <a href="#2_label2">label2</a>
+   17 A:100a                                     .) 
+
+   19 A:100a  c8                       <a name="0_label2"> </a>label2    iny 
+   20 A:100b  f0 fd                              beq <a href="#0_label2">label2</a>
+
+   22 A:100d  4c 00 10                           jmp <a href="#0_label1">label1</a>
+</pre></body></html>

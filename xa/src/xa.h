@@ -21,12 +21,18 @@
 
 #include "xah.h"	/* For SEG_MAX */
 
+#define progmajor "2"
+#define progminor "4"
+#define progpatch "0"
+#define progversion progmajor "." progminor "." progpatch
+
 extern int ncmos, cmosfl, w65816, n65816;
-extern int masm, nolink, ppinstr;
+extern int masm, ca65, xa23, nolink, undefok;
 extern int noglob;
 extern int showblk;
 extern int relmode;
 extern int crossref;
+extern int ctypes;
 extern char altppchar;
 
 extern int tlen, tbase;

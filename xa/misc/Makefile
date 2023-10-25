@@ -2,7 +2,7 @@
 XCBMLIB = ..
 
 # -Wall -ansi et al. cause compile problems.
-CFLAGS =  -O2
+CFLAGS =  -O2 -g
 
 LIBS = #-lncurses -ltermcap -lm
 
