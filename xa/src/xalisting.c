@@ -556,6 +556,13 @@ int list_tokens(char *buf, signed char *input, int len) {
 			outp += list_char(buf+outp, '"');
 			break;
 		}
+		case '*': {
+			// If '*' appears as operand, it is the PC. We need to switch to operator then
+			inp++;
+			outp += list_char(buf+outp, '*');
+			operator = 1;
+			break;
+		}
 		default:
 			c = input[inp];
 			if (c > 31) {

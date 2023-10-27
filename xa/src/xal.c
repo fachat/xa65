@@ -196,7 +196,8 @@ int lg_toglobal(char *s ) {
 //printf("lg_toglobal(%s)\n", s);
 	er = ll_search(s,&n, STD);
 
-	if(er==E_OK) {
+	if(er==E_OK && ltp->fl != 3) {
+		// fonnd, but not yet set as global undef'd label
 	        ltp=afile->la.lt+n;
         	ltp->fl=3;
         	ltp->afl=SEG_UNDEF;
