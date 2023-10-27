@@ -173,7 +173,7 @@ int main(int argc,char *argv[])
           exit(1);
      }
 
-     if (strstr(argv[1], "--help")) {
+     if (strstr(argv[1], "--help") || strstr(argv[1], "-?")) {
           usage(w65816, stdout);
 	  exit(0);
      }

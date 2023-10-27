@@ -116,12 +116,14 @@ int read_globals(file65 *file);
 int write_options(FILE *fp, file65 *file);
 int write_reloc(file65 *fp[], int nfp, FILE *f);
 int write_globals(FILE *fp);
+int write_nglobals(FILE *fp, char **globdef, int nglobal);
 int find_global(unsigned char *name);
 int resolve_undef(file65 *file, int *remains);
 
 file65 file;
 unsigned char cmp[] = { 1, 0, 'o', '6', '5' };
 unsigned char hdr[26] = { 1, 0, 'o', '6', '5', 0 };
+
 
 void usage(FILE *fp)
 {
@@ -135,7 +137,8 @@ void usage(FILE *fp)
 		"  -o file    uses `file' as output file. Default is `a.o65'\n"
 		"  -G         suppress writing of globals\n"
 		"  -U         accept any undef'd labels after linking\n"
-//		"  -L<name>   accept specific given undef'd labels after linking\n"
+		"  -L<name>   accept specific given undef'd labels after linking\n"
+		"  -g<name>   only export the globals defined with (multiple) -g options\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n",
 		programname);
@@ -153,17 +156,23 @@ int main(int argc, char *argv[]) {
 	FILE *fd;
 	int nundef = 0;	// counter/index in list of remaining undef'd labels
 
-	char **defined = NULL;	
 	char *arg;
+
+	char **defined = NULL;	
 	int ndefined = 0;
 	int ndefalloc = 0;
+
+	// globals allowed by -g
+	char **globdef = NULL;	
+	int nglobal = 0;
+	int ngloballoc = 0;
 	
 	if (argc <= 1) {
 		usage(stderr);
 		exit(1);
 	}
 
-	if (strstr(argv[1], "--help")) {
+	if (strstr(argv[1], "--help") || strstr(argv[1], "-?")) {
           usage(stdout);
 	  exit(0);
 	}
@@ -186,6 +195,20 @@ int main(int argc, char *argv[]) {
 	    case 'o':
 		if(argv[i][2]) outfile=argv[i]+2;
 		else outfile=argv[++i];
+		break;
+	    case 'g':
+		noglob=1;
+		if(argv[i][2]) arg=argv[i]+2;
+		else arg=argv[++i];
+		if (ngloballoc == 0) {
+			ngloballoc = 20;
+			globdef = malloc(ngloballoc * sizeof(char*));
+		} else
+		if (nglobal >= ngloballoc) {
+			ngloballoc *= 2;
+			globdef = realloc(globdef, ngloballoc * sizeof(char*));
+		}
+		globdef[nglobal++] = arg;
 		break;
 	    case 'L':
 		if(argv[i][2]) arg=argv[i]+2;
@@ -443,8 +466,12 @@ int main(int argc, char *argv[]) {
 	if(!noglob) { 
 	  write_globals(fd);
 	} else {
-	  fputc(0,fd);
-	  fputc(0,fd);
+	  if (nglobal > 0) {
+	    write_nglobals(fd, globdef, nglobal);
+	  } else {
+ 	    fputc(0,fd);
+	    fputc(0,fd);
+	  }
 	}
 
 	fclose(fd);
@@ -722,6 +749,55 @@ int write_globals(FILE *fp) {
 	for(i=0;i<g;i++) {
 	  fprintf(fp,"%s%c%c%c%c",gp[i].name,0,gp[i].seg, 
 			gp[i].val & 255, (gp[i].val>>8)&255);
+	}
+	return 0;
+}
+
+int write_nglobals(FILE *fp, char **globdef, int nglobal) {
+	int i, j;
+	int newnum = 0;
+
+	// first check which defined globals are allowed to be exported
+	// and clear out the other ones
+	for (i = 0; i < g; i++) {
+		for (j = 0; j < nglobal; j++) {
+			if (!strcmp(gp[i].name, globdef[j])) {
+				// found
+				break;
+			}
+		}
+		if (j >= nglobal) {
+			// not found
+			gp[i].name = NULL;
+		} else {
+			// found, so we inc the counter
+			newnum++;
+		}
+	}
+
+	// then check which globals from the -g list are actually used, and warn about unused ones
+	for (j = 0; j < nglobal; j++) {
+		for (i = 0; i < g; i++) {
+			if (gp[i].name != NULL && !strcmp(gp[i].name, globdef[j])) {
+				// found
+				break;
+			}
+		}
+		if (i >= g) {
+			// not found
+	    		fprintf(stderr,"Warning: command line allowed global '%s' is not defined!\n", globdef[j]);
+		}
+	}
+
+	// write out only defined globals
+	fputc(newnum&255, fp);
+	fputc((newnum>>8)&255, fp);
+
+	for(i=0;i<g;i++) {
+		if (gp[i].name != NULL) {
+			fprintf(fp,"%s%c%c%c%c",gp[i].name,0,gp[i].seg, 
+				gp[i].val & 255, (gp[i].val>>8)&255);
+		}
 	}
 	return 0;
 }
