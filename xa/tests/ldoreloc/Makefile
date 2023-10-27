@@ -1,6 +1,6 @@
 
 default: all
-all: t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51
+all: t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61 t62
 
 %.o65: %.s
 	../../xa -R -c -o $@ $<
@@ -46,6 +46,15 @@ linked50.o65: 50.o65 51.o65
 
 linked51.o65: 50.o65 51.o65
 	../../ldo65 -o $@ 51.o65 50.o65
+
+linked60.o65: 60.o65 61.o65
+	../../ldo65 -o $@ 60.o65 61.o65
+
+linked61.o65: 60.o65 61.o65
+	../../ldo65 -o $@ 61.o65 60.o65
+
+linked62.o65: 60.o65 61.o65
+	../../ldo65 -bd 65529 -bt 65523 -bz 255 -o $@ 61.o65 60.o65 && exit 1 || exit 0
 
 t1: linked.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
@@ -110,6 +119,18 @@ t51: linked51.o65
 	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t51.ok
 
+t60: linked60.o65
+	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../hextool $@ > $@.hex
+	../hextool -cmp=$@ < t60.ok
+
+t61: linked61.o65
+	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../hextool $@ > $@.hex
+	../hextool -cmp=$@ < t61.ok
+
+t62: linked62.o65
+
 clean:
-	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51
+	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61
 

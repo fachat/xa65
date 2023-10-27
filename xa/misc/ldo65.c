@@ -288,14 +288,50 @@ int main(int argc, char *argv[]) {
 	  file->ddiff =  ((dbase + tdlen) - file->dbase);
 	  file->bdiff =  ((bbase + tblen) - file->bbase);
 	  file->zdiff =  ((zbase + tzlen) - file->zbase);
-/*printf("tbase=%04x, file->tbase=%04x, ttlen=%04x -> tdiff=%04x\n",
-		tbase, file->tbase, ttlen, file->tdiff);*/
 
+/*
+printf("tbase=%04x+len=%04x->%04x, file->tbase=%04x, f.tlen=%04x -> tdiff=%04x\n",
+		tbase, ttlen, (tbase + ttlen), file->tbase, file->tlen, file->tdiff);
+printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n",
+		zbase, tzlen, (zbase + tzlen), file->zbase, file->zlen, file->zdiff);
+*/
 	  /* update globals (for result file) */
 	  ttlen += file->tlen;
 	  tdlen += file->dlen;
 	  tblen += file->blen;
 	  tzlen += file->zlen;
+	}
+
+	// validate various situations.
+	{
+		int er = 0;
+		if (tbase + ttlen > 0x10000) {
+			fprintf(stderr, 
+				"Overflow in text segment: end at %06x behind 64k limit\n", 
+				tbase + ttlen);
+			er = 1;
+		}
+		if (dbase + tdlen > 0x10000) {
+			fprintf(stderr, 
+				"Overflow in data segment: end at %06x behind 64k limit\n", 
+				dbase + tdlen);
+			er = 1;
+		}
+		if (bbase + tblen > 0x10000) {
+			fprintf(stderr, 
+				"Overflow in bss segment: end at %06x behind 64k limit\n", 
+				bbase + tblen);
+			er = 1;
+		}
+		if (zbase + tzlen > 0x100) {
+			fprintf(stderr, 
+				"Overflow in zero segment: end at %04x behind 256 byte limit\n", 
+				zbase + tzlen);
+			er = 1;
+		}
+		if (er) {
+			exit (1);
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -710,7 +746,7 @@ file65 *load_file(char *fname) {
 	      file->bbase = file->buf[17]*256+file->buf[16];
 	      file->blen  = file->buf[19]*256+file->buf[18];
 	      file->zbase = file->buf[21]*256+file->buf[20];
-	      file->zlen  = file->buf[23]*256+file->buf[21];
+	      file->zlen  = file->buf[23]*256+file->buf[22];
 
 	      file->tpos = hlen;
 	      file->dpos = hlen + file->tlen;
@@ -1056,10 +1092,6 @@ printf("found undef'd label %s, resolved=%d, newidx=%d, (ri=%d, ro=%d)\n", u->na
 			ri += 4;// account for position, segment byte, label number in reloc table
 		}
 		new = old + diff;
-		if (((diff & 0xff) + (old & 0xff)) > 0xff) {
-			fprintf(stderr,"Warning: overflow in byte relocation at %04x in file %s\n",
-				pos, fp->fname);
-		}
 		buf[addr-base+pos] = new & 255;
 		break;
 	    }
