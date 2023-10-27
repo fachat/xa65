@@ -201,15 +201,19 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
                {
 		    if(afl || *nafl) {	/* check pointer arithmetic */
 		      if((afl == *nafl) && (afl!=SEG_UNDEFZP) && (afl!=SEG_UNDEF) && o==2) {
-			afl = 0; 	/* substract two pointers */
+			afl = 0; 	/* subtract two pointers */
 		      } else 
 		      if(((afl && !*nafl) || (*nafl && !afl)) && o==1) {
 			afl=(afl | *nafl);  /* add constant to pointer */
 		      } else 
 		      if((afl && !*nafl) && o==2) {
-			afl=(afl | *nafl);  /* substract constant from pointer */
+			afl=(afl | *nafl);  /* subtract constant from pointer */
 		      } else {
-                        /* allow math in the same segment */
+       		        if((!afl && *nafl) && o==2) {
+			  /* subtract pointer from constant */
+			  errout(W_SUBTRACT);
+			}
+                 /* allow math in the same segment */
 			if(segment!=SEG_ABS && segment != afl) { 
 			  if(!dsb_len) {
 			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/

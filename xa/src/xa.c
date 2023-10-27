@@ -954,17 +954,6 @@ static void usage(int default816, FILE *fp)
 	    "  --help      display this help and exit\n");
 }
 
-/*
-static char *ertxt[] = { "Syntax","Label definiert",
-          "Label nicht definiert","Labeltabelle voll",
-          "Label erwartet","Speicher voll","Illegaler Opcode",
-          "Falsche Adressierungsart","Branch ausserhalb des Bereichs",
-          "Ueberlauf","Division durch Null","Pseudo-Opcode erwartet",
-          "Block-Stack-Ueberlauf","Datei nicht gefunden",
-          "End of File","Block-Struktur nicht abgeschlossen",
-          "NoBlk","NoKey","NoLine","OKDef","DSB","NewLine",
-          "NewFile","CMOS-Befehl","pp:Falsche Anzahl Parameter" };
-*/
 static char *ertxt[] = {
 	"Syntax",			// E_SYNTAX	=-1
 	"Label already defined",	// E_LABDEF	=-2
@@ -1003,9 +992,9 @@ static char *ertxt[] = {
 	"Illegal quantity",		// E_ILLQUANT	=-35
 	".bin",				// E_BIN	=-36
 	"#error directive",		// E_UERROR	=-37
-	"Assertion",		// E_AERROR	=-38
+	"Assertion",			// E_AERROR	=-38
+	"DSB has negative length",	// E_NEGDSBLEN	=-39
 /* placeholders for future fatal errors */
-		"",			// -39
 		"",			// -40
 		"",			// -41
 		"",			// -42
@@ -1042,7 +1031,7 @@ static char *ertxt[] = {
 	  "Open preprocessor directive at end of file (intentional?)", // W_OPENPP =-72
 	  "Included binary data exceeds 64KB",		// W_OVER64K	=-73
 	  "Included binary data exceeds 16MB",		// W_OVER16M	=-74
-          "MVN/MVP $XXXX syntax is deprecated and will be removed", // W_OLDMVNS =-75
+          "Subtracting pointer from constant not supported in -R mode", // W_SUBTRACT =-75
 /* more placeholders */
 		"",			// -76
 		"",			// -77

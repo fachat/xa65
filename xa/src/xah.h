@@ -140,6 +140,8 @@ typedef struct {
 #define E_BIN		-36	/* okdef */
 #define E_UERROR	-37	/* #error */
 #define	E_AERROR	-38	/* .assert failed */
+#define	E_NEGDSBLEN	-39	/* .dsb has negative length */
+
 /* errors thru 64 are placeholders available for use */
 
 #define W_ADRRELOC	-65	/* word relocation in byte value */
@@ -152,6 +154,7 @@ typedef struct {
 #define W_OPENPP	-72	/* warning about open preprocessor directive */
 #define W_OVER64K	-73	/* included binary over 64K in 6502 mode */
 #define W_OVER16M	-74	/* included binary over 16M in 65816 mode */
+#define	W_SUBTRACT	-75	/* subtract a segment pointer from a constant - not supported in -R mode */
 /* warnings 75-77 are placeholders available for use */
 
 /* Meta-values for the token list. Note must not overlap with the
