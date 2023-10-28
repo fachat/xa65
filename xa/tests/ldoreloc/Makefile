@@ -132,5 +132,5 @@ t61: linked61.o65
 t62: linked62.o65
 
 clean:
-	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61
+	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61 t62
 
