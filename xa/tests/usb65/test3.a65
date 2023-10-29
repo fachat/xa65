@@ -1,0 +1,28 @@
+
+
+;#define DEBUG
+;#undef  DEBUG_POLL
+;#define DEBUG_HW
+;
+;printc=$ffd2
+
+        .(
+
+;#include "hostmsg.i65"
+
+;        .word $0401
+	*=$0401
+
+;        .word eol
+;        .word 10
+;        .byt $9e, "1040"
+;        .byt 0
+;eol     .word 0
+        .dsb 1040-*, $00
+;        jmp start
+
+;irqvec  =$90
+;irqsave .word 0
+
+	.)
+
