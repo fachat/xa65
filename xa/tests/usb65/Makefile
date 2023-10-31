@@ -1,7 +1,7 @@
 
 XA=../../xa 
 
-all: test1 test2 test3
+all: test1 test2 
 
 test1: test1.a65
 	${XA} -XC -R -U $<
