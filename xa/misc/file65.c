@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
 	i = 1;
 
-	if (strstr(argv[i], "--help")) {
+	if (strstr(argv[i], "--help") || strstr(argv[i], "-?")) {
           usage(stdout);
 	  exit(0);
 	}
