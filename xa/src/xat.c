@@ -632,45 +632,45 @@ printf("reloc: er=%d, l=%d, segment=%d, pc[%d]=%04x, pc[abs(%d)]=%04x, pc[text(%
 	       dsb_len = 0;
           } else
 	  if(n==Ktext) {
+	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
 	      segment = relmode ? SEG_TEXT : SEG_ABS;
 	      t[0]=Ksegment;
 	      t[1]=segment;
 	      *ll=2;
               er=E_OKDEF;
-	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	  } else
 	  if(n==Kdata) {
   	    if(relmode) {   
+	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
 	      segment = SEG_DATA;
 	      t[0]=Ksegment;
 	      t[1]=SEG_DATA;
 	      *ll=2;
               er=E_OKDEF;
-	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    } 
 	  } else
 	  if(n==Kbss) {
   	    if(relmode) { 
+	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
 	      segment = SEG_BSS;
 	      t[0]=Ksegment;
 	      t[1]=SEG_BSS;
 	      *ll=2;
               er=E_OKDEF;
-	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    } 
 	  } else
 	  if(n==Kzero) {
   	    if(relmode) {   
+	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
 	      segment = SEG_ZERO;
 	      t[0]=Ksegment;
 	      t[1]=SEG_ZERO;
 	      *ll=2;
               er=E_OKDEF;
-	      r_mode(RMODE_RELOC); // use of segments always switches of ABS reloc mode
 	    } else {
 	      er=E_ILLSEGMENT;
 	    }  
