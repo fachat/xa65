@@ -5,7 +5,7 @@ ptr	.word 0
 
 foo	=$1234
 
-	lda ptr2 
+	lda ptr2
 loop: 	jmp loop
 
 	.data

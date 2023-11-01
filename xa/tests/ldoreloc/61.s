@@ -1,4 +1,4 @@
-	jsr loop 
+	jsr loop
 bla: 	lda ptr
 	lda #ptr
 

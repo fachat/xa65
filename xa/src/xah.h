@@ -141,7 +141,6 @@ typedef struct {
 #define E_UERROR	-37	/* #error */
 #define	E_AERROR	-38	/* .assert failed */
 #define	E_NEGDSBLEN	-39	/* .dsb has negative length */
-
 /* errors thru 64 are placeholders available for use */
 
 #define W_ADRRELOC	-65	/* word relocation in byte value */

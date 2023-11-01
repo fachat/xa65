@@ -34,5 +34,5 @@ escape2: escape2.a65
 	../hextool -cmp=escape2.ca65 < $@
 
 clean:
-	rm -f a.err a.o65 $(OBJS)
+	rm -f *.err a.o65 $(OBJS)
 

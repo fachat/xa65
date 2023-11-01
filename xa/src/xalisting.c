@@ -132,6 +132,11 @@ static char *html_escape(char *toescape) {
 			strcpy(q, "&amp;");
 			q+=5;
 			p++;
+		} else
+		if (*p == '>') {
+			strcpy(q, "&gt;");
+			q+=4;
+			p++;
 		} else {
 			*q = *p;
 			q++;

@@ -5,7 +5,7 @@
 #define max3421e_enable()       \
         lda #MAX3421E_EnMask    :\
         jsr spi_enable
-                                    
+
 #define max3421e_disable()      \
         jsr spi_disable
 
@@ -25,7 +25,7 @@
         spi_wra()               :\
         lda #(val)              :\
         spi_wra()               :\
-        max3421e_disable() 
+        max3421e_disable()
 
 /********************************************************************/
 
@@ -38,5 +38,5 @@
 	max3421e_disable()
 
 ; macro used o give syntax...
-        wreg(rPINCTL, bmFDUPSPI+bmINTLEVEL)    
+        wreg(rPINCTL, bmFDUPSPI+bmINTLEVEL)
 

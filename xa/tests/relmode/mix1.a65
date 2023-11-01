@@ -1,11 +1,11 @@
-                                                                 
-        .text                                                    
-                                                                 
-        .word $0401                                              
-        *=$0401                                                  
- 	*=                                                                
-                                                                 
-        .data                                                    
-NextPacketPtr:  .byte  0,0                      ; word           
+
+        .text
+
+        .word $0401
+        *=$0401
+ 	*=
+
+        .data
+NextPacketPtr:  .byte  0,0                      ; word
 
 

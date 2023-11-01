@@ -1,0 +1,10 @@
+
+assert.a65
+
+    1 A:1000                                     *= $0400
+
+    3 A:0400                                     .assert *<$17e6,"routine too long"
+
+    5 A:0400  a9 f9                              lda #<$17e6>>2
+
+    7 A:0402  ad 00 04                           lda *-2

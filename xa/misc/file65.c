@@ -263,7 +263,7 @@ printf("print_labels:offset=%d\n",offset);
 
 	// -----------------------------------------------------------
 	// print undefined labels
-	
+
 	nud = (fgetc(fp) & 0xff);
 	nud += ((fgetc(fp) << 8) & 0xff00);
 
@@ -310,15 +310,15 @@ printf("print_labels:offset=%d\n",offset);
 	  if( (c & 0xe0) == 0x40 ) {
 		  lowbyte = fgetc(fp);
 	  }
-	  if( (c & 0x07) == 0 ) { 
-		  index = fgetc(fp) & 0xff; 
-		  index += (fgetc(fp) & 0xff) << 8; 
+	  if( (c & 0x07) == 0 ) {
+		  index = fgetc(fp) & 0xff;
+		  index += (fgetc(fp) & 0xff) << 8;
 	  }
 	  if (verbose > 1) {
 		printf("\t%d:%s(%s (%d)", offset, reltype[ (c>>5) & 0xf], segments[c & 0x07], (c&0x07));
 	  	if ( (c & 0xe0) == 0x40) {
 			printf(", %02x", lowbyte);
-		} 
+		}
 		if ( (c & 0x07) == 0) {
 			printf(", %04x", index);
 		}

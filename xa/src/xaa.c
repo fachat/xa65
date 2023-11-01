@@ -213,7 +213,7 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
 			  /* subtract pointer from constant */
 			  errout(W_SUBTRACT);
 			}
-                 /* allow math in the same segment */
+                 	/* allow math in the same segment */
 			if(segment!=SEG_ABS && segment != afl) { 
 			  if(!dsb_len) {
 			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/

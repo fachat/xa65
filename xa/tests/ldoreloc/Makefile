@@ -58,32 +58,26 @@ linked62.o65: 60.o65 61.o65
 
 t1: linked.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t1.ok
 
 t2: linked2.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t2.ok
 
 t10: linked10.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t10.ok
 
 t11: linked11.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t11.ok
 
 t20: linked20.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t20.ok
 
 t21: linked21.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t21.ok
 
 t22: linked22.o65
@@ -91,46 +85,38 @@ t22: linked22.o65
 
 t30: linked30.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t30.ok
 
 t31: linked31.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t31.ok
 
 t40: linked40.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t40.ok
 
 t41: linked41.o65
 	../../reloc65 -bt 32768 -xt -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t41.ok
 
 t50: linked50.o65
 	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t50.ok
 
 t51: linked51.o65
 	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t51.ok
 
 t60: linked60.o65
 	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t60.ok
 
 t61: linked61.o65
 	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
-	../hextool $@ > $@.hex
 	../hextool -cmp=$@ < t61.ok
 
 t62: linked62.o65
 
 clean:
-	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61 t62
+	rm -f *.o65 *.hex t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61
 

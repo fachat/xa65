@@ -931,7 +931,7 @@ static void usage(int default816, FILE *fp)
 	    " -M           allow ``:'' to appear in comments for MASM compatibility\n"
 	    "              (deprecated: prefer -XMASM)\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"
-	    "              MASM, CA65, XA23 (deprecated: for better 2.3 compatibility)\n"
+	    "              C, MASM, CA65, XA23 (deprecated: for better 2.3 compatibility)\n"
 	    " -R           start assembler in relocating mode\n"
 	    " -U           allow all undefined labels in relocating mode\n");
 	fprintf(fp,
@@ -992,7 +992,7 @@ static char *ertxt[] = {
 	"Illegal quantity",		// E_ILLQUANT	=-35
 	".bin",				// E_BIN	=-36
 	"#error directive",		// E_UERROR	=-37
-	"Assertion",			// E_AERROR	=-38
+	"Assertion",		// E_AERROR	=-38
 	"DSB has negative length",	// E_NEGDSBLEN	=-39
 /* placeholders for future fatal errors */
 		"",			// -40
