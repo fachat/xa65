@@ -707,7 +707,7 @@ int ll_pdef(char *t)
 	return(E_NODEF);
 }
 
-/* 
+/*
  * Write out the list of global labels in an o65 file
  */
 int l_write(FILE *fp)
@@ -740,7 +740,7 @@ int l_write(FILE *fp)
 
 	    // segment byte
 	    afl = ltp->afl;
-            // hack to switch undef and abs flag from internal to file format 
+            // hack to switch undef and abs flag from internal to file format
 	    // if asolute of undefined (< SEG_TEXT, i.e. 0 or 1)
 	    // then invert bit 0 (0 = absolute)
             if( (afl & (A_FMASK>>8)) < SEG_TEXT) {
