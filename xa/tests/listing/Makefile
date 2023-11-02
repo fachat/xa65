@@ -7,7 +7,11 @@ XA=../../xa
 CA65=ca65
 LD65=ld65
 
-tests: assertx.out assertx.html linebreakx.out include1x.out listblocksx.html listca65x.html listca65_2x.html
+tests: operatorsx.out assertx.out assertx.html linebreakx.out include1x.out listblocksx.html listca65x.html listca65_2x.html
+
+operatorsx.out: operators.a65
+	${XA} -P- -o operatorsx.o65 $< > $@
+	../hextool -cmp=operators.out < $@
 
 assertx.out: assert.a65
 	${XA} -P- -o assertx.o65 $< > $@

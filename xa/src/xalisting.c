@@ -448,8 +448,8 @@ int list_tokens(char *buf, signed char *input, int len) {
 #endif
 	}
 
+	int operator = 0;
 	while (inp < len) {
-		int operator = 0;
 
 		switch(input[inp]) {
 		case T_CAST:
@@ -582,11 +582,14 @@ int list_tokens(char *buf, signed char *input, int len) {
 
 		if (operator && inp < len) {
 			signed char op = input[inp];
-			if (op > 0 && op <= 17) {
+			if (op > 0 && op <= 20) {	// sizeof(arith_ops)
 				outp += list_string(buf+outp, formatp->escape(arith_ops[op]));
 				inp += 1;
+				operator = 0;
 			}
-			operator = 0;
+			// note: falls through for closing brackets which are where an operator would normally be.
+			// closing bracket is then printed in upper (operand) part in default case before
+			// another operator is expected after the bracket
 		}
 	}
 end:

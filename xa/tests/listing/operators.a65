@@ -1,0 +1,16 @@
+
+
+la9a5	=$a9a5
+lac15	=$ac15
+lad24	=$ad24
+lb3c0	=$b3c0
+laf28	=$af28
+
+x1   =(la9a5^laf28)&$00ff
+x2   =(lac15^laf28)&$00ff
+x3   =(lad24^laf28)&$00ff
+x4   =(lb3c0^laf28)&$00ff
+
+x5   =$ff&(la9a5|laf28)
+x6   =$ff&(la9a5|laf28)&$00ff
+

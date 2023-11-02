@@ -1,0 +1,17 @@
+
+operators.a65
+
+
+    3 A:1000                                    la9a5=$a9a5
+    4 A:1000                                    lac15=$ac15
+    5 A:1000                                    lad24=$ad24
+    6 A:1000                                    lb3c0=$b3c0
+    7 A:1000                                    laf28=$af28
+
+    9 A:1000                                    x1=(la9a5^laf28)&$ff
+   10 A:1000                                    x2=(lac15^laf28)&$ff
+   11 A:1000                                    x3=(lad24^laf28)&$ff
+   12 A:1000                                    x4=(lb3c0^laf28)&$ff
+
+   14 A:1000                                    x5=$ff&(la9a5|laf28)
+   15 A:1000                                    x6=$ff&(la9a5|laf28)&$ff
