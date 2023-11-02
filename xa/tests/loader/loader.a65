@@ -1,0 +1,909 @@
+
+/**************************************************************************
+ * 
+ * Loader for 6502 relocatable binary format
+ *
+ * The loader supports 16 bit o65 version 1 files without undefined 
+ * references. Also it doesn't like pagewise relocation and 65816 
+ * code, because there are different/additional relocation entries.
+ *
+ * The support routines, that have to be changed are at the end of the
+ * file. The stuff in this file is in absolute format (well, you have to
+ * bootstrap from something :-)
+ * The support routines for the file handling are for the operating system
+ * OS/A65, as of version 1.3.10b. The first part of the file (wrapped in
+ * "#ifdef C64") shows how to use it with a C64, for example.
+ * 
+ * The subroutine 'loader' is called with a file descriptor, that has a 
+ * meaning for the support routines, in the X register.
+ * The file must already be open. Also binit must have been called before.
+ * The loader doesn't close the file.
+ *
+ * Support routines are:
+ *   binit	a   = hi byte start address memory to handle,
+ *		x   = hi byte length of memory to handle
+ *   balloc	a/y = length of block -> x = memory descriptor
+ *   bfree      x   = memory block descriptor to free
+ *   getbadr	x   = memory descriptor -> a/y address of memory block
+ *
+ *   zalloc	a   = length of needed zeropage block. returns a=address
+ *   zfree	a   = address of block to free
+ *
+ *   fgetc	x   = file descriptor, returns read byte (c=0) or error (c=1)
+ *		      The error is passed through; fgetc blocks if no data
+ *		      available
+ *   fgetb	x   = filedescriptor, a/y = address of block descriptor,
+ *                    i.e. a word start address and a word length of block.
+ *                    returns (c=0) or error in accu (c=1).
+ *
+ **************************************************************************/
+
+/**************************************************************************
+ * This part is a binding for a C64
+ * to show how it works
+ */
+
+#define	C64
+
+#ifdef C64
+
+sysmem	=$033c
+syszp	=$57
+
+
+	.word $0801
+	*=$801
+	.word nextl
+	.word 10
+	.byt $9e, "2080",0
+nextl	.word 0
+	.dsb 2080-*, 0 
+
+c64load	.(
+	lda #>PRGEND+255
+	ldx #>$A000-PRGEND
+	jsr binit	; init memory handling
+
+	lda #7
+	ldx #<fname
+	ldy #>fname
+	jsr $ffbd	; setfnpar
+	
+	lda #2
+	ldx #11
+	ldy #0
+	jsr $ffba	; setfpar
+
+	jsr $ffc0	; open
+	bcs end
+
+	ldx #2
+	jsr $ffc6	; chkin
+	bcs end
+
+	jsr loader	; don't care about x, chkin did it
+
+	php
+	pha
+	jsr $ffcc	; clrch
+	lda #2
+	jsr $ffc3	; close
+	pla
+	plp
+end	rts
+
+fname	;.asc "example",0
+	.byt $45, $58, $41, $4d, $50, $4c, $45, 0
+	.)
+
+fgetc	.(
+	jsr $ffcf
+	php
+	pha
+	bcc carry
+	lda #"C"
+	jsr $ffd2
+	pla
+	pha
+carry
+	jsr hexout
+	lda #$20
+	jsr $ffd2
+	pla
+	plp
+	rts
+	.)
+
+hexout	.(
+	pha
+	lsr
+	lsr
+	lsr
+	lsr
+	jsr nibout
+	pla
+nibout	and #$0f
+	clc
+	adc #$30
+	cmp #$3a
+	bcc ok
+	adc #$41-$3a-1
+ok	jmp $ffd2
+	.)
+	
+zalloc	.(
+	cmp #$80	; save from $90 upward = OS, below is only basic
+	bcs end
+	lda #$10
+end	rts
+	.)
+
+zfree	.(
+	clc
+	rts
+	.)
+
+#endif
+
+/**************************************************************************
+ * Here is the real loader code
+ */
+
+#include "file.def"
+
+#define	E_NOMEM		<-40
+#define	E_FVERSION	<-41
+
+loader 	.(
+p1	=syszp
+p2	=syszp+2
+-syszp	+=4
+
+tmp	=sysmem
+file	=sysmem+1
+-sysmem	+=2
+header	=sysmem
+-sysmem	+=HDR_LEN
+textb	=sysmem		; memory block ID
+texta	=sysmem+1	; address of block
+textl	=sysmem+3	; address of block
+textd	=sysmem+5	; difference to assemble address
+-sysmem	+=7
+datab	=sysmem
+dataa	=sysmem+1
+datal	=sysmem+3
+datad	=sysmem+5
+-sysmem	+=7
+bssb	=sysmem
+bssa	=sysmem+1
+bssd	=sysmem+3
+-sysmem	+=5
+zeroa	=sysmem
+zerod	=sysmem+1
+-sysmem	+=3
+
+	stx file
+	jsr fgetc
+	bcs end
+	sta tmp
+	jsr fgetc
+	bcs end
+	tay
+	lda tmp
+	cpy #0
+	bne rt
+	cmp #1
+	beq load
+rt 	lda #E_FVERSION		; ok, but not this version
+end	sec
+	rts
+
+load	.(
+	lda #<header
+	sta p1
+	lda #>header
+	sta p1+1
+	lda #<HDR_LEN
+	sta p1+2
+	lda #>HDR_LEN
+	sta p1+3
+
+	ldx file
+	lda #<p1
+	ldy #>p1
+	jsr fgetb
+	bcs end
+
+				; header loaded, check magic and version
+	lda header+HDR_MAGIC
+	cmp #$6f
+	bne end
+	lda header+HDR_MAGIC+1
+	cmp #"6"
+	bne end
+	lda header+HDR_MAGIC+2
+	cmp #"5"
+	bne end
+	lda header+HDR_VERSION
+	cmp #0
+	bne end
+	lda header+HDR_MODE+1
+	and #%11110000
+	bne end
+				; now allocate buffers
+	lda header+HDR_TLEN
+	ldy header+HDR_TLEN+1
+	sta textl
+	sty textl+1
+	jsr balloc
+	stx textb
+	bcs no_text2
+	jsr getbadr
+	sta texta
+	sty texta+1
+	sec
+	sbc header+HDR_TBASE
+	sta textd
+	tya
+	sbc header+HDR_TBASE+1
+	sta textd+1
+
+	lda header+HDR_DLEN
+	ldy header+HDR_DLEN+1
+	sta datal
+	sty datal+1
+	jsr balloc
+	stx datab
+	bcs no_data2
+no_text2 bcs no_text1
+	jsr getbadr
+	sta dataa
+	sty dataa+1
+	sec
+	sbc header+HDR_DBASE
+	sta datad
+	tya
+	sbc header+HDR_DBASE+1
+	sta datad+1
+
+	lda header+HDR_BLEN
+	ldy header+HDR_BLEN+1
+	jsr balloc
+	stx bssb
+	bcs no_bss
+no_text1 bcs no_text
+no_data2 bcs no_data
+	jsr getbadr
+	sta bssa
+	sty bssa+1
+	sec
+	sbc header+HDR_BBASE
+	sta bssd
+	tya
+	sbc header+HDR_BBASE+1
+	sta bssd+1
+
+	lda header+HDR_ZLEN
+	jsr zalloc
+	bcs no_zero
+	sta zeroa
+	sec
+	sbc header+HDR_ZBASE
+	sta zerod
+	lda #0
+	sta zerod+1
+
+	jmp do_load
+
+&no_file lda zeroa
+	jsr zfree
+no_zero ldx bssb
+	jsr bfree
+no_bss	ldx datab
+	jsr bfree
+no_data	ldx textb
+	jsr bfree
+no_text	rts
+
+do_load				; load options (i.e. ignore them now)
+	jsr fgetc
+	bcs no_file
+	cmp #0
+	beq load_text
+	tay
+	dey
+optl	jsr fgetc
+	bcs no_file
+	dey
+	bne optl
+	beq do_load
+
+load_text			; load text segment
+	ldx file
+	lda #<texta
+	ldy #>texta
+	jsr fgetb
+	bcs no_file
+
+	ldx file
+	lda #<dataa
+	ldy #>dataa
+	jsr fgetb
+	bcs no_file
+				; check number of undefined references
+	ldx file
+	jsr fgetc
+&no_file2 bcs no_file
+	cmp #0
+	bne no_file		; we have some -> not handled
+	ldx file
+	jsr fgetc
+	bcs no_file
+	cmp #0
+	bne no_file
+				; ok, text segments loaded, now relocate
+	lda texta
+	sec
+	sbc #1
+	sta p1
+	lda texta+1
+	sbc #0
+	sta p1+1
+	jsr trel
+
+	lda dataa
+	sec
+	sbc #1
+	sta p1
+	lda dataa+1
+	sbc #0
+	sta p1+1
+	jsr trel
+
+	lda texta		; return start of text segment
+	ldy texta+1
+	clc
+	rts
+	.)
+
+trel	.(
+	ldx file
+	jsr fgetc
+no_file1 bcs no_file2
+	cmp #0
+	beq reloc_rts
+	cmp #255
+	bne t1
+	lda #254
+	clc
+	adc p1
+	sta p1
+	bcc trel
+	inc p1+1
+	jmp trel
+t1	clc
+	adc p1
+	sta p1
+	bcc t1a
+	inc p1+1
+t1a			; p1 is the relocation address
+	ldx file
+	jsr fgetc
+	bcs no_file1
+	tay
+	and #A_MASK
+	sta tmp
+	tya
+	and #A_FMASK
+	jsr getreldiff
+	ldy tmp
+	cpy #A_ADR
+	bne t2
+
+	ldy #0
+	clc
+	adc (p1),y
+	sta (p1),y
+	iny
+	txa
+	adc (p1),y
+	sta (p1),y
+	jmp trel
+t2	
+	cpy #A_LOW
+	bne t3
+	ldy #0
+	clc
+	adc (p1),y
+	sta (p1),y
+	jmp trel
+t3
+	cpy #A_HIGH
+	bne trel
+	sta p2
+	stx p2+1
+	ldx file
+	jsr fgetc
+	clc
+	adc p2		; just get the carry bit
+	ldy #0
+	lda p2+1	; relocate high byte
+	adc (p1),y
+	sta (p1),y
+	jmp trel
+
+reloc_rts
+	clc
+	rts
+	.)
+	
+getreldiff .(		; comparing with SEG_UNDEF would give a way
+			; to get label value here for undefined refs
+	cmp #SEG_TEXT
+	bne notext
+	lda textd
+	ldx textd+1
+	rts
+notext	cmp #SEG_DATA
+	bne nodata
+	lda datad
+	ldx datad+1
+	rts
+nodata	cmp #SEG_BSS
+	bne nobss
+	lda bssd
+	ldx bssd+1
+	rts
+nobss	cmp #SEG_ZERO
+	bne nozero
+	lda zerod
+	ldx zerod+1
+nozero	rts
+	.)
+
+	.)
+
+/**************************************************************************
+ * Here come the support routines
+ *
+ * first is a simple and basic implementation of fgetb, just using fgetc
+ */
+
+fgetb	.(
+p	=syszp
+-syszp	+=2
+file	=sysmem
+l	=sysmem+1
+-sysmem	+=3
+	
+	stx file		; x=file, a=zp-adr of address, y=zp-adr of len
+	sta p
+	sty p+1
+	ldy #3
+	lda (p),y
+	sta l+1
+	dey
+	lda (p),y
+	sta l
+	dey
+	lda (p),y
+	pha
+	dey
+	lda (p),y
+	sta p
+	pla
+	sta p+1
+
+loop	ldx file
+	jsr fgetc		; this is a simple implementation
+	bcs end
+	ldy #0
+	sta (p),y
+	inc p
+	bne l0
+	inc p+1
+l0	
+	lda l
+	bne l1
+	dec l+1
+l1	dec l
+
+	lda l
+	ora l+1
+	bne loop
+	clc
+end
+	rts
+	.)
+
+/**************************************************************************
+ * support for memory allocation
+ *
+ * These routines are taken from a preliminary SLIP implementation, as of
+ * OS/A65 version 1.3.10b
+ */
+
+#define	MAXSLOT	8
+
+/**********************************************************************/
+/* New memory management for IP buffers 			      */
+/* exports							      */
+/* 	binit							      */
+/* 	balloc, bfree, btrunc, bsplit, brealloc			      */
+/*	getbadr, getblen					      */
+
+#define	MINBUF	8
+#define	MINMASK	%11111000
+
+	.(
+
+slotladr =sysmem
+slothadr =sysmem+MAXSLOT
+slotllen =sysmem+MAXSLOT*2
+slothlen =sysmem+MAXSLOT*3
+-sysmem	+=MAXSLOT*4
+
+flist 	=sysmem
+slot	=sysmem+2
+-sysmem	+=3
+
+p	=syszp
+p2	=syszp+2
+p3	=syszp+4
+p4	=syszp+6
+-syszp	+=8
+
+/* init memory management */
+&binit	.(
+	sta p+1		; hi byte startadress buffer
+	stx p2+1	; hi byte length of buffer
+
+	lda #0
+	tay
+l0	sta slotladr,y
+	sta slothadr,y
+	iny
+	cpy #MAXSLOT
+	bcc l0
+
+	sta p
+	tay
+	sta (p),y
+	iny 
+	sta (p),y
+	iny
+	sta (p),y
+	iny
+	lda p2+1
+	sta (p),y
+	
+	lda p
+	sta flist
+	lda p+1
+	sta flist+1
+
+	clc
+	rts
+	.)
+
+/* a/y = size of buffer to be allocated -> x buffer-ID */       
+&balloc	.(
+	/* walk along freelist, and take first matching buffer 
+	   length is made a multiple of 8 (for freelist connectors */
+
+	pha
+	jsr getbslot
+	pla
+	bcc gotslot
+	lda #E_NOMEM
+	rts
+gotslot
+	stx slot
+
+	adc #MINBUF-1
+	and #MINMASK
+	sta slotllen,x
+	tya
+	adc #0
+	sta slothlen,x
+
+	lda #0
+	sta p2
+	sta p2+1
+	lda flist
+	sta p
+	lda flist+1
+	sta p+1
+l0
+	ldy #2
+	lda (p),y
+	sec
+	sbc slotllen,x
+	sta p3
+	iny
+	lda (p),y
+	sbc slothlen,x
+	sta p3+1
+	bcs found 
+
+	lda p
+	sta p2
+	lda p+1
+	sta p2+1
+	ldy #1
+	lda (p2),y
+	sta p+1
+	dey
+	lda (p2),y
+	sta p
+	ora p+1
+	bne l0
+	
+oops	lda #E_NOMEM
+	sec
+	rts	
+
+found
+	/* ok, we found a free buffer: p points to the buffer, p2 to the
+	   previous one. p3 is the length of the free buffer minus the
+	   needed size. If the buffer is longer than needed, create a 
+	   new free buffer, then link new buffer to freelist */
+
+	lda p		/* save buffer address */
+	sta slotladr,x
+	lda p+1
+	sta slothadr,x
+		
+	lda p3 		/* check length */
+	ora p3+1
+	beq nocreate
+	
+	lda p		/* get address of new free buffer */
+	clc
+	adc slotllen,x
+	sta p4
+	lda p+1
+	adc slothlen,x
+	sta p4+1
+
+	ldy #0		/* copy next pointer */
+	lda (p),y
+	sta (p4),y
+	iny
+	lda (p),y
+	sta (p4),y
+
+	iny		/* set new length */
+	lda slotllen,x
+	sta (p),y
+	lda p3
+	sta (p4),y
+	iny
+	lda slothlen,x
+	sta (p),y
+	lda p3+1
+	sta (p4),y
+
+	lda p4
+	sta p
+	lda p4+1
+	sta p+1
+
+nocreate
+	lda p2
+	ora p2+1
+	beq freestart
+
+	ldy #0
+	lda p
+	sta (p2),y
+	iny
+	lda p+1
+	sta (p2),y
+	clc
+	bcc geta
+freestart
+	lda p
+	sta flist
+	lda p+1
+	sta flist+1
+	clc
+geta
+	lda slotladr,x
+	ldy slothadr,x
+	rts
+	.)
+
+/* free buffer (ID=xr) */
+&bfree	.( 
+	lda slothadr,x
+	sta p3+1
+	lda slotladr,x
+	sta p3
+	ora p3+1
+	beq end2
+
+	ldy #2
+	lda slotllen,x
+	sta (p3),y
+	iny
+	lda slothlen,x
+	sta (p3),y	
+
+	lda #0
+	sta slothadr,x
+	sta slotladr,x
+
+	lda flist
+	ora flist+1
+	bne ok		/* no free buffer so far? */
+
+	lda p3
+	sta flist
+	lda p3+1
+	sta flist+1
+	ldy #0
+	tya
+	sta (p3),y
+	iny
+	sta (p3),y
+end2	clc
+	rts
+ok	
+	lda #0
+	sta p2
+	sta p2+1
+	lda flist
+	sta p
+	lda flist+1
+	sta p+1
+
+	/* we have to find the place where to put the buffer in the
+	   ordered free list. Then we have to check if we can merge
+	   free buffers */
+loop
+	lda p3+1
+	cmp p+1
+	bcc found
+	bne next
+	lda p3
+	cmp p
+	bcc found
+next
+	lda p
+	sta p2
+	lda p+1
+	sta p2+1
+	ldy #0
+	lda (p2),y
+	sta p
+	iny
+	lda (p2),y
+	sta p+1
+	ora p
+	bne loop
+	beq found
+end
+	clc
+	rts
+
+found	/* p2 is the buffer before the one to be freed, p the one behind.
+	   p3 is the buffer to be inserted */
+
+	lda p2
+	ora p2+1
+	bne fok
+			; insert before the first free buffer so far
+	ldy #0
+	lda flist
+	sta (p3),y
+	iny
+	lda flist+1
+	sta (p3),y
+	lda p3
+	sta flist
+	ldy p3+1
+	sty flist+1
+	jsr bmerge
+	clc
+	rts
+fok			; insert to list
+	ldy #1
+	lda p+1		;lda (p2),y
+	sta (p3),y
+	dey
+	lda p		;lda (p2),y
+	sta (p3),y
+	lda p3
+	sta (p2),y
+	iny
+	lda p3+1
+	sta (p2),y
+
+	lda p3
+	ldy p3+1
+	jsr bmerge
+	lda p2
+	ldy p2+1
+	jsr bmerge
+	clc
+	rts
+	.)
+
+/* get adress of buffer */
+&getbadr .(
+	lda slotladr,x
+	ldy slothadr,x
+	clc
+	rts
+	.)
+
+/* get length of buffer */
+&getblen .(
+	lda slotllen,x
+	ldy slothlen,x
+	clc
+	rts
+	.)
+
+/* get free buffer-ID slot */
+getbslot .(
+	ldx #0
+l0
+	clc
+	lda slotladr,x
+	ora slothadr,x
+	beq found
+	inx
+	cpx #MAXSLOT
+	bcc l0
+found
+	rts
+	.)
+
+/* check if two buffers (i.e. a/y plus following) can be merged */
+bmerge	.(
+	sta p
+	sty p+1
+	ldy #2
+	clc
+	lda (p),y
+	adc p
+	sta p3
+	iny
+	lda (p),y
+	adc p+1
+	sta p3+1
+	ldy #0
+	lda (p),y
+	cmp p3
+	bne nomerge
+	iny
+	lda (p),y
+	cmp p3+1
+	bne nomerge
+merge
+	ldy #2
+	clc
+	lda (p3),y
+	adc (p),y
+	sta (p),y
+	iny
+	lda (p3),y
+	adc (p),y
+	sta (p),y
+	ldy #0
+	lda (p3),y
+	sta (p),y
+	iny
+	lda (p3),y
+	sta (p),y
+nomerge
+	clc
+	rts
+	.)
+
+	.)
+
+PRGEND 
+

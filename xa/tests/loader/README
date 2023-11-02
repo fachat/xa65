@@ -1,0 +1,8 @@
+
+In this directory you find two test files, i.e. test.a and test2.a for 
+xa. test.a is assembled into the file "example", which is loaded by the
+relocator "loader", when started on a C64. Don't try to execute this
+file, it's just for testing.
+
+
+

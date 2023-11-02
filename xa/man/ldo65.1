@@ -9,7 +9,7 @@ ldo65 \- linker for o65 object files
 
 .SH DESCRIPTION
 .B ldo65
-is a linker for files in the `o65' object format, formerly
+is a linker for files in the o65 object format, formerly
 .B ld65
 but renamed to avoid conflicts with the
 .B cc65
@@ -32,8 +32,22 @@ man page for an explanation.
 Set output filename. The default is
 .BR a.o65 \&.
 .TP
+.B \-L name
+Allow label
+.B name
+to remain undefined, even after linking.
+This option may be specified multiple times for multiple labels.
+.TP
+.B \-U
+Allow any label to remain undefined, even after linking.
+.TP
 .B \-G
 Suppress writing of globals.
+.TP
+.B \-g name
+Only export global
+.BR name .
+This option may be specified multiple times for multiple globals.
 .TP
 .B \-\-help
 Show summary of options.

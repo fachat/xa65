@@ -124,7 +124,6 @@ file65 file;
 unsigned char cmp[] = { 1, 0, 'o', '6', '5' };
 unsigned char hdr[26] = { 1, 0, 'o', '6', '5', 0 };
 
-int verbose = 0;
 
 void usage(FILE *fp)
 {
@@ -140,7 +139,6 @@ void usage(FILE *fp)
 		"  -U         accept any undef'd labels after linking\n"
 		"  -L<name>   accept specific given undef'd labels after linking\n"
 		"  -g<name>   only export the globals defined with (multiple) -g options\n"
-		"  -v         verbose output\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n",
 		programname);
@@ -188,13 +186,6 @@ int main(int argc, char *argv[]) {
 	while(i<argc && argv[i][0]=='-') {
 	    /* process options */
 	    switch(argv[i][1]) {
-	    case 'v':
-		j=1;
-		while (argv[i][j]=='v') {
-			verbose++;
-			j++;
-		}
-		break;
 	    case 'G':
 		noglob=1;
 		break;
@@ -304,19 +295,6 @@ printf("tbase=%04x+len=%04x->%04x, file->tbase=%04x, f.tlen=%04x -> tdiff=%04x\n
 printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n",
 		zbase, tzlen, (zbase + tzlen), file->zbase, file->zlen, file->zdiff);
 */
-	 
-	  if (verbose > 0) {
-		  printf("Relocating file: %s\n", file->fname);
-		  printf("    text: from %04x to %04x (diff is %04x, length is %04x)\n", 
-				  file->tbase, file->tbase + file->tdiff, file->tdiff, file->tlen);
-		  printf("    data: from %04x to %04x (diff is %04x, length is %04x)\n", 
-				  file->dbase, file->dbase + file->ddiff, file->ddiff, file->dlen);
-		  printf("    bss:  from %04x to %04x (diff is %04x, length is %04x)\n", 
-				  file->bbase, file->bbase + file->bdiff, file->bdiff, file->blen);
-		  printf("    zero: from %02x to %02x (diff is %02x, length is %02x)\n", 
-				  file->zbase, file->zbase + file->zdiff, file->zdiff, file->zlen);
-	  }
-
 	  /* update globals (for result file) */
 	  ttlen += file->tlen;
 	  tdlen += file->dlen;
@@ -699,21 +677,17 @@ int len_reloc_seg(unsigned char *buf, int ri) {
 
 unsigned char *reloc_globals(unsigned char *buf, file65 *fp) {
 	int n, old, new, seg;
-	char *name;
 
 	n = buf[0] + 256*buf[1];
 	buf +=2;
 
 	while(n) {
-	  name = buf;
+/*printf("relocating %s, ", buf);*/
 	  while(*(buf++));
-	  seg = *buf & 0x07;
+	  seg = *buf;
 	  old = buf[1] + 256*buf[2];
 	  new = old + reldiff(seg);
-	  if (verbose > 1) {
-		printf("%s:%s: old=%04x, seg=%d, rel=%04x, new=%04x\n", 
-				fp->fname, name, old, seg, reldiff(seg), new);
-	  }
+/*printf("old=%04x, seg=%d, rel=%04x, new=%04x\n", old, seg, reldiff(seg), new);*/
 	  buf[1] = new & 255;
 	  buf[2] = (new>>8) & 255;
 	  buf +=3;

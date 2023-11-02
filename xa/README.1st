@@ -40,6 +40,8 @@ Fabian Nunez. For mingw, use
 
 	make mingw
 
+(but do it from within MSYS2).
+
 Similarly, Amiga and Atari ST compilation should still also function with
 their particular compatible packages.
 

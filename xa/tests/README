@@ -38,6 +38,7 @@ relmode/	tests concerning switches between segments and absolute mode
 mvnmvp/		Test MVN MVP unusual addressing mode ('816)
 dos51/		Regression test, label scoping, "real world code"
 cpktest/	Regression test, label listing, "real world code"
+listing/	Test of listing feature
 op816/		Regression test for '816 opcodes (thanks Alessandro Gatti)
 branch/		Branch range test
 masmcom/	Another test for -M that generates totally valid code
@@ -49,6 +50,8 @@ alxl/		Various '816 width tests (includes Samuel Falvo's test)
 pparity/	Tests of preprocessor macro arity (with Emil Johansson's test)
 recucom/	Recursive comments test
 aserror/	Tests of .assert and #error syntax/function
+loader/		Old ../loader tests, moved into test suite proper
+reset_segment/	Verifies conditions under which a segment is reset
 
 Cameron Kaiser, André Fachat
 
