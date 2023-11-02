@@ -707,6 +707,9 @@ int ll_pdef(char *t)
 	return(E_NODEF);
 }
 
+/* 
+ * Write out the list of global labels in an o65 file
+ */
 int l_write(FILE *fp)
 {
      int i, afl, n=0;
@@ -716,25 +719,39 @@ int l_write(FILE *fp)
 	fputc(0, fp);
 	return 0;
      }
+     // calculate number of global labels
      for (i=0;i<afile->la.lti;i++) {
         ltp=afile->la.lt+i;
 	if((!ltp->blk) && (ltp->fl==1)) {
 	  n++;
 	}
      }
+     // write number of globals to file
      fputc(n&255, fp);
      fputc((n>>8)&255, fp);
+     // iterate over labels and write out label
      for (i=0;i<afile->la.lti;i++)
      {
           ltp=afile->la.lt+i;
           if((!ltp->blk) && (ltp->fl==1)) {
+	    // write global name
 	    fprintf(fp, "%s",ltp->n);
 	    fputc(0,fp);
+
+	    // segment byte
 	    afl = ltp->afl;
-            /* hack to switch undef and abs flag from internal to file format */
-/*printf("label %s, afl=%04x, A_FMASK>>8=%04x\n", ltp->n, afl, A_FMASK>>8);*/
-            if( (afl & (A_FMASK>>8)) < SEG_TEXT) afl^=1;
+            // hack to switch undef and abs flag from internal to file format 
+	    // if asolute of undefined (< SEG_TEXT, i.e. 0 or 1)
+	    // then invert bit 0 (0 = absolute)
+            if( (afl & (A_FMASK>>8)) < SEG_TEXT) {
+		    afl^=1;
+	    }
+	    // remove residue flags, only write out real segment number
+	    // according to o65 file format definition
+	    afl = afl & (A_FMASK >> 8);
 	    fputc(afl,fp);
+
+	    // value
 	    fputc(ltp->val&255, fp);
 	    fputc((ltp->val>>8)&255, fp);
 	  }
