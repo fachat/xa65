@@ -1,13 +1,19 @@
 This is a directory of test suites for complex or pathological cases that
 have been repaired (?) in the current version. It is primarily for internal
-testing, but is here for your interest.
+testing, but is here for your interest. It requires a reasonably compatible
+`make` and Perl.
 
-Starting with 2.3.6, you should not normally need to run these directly
-unless 'make test' fails. If you do, use harness:
+You can run specific tests from the main source directory with
+
+make test TESTS=test,test,test,...
+
+or, if `make test` doesn't work right on your system, you can run the Perl
+harness directly:
 
 ./harness -cc=... -cflags=... -make=... -tests=testdir,testdir,testdir,...
 
 If -tests is omitted, all tests are run.
+
 Don't run the makefiles directly, if they exist; they may not work properly.
 If a Makefile is not present, then the test harness assembles "test.s" and
 compares it with "ok".
@@ -52,6 +58,7 @@ recucom/	Recursive comments test
 aserror/	Tests of .assert and #error syntax/function
 loader/		Old ../loader tests, moved into test suite proper
 reset_segment/	Verifies conditions under which a segment is reset
+expando/	Test of preprocessor expansion (thanks Tom Hargreaves)
 
 Cameron Kaiser, André Fachat
 

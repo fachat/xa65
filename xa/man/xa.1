@@ -1,4 +1,4 @@
-.TH XA "1" "24 November 2021"
+.TH XA "1" "17 November 2023"
 
 .SH NAME
 xa \- 6502/R65C02/65816 cross-assembler
@@ -125,7 +125,7 @@ preprocessor macros. This option is inherently deprecated and may be removed
 in the next 2.x or 3.x release.
 .TP
 .B \-M
-This option is deprecated; use
+This option is deprecated and will be removed in a future version; use
 .B \-XMASM
 instead. Allows colons to appear in comments for MASM compatibility. This does
 not affect colon interpretation elsewhere, and may become the default in a
@@ -480,12 +480,10 @@ or zero page value, do not attempt to optimize to a zero page argument
 for those opcodes that support it (i.e., keep as 16 bit word)
 .TP
 .B @
-render as 24-bit quantity for 65816 (must specify
+render as 24-bit quantity for 65816, even if smaller than 24 bits (must specify
 .B \-w
 command-line option, must not specify
-.BR \-XCA65 ).
-.B This is required to specify any
-.B 24-bit quantity!
+.BR \-XCA65 )
 .TP
 .B `
 force further optimization, even if the length of the instruction cannot
@@ -609,7 +607,8 @@ repetitions of
 will be inserted into the assembled object. For example,
 .B .dsb 5,$10
 will insert five bytes, each being 16 decimal, into the object. The arguments
-may be expressions. See
+may be expressions. If only a single argument is provided, then the argument
+is treated as a number of null bytes to insert. See
 .B LINKING
 for how to use this pseudo-op to link multiple objects.
 .TP
@@ -618,8 +617,10 @@ Inlines a binary file without further interpretation specified by
 .B filename
 from offset
 .B offset
-to length
-.BR length .
+(relative to the beginning of the file)
+for
+.B length 
+bytes.
 This allows you to insert data such as a previously assembled object file
 or an image or other binary data structure, inlined directly into this
 file's object. If
@@ -644,7 +645,7 @@ one level deep). Sixteen levels of scoping are permitted.
 .IP
 .B \.block
 is accepted as a synonym for
-.BR \&.) ,
+.BR \&.( ,
 as well as
 .B \.proc
 (but you cannot specify an explicit scope name as in
@@ -657,7 +658,6 @@ Closes a block.
 or 
 .B .endproc
 are accepted as synonyms.
-.
 .TP
 .B \.as \.al \.xs \.xl
 Only relevant in 65816 mode (with the
@@ -715,19 +715,30 @@ Includes another file in place of the pseudo-op, as if the preprocessor had
 done so with an
 .B #include
 directive (see
-.BR PREPROCESSOR ).
+.BR PREPROCESSOR ),
+but at the assembler
+phase after preprocessing has already occurred.
+
+.LP
+The following pseudo-op applies to listing mode.
+.TP
+.B \.listbytes number
+In the listing output, sets the maximum number of hex bytes to be printed
+in the listing for pseudo-ops like
+.BR .byt ,
+by default 8. The special argument
+.B unlimited
+sets no upper limit. If listing mode is disabled, this pseudo-op has no
+observable effect.
 
 .LP
 The following pseudo-ops apply primarily to relocatable
 .B .o65
 objects.
 A full discussion of the relocatable format is beyond the
-scope of this manpage. Documentation
-on the proposed v1.2 format is in 
-.B doc/fileformat.txt
-within the
-.B xa
-installation directory.
+scope of this manpage; see
+.B http://www.6502.org/users/andre/o65/
+for the most current specification.
 .TP
 .B .text .data .bss .zero
 These pseudo-ops switch between the different segments,
@@ -743,7 +754,7 @@ being uninitialized zero page space for allocation. In
 and
 .BR .zero ,
 only labels are evaluated. These pseudo-ops
-are valid in relative and absolute modes.
+are valid in relocating and absolute modes.
 .TP
 .B .code
 For
@@ -761,7 +772,7 @@ compatibility, this is currently mapped to
 Aligns the current segment to a byte boundary (2, 4 or 256) as specified by
 .B
 value
-(and places it in the header when relative mode is enabled). Other values
+(and places it in the header when relocating mode is enabled). Other values
 generate an error.
 .TP
 .B .fopt type, value1, value2, value3, ...
@@ -941,12 +952,6 @@ satisfied, then the source code between the directive and its terminating
 .B #endif
 are expunged and not assembled. Up to fifteen levels of nesting are supported.
 .TP
-.B #endif
-Closes a conditional block.
-.TP
-.B #else
-Implements alternate path for a conditional block.
-.TP
 .B #ifdef DEFINE
 True only if macro
 .B DEFINE
@@ -977,6 +982,12 @@ is defined
 .I and
 assigned with a value.
 .I This works on labels, not macros!
+.TP
+.B #else
+Implements alternate path for a conditional block.
+.TP
+.B #endif
+Closes a conditional block.
 .LP
 Unclosed conditional blocks at the end of included files generate warnings;
 unclosed conditional blocks at the end of assembly generate an error.
@@ -1160,17 +1171,6 @@ Indiscriminately forcing the issue can be fraught with peril, however, and
 is not recommended; to discourage this, the assembler will complain about its
 use in addressing mode situations where no ambiguity exists, such as indirect
 indexed, branching and so on.
-.LP
-Also, as a further consequence of the way optimization is managed, we repeat
-that
-.B all
-24-bit quantities and labels that reference a 24-bit quantity in 65816 mode,
-anteriorly declared or otherwise,
-.B MUST
-be prepended with the
-.B @
-prefix. Otherwise, the assembler will attempt to optimize to 16 bits, which
-may be undesirable. 
 
 .SH "SEE ALSO"
 .BR file65 (1),
@@ -1188,7 +1188,7 @@ Original xa package (C)1989-1997 Andre Fachat. Additional changes
 (C)1989-2023 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
 
-.SH 30 YEARS OF XA
+.SH OVER 30 YEARS OF XA
 Yay us?
 
 .SH WEBSITE

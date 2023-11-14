@@ -5,10 +5,18 @@ under most ANSI C compilers. It is distributed under the GNU Public License
 
 The current version is 2.4.0, the first new feature release literally in
 years. It builds upon the improvements in 2.3.x and its unified 6502/65816
-assembler core, removes deprecated features, and adds listing capability,
-greater flexibility with relocatable objects, and greater cross-compatibility
-with other popular cross-assemblers (notably ca65) because once you use xa,
-you'll want to keep on using it. :)
+assembler core by adding listing capability, greater flexibility with
+relocatable objects, and better cross-compatibility with other popular
+cross-assemblers (notably ca65) because once you use xa, you'll want to keep
+on using it. :)
+
+Certain long-deprecated options and non-standard syntaxes have also been
+removed in this release, so it is possible some very old code may not
+assemble without errors. These changes have been a long time coming and we
+gave lots of warnings, so if you require these features and cannot change
+your code to work without them, you must use xa 2.3.14. Fortunately, most
+code should continue to work just fine and the test suite is even bigger to
+catch these sorts of regressions.
 
 To install on a generic Unixy thing, you should be able to just type
 
@@ -19,9 +27,8 @@ To install on a generic Unixy thing, you should be able to just type
 This will create xa along with its various support utilities. Try assembling
 the cpk depacker in examples/ as a test. xa also comes with uncpk (a program
 for generating cpk archives) and printcbm (a program for listing Commodore
-BASIC test) and file65, ldo65 and reloc65 for displaying, linking and
-relocating o65 files in Andre's relocatable format (see doc/fileformats.txt).
-The loader/ directory also has goodies for managing relocatable binaries.
+BASIC test, now deprecated as of 2.4) and file65, ldo65 and reloc65 for
+displaying, linking and relocating o65 files in Andre's relocatable format.
 
 Don't forget the man pages in man/. Install these into your MANPATH at your
 leisure, or read them with nroff -man (and/or groff -man).

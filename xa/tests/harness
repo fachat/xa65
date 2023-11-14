@@ -27,8 +27,6 @@ CC = $cc
 CFLAGS = $cflags
 MAKE = $make
 MAKEFLAGS = $makeflags
-tests to run: $dtests
-
 EOF
 
 # Get a list of all directories. If there is a Makefile there, do it.
@@ -36,9 +34,26 @@ EOF
 # Otherwise, do nothing (acknowledge and ignore directories we don't grok).
 
 opendir(D, ".") || die("test harness failed: $!\n");
-W: while($x = readdir(D)) {
-	next W if ($x =~ /^\./);
-	next W if (length($tests) && ($tests !~ /$x/));
+while($x = readdir(D)) {
+	next if ($x =~ /^\./ || $x =~ /\s/);
+	next if (length($tests) && ($tests !~ /$x/));
+	next if (! -d $x);
+	if (-r "$x/Makefile") {
+		push(@mtests, $x);
+	} else {
+		push(@stests, $x);
+	}
+}
+closedir(D);
+
+@tests = ();
+push(@tests, sort @mtests) if (scalar(@mtests));
+push(@tests, sort @stests) if (scalar(@stests));
+print "matching tests: ";
+print join(",", @tests);
+print "\n\n";
+
+W: foreach $x (@tests) {
 	next W if (!chdir($x));
 	$x = substr($x . " " . ("." x 79), 0, 50);
 	print STDOUT "$x > ";
@@ -69,7 +84,6 @@ W: while($x = readdir(D)) {
 	}
 	chdir("..");
 }
-closedir(D);
 print STDOUT "=" x 79, "\n";
 if ($ntests) { # ntestacy is a terrible thing
 	print STDOUT "\n## ALL SELECTED TESTS PASS ($dtests, n=$ntests) ##\n";
