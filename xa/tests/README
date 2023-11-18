@@ -56,7 +56,6 @@ alxl/		Various '816 width tests (includes Samuel Falvo's test)
 pparity/	Tests of preprocessor macro arity (with Emil Johansson's test)
 recucom/	Recursive comments test
 aserror/	Tests of .assert and #error syntax/function
-loader/		Old ../loader tests, moved into test suite proper
 reset_segment/	Verifies conditions under which a segment is reset
 expando/	Test of preprocessor expansion (thanks Tom Hargreaves)
 

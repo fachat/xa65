@@ -490,7 +490,8 @@ static int check_name(char *t, int n) {
 static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int *l, int blist) 
 {
 	int er = E_OK;
-	int i;
+	int i, d;
+        char c;
 
 	// save mem, to restore it when we don't need the pseudo replacements anymore
 	// Note: in a real version, that should probably be a parameter, and not fiddling
@@ -543,6 +544,10 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 					// rlist.
                                         for(i=0;i<liste[n].p_anz;i++)
                                         {
+					     char c;
+                                             int hkfl=0;	// quote flag
+					     int klfl=0;	// brackets counter
+
 					     // create new replacement entry
                                              liste[blist+i].search=x;
                                              liste[blist+i].s_len=(int)strlen(x);
@@ -553,9 +558,7 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 					     // points to first char of the parameter name in the input
 					     // copy over first char into text memory (note that the position
 					     // is already stored in liste[].replace above)
-                                             char c=*(++mx)=*(++y);
-                                             int hkfl=0;	// quote flag
-					     int klfl=0;	// brackets counter
+                                             c=*(++mx)=*(++y);
 					     // copy over the other characters
                                              while(c!='\0' 
                                                   && ((hkfl!=0 
@@ -698,7 +701,7 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 			      }
                          }  // end if(liste[n].p_anz), i.e. if it has parameters
 
-                         int d=(int)strlen(rs)-sl;
+                         d=(int)strlen(rs)-sl;
 
                          if(strlen(to)+d>=MAXLINE) {
 			      mem = saved_mem;
@@ -724,7 +727,6 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 			 }
 
                          i=0;
-			 char c;
                          while((c=rs[i])) {
                               t[i++]=c;
 			 }
@@ -903,10 +905,11 @@ int pp_init(void)
 int pp_open(char *name)
 {
      FILE *fp;
+     int l;
 
      fp=xfopen(name,"r");
 
-     int l = strlen(name);
+     l = strlen(name);
 
      /* we have to alloc it dynamically to make the name survive another
  	pp_open - it's used in the cross-reference list */	
@@ -959,7 +962,8 @@ int icl_close(int *c)
 int icl_open(char *tt)
 {
      FILE *fp2;
-     int j,i=0;
+     char *namep;
+     int len,j,i=0;
 
      pp_replace(s,tt,-1,rlist);
 
@@ -982,8 +986,8 @@ int icl_open(char *tt)
 	
      fsp++;
 
-     char *namep = s+i;
-     int len = strlen(namep);
+     namep = s+i;
+     len = strlen(namep);
 
      /* we have to alloc it dynamically to make the name survive another
         pp_open - it's used in the cross-reference list */

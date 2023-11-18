@@ -227,13 +227,16 @@ void list_setfile(FILE *fp) {
 }
 
 char *list_preamble(char *buf, int lineno, int seg, int pc) {
+	int i;
+	char c;
+
 	/* line number in file */
 	snprintf(buf, 10, "% 5d", lineno);
-	int i = strlen(buf);
+	i = strlen(buf);
 	buf += i;
 	buf += list_char(buf, ' ');
 
-	char c = '?';
+	c = '?';
 	/* preamble <segment>':'<address>' ' */
 	switch(seg) {
 	case SEG_ABS:	c='A'; break;
@@ -261,8 +264,7 @@ char *list_preamble(char *buf, int lineno, int seg, int pc) {
  * Note that both lengths may be zero
  */
 void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len) {
-	
-	int i, n_hexb;
+	int i, n_hexb, num_last_line, tmp, overflow;
 
 	char outline[MAXLINE];
 	char *buf = outline;
@@ -293,13 +295,13 @@ void do_listing(signed char *listing, int listing_len, signed char *bincode, int
 
 	// check if we have labels, so we can adjust the max printable number of 
 	// bytes in the last line
-	int num_last_line = 11;
-	int tmp = listing[3] & 255;
+	num_last_line = 11;
+	tmp = listing[3] & 255;
 	if (tmp == (T_DEFINE & 255)) {
 		// we have label definition
 		num_last_line = 8;
 	}
-	int overflow = 0;
+	overflow = 0;
 
 	/* binary output (up to 8 byte. If more than 8 byte, print 7 plus "..." */
 	n_hexb = bincode_len;
@@ -381,7 +383,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 	char *name;
 	signed char c;
 	xalabel_t is_cll;
-	int tabval;
+	int tabval, operator;
 	signed char format;
 
 	if (inp >= len) return 0;
@@ -448,7 +450,7 @@ int list_tokens(char *buf, signed char *input, int len) {
 #endif
 	}
 
-	int operator = 0;
+	operator = 0;
 	while (inp < len) {
 
 		switch(input[inp]) {
@@ -597,14 +599,14 @@ end:
 }
 
 int list_string(char *buf, char *string) {
+	int p = 0;
+
 	if (buf == NULL || string == NULL) {
 		fprintf(stderr, "NULL pointer: buf=%p, string=%p\n", buf, string);
 		fflush(stderr);
 		//exit(1);
 		return 0;
 	}
-
-	int p = 0;
 	while (string[p] != 0) {
 		buf[p] = string[p];
 		p++;

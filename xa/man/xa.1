@@ -1,4 +1,4 @@
-.TH XA "1" "17 November 2023"
+.TH XA "1" "18 November 2023"
 
 .SH NAME
 xa \- 6502/R65C02/65816 cross-assembler
@@ -306,9 +306,24 @@ for block instructions). A label may also be hard-specified with the
 .B \-L
 command line option.
 .LP
+Redefining a label does not change previously assembled code that used the
+earlier value. Therefore, because the program counter is a special type of
+label, changing the program counter to a lower value does not reorder code
+assembled previously and changing it to a higher value does not issue
+padding to put subsequent code at the new location. This is intentional
+behaviour to facilitate generating relocatable and position-independent code,
+but can differ from other assemblers which use this behaviour for
+linking. However, it is possible to use pseudo-ops to simulate other
+assemblers' behaviour and use
+.B xa
+as a linker; see
+.B PSEUDO-OPS
+and
+.BR LINKING .
+.LP
 If
 .B \-XCA65
-is specified, "cheap" local labels may be used and/or redefined, marked by the
+is specified, "cheap" local labels may be used, marked by the
 .B @
 prefix. Additionally, unnamed labels may be specified with
 .B :
@@ -351,21 +366,6 @@ documentation),
     :       ldx     #$01            ; #3
 .BR
     :       rts                     ; #4
-.LP
-Redefining a label does not change previously assembled code that used the
-earlier value. Therefore, because the program counter is a special type of
-label, changing the program counter to a lower value does not reorder code
-assembled previously and changing it to a higher value does not issue
-padding to put subsequent code at the new location. This is intentional
-behaviour to facilitate generating relocatable and position-independent code,
-but can differ from other assemblers which use this behaviour for
-linking. However, it is possible to use pseudo-ops to simulate other
-assemblers' behaviour and use
-.B xa
-as a linker; see
-.B PSEUDO-OPS
-and
-.BR LINKING .
 .LP
 For those instructions where the accumulator is the implied argument (such as
 .B asl 

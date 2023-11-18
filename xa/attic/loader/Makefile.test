@@ -14,6 +14,6 @@ test2: test2.a
 
 rom65: test.a
 	# ugly!
-	( cd .. && ../mkrom.sh -O "-G" -S "-bd 1234" -R loader/rom65 loader/test.a loader/test.a  )
-	../hextool -cmp=rom65.ok < rom65
+	# don't run if this system doesn't have bash
+	test -f /bin/bash || exit 0 && ( cd .. && ../mkrom.sh -O "-G" -S "-bd 1234" -R loader/rom65 loader/test.a loader/test.a  ) && ( ../hextool -cmp=rom65.ok < rom65 )
 

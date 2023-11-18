@@ -2,10 +2,16 @@
 default: all
 all: t1 t2 t10 t11 t20 t21 t30 t31 t40 t41 t50 t51 t60 t61 t62
 
-%.o65: %.s
+# BSD only has suffix rules
+
+.SUFFIXES: .o65 .hex
+
+#%.o65: %.s
+.s.o65:
 	../../xa -R -c -o $@ $<
 
-%.hex: %.o65
+#%.hex: %.o65
+.o65.hex:
 	../hextool $< > $@
 
 linked.o65: 1.o65 2.o65
@@ -56,63 +62,65 @@ linked61.o65: 60.o65 61.o65
 linked62.o65: 60.o65 61.o65
 	../../ldo65 -bd 65529 -bt 65523 -bz 255 -o $@ 61.o65 60.o65 && exit 1 || exit 0
 
+# BSD make doesn't populate $< in these rules and GNU make doesn't like $>
+
 t1: linked.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked.o65
 	../hextool -cmp=$@ < t1.ok
 
 t2: linked2.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked2.o65
 	../hextool -cmp=$@ < t2.ok
 
 t10: linked10.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked10.o65
 	../hextool -cmp=$@ < t10.ok
 
 t11: linked11.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked11.o65
 	../hextool -cmp=$@ < t11.ok
 
 t20: linked20.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked20.o65
 	../hextool -cmp=$@ < t20.ok
 
 t21: linked21.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked21.o65
 	../hextool -cmp=$@ < t21.ok
 
 t22: linked22.o65
 	# should fail, so no action
 
 t30: linked30.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked30.o65
 	../hextool -cmp=$@ < t30.ok
 
 t31: linked31.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked31.o65
 	../hextool -cmp=$@ < t31.ok
 
 t40: linked40.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked40.o65
 	../hextool -cmp=$@ < t40.ok
 
 t41: linked41.o65
-	../../reloc65 -bt 32768 -xt -o $@ $<
+	../../reloc65 -bt 32768 -xt -o $@ linked41.o65
 	../hextool -cmp=$@ < t41.ok
 
 t50: linked50.o65
-	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../../reloc65 -bt 32768 -bd 40960 -o $@ linked50.o65
 	../hextool -cmp=$@ < t50.ok
 
 t51: linked51.o65
-	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../../reloc65 -bt 32768 -bd 40960 -o $@ linked51.o65
 	../hextool -cmp=$@ < t51.ok
 
 t60: linked60.o65
-	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../../reloc65 -bt 32768 -bd 40960 -o $@ linked60.o65
 	../hextool -cmp=$@ < t60.ok
 
 t61: linked61.o65
-	../../reloc65 -bt 32768 -bd 40960 -o $@ $<
+	../../reloc65 -bt 32768 -bd 40960 -o $@ linked61.o65
 	../hextool -cmp=$@ < t61.ok
 
 t62: linked62.o65

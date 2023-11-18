@@ -151,7 +151,9 @@ int main(int argc, char *argv[]) {
 	int undefok=0;
 	int i = 1;
 	int tbase = 0x0400, dbase = 0x1000, bbase = 0x4000, zbase = 0x0002;
-	int ttlen, tdlen, tblen, tzlen;
+	int ttlen, tdlen, tblen, tzlen, routtlen, routdlen, tro, dro;
+	int lasttaddr, lastdaddr;
+	unsigned char *treloc, *dreloc;
 	char *outfile = "a.o65";
 	int j, jm;
 	file65 *file, **fp = NULL;
@@ -384,8 +386,8 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 
 	// reloc globals first, so reloc_seg has current info for resolved undef'd labels
 
-	int routtlen = 1;	// end-of-table byte
-	int routdlen = 1;	// end-of-table byte
+	routtlen = 1;	// end-of-table byte
+	routdlen = 1;	// end-of-table byte
 
 	for(i=0;i<j;i++) {
 	  file = fp[i];
@@ -397,19 +399,19 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 	}
 
 	// prep global reloc tables
-	unsigned char *treloc = malloc(routtlen);
-	unsigned char *dreloc = malloc(routdlen);
+	treloc = malloc(routtlen);
+	dreloc = malloc(routdlen);
 
 #ifdef DEBUG
 	printf("prep'd text reloc table at %p (%d bytes)\n", treloc, routtlen);
 	printf("prep'd data reloc table at %p (%d bytes)\n", dreloc, routdlen);
 #endif
-	int tro = 0;
-	int dro = 0;
+	tro = 0;
+	dro = 0;
 
 	// segment position of last relocation entry to compute offsets across files
-	int lasttaddr = tbase - 1;
-	int lastdaddr = dbase - 1;
+	lasttaddr = tbase - 1;
+	lastdaddr = dbase - 1;
 
 	for(i=0;i<j;i++) {
 	  file = fp[i];
@@ -597,6 +599,7 @@ int read_undef(unsigned char *buf, file65 *file) {
 
 int resolve_undef(file65 *file, int *remains) {
 	int i;
+	undefs *current;
 	int nlabels = file->nundef;
 #ifdef DEBUG
 printf("resolved undef file %s (%d undef'd)\n", file->fname, nlabels);
@@ -604,7 +607,7 @@ printf("resolved undef file %s (%d undef'd)\n", file->fname, nlabels);
 	if (nlabels == 0) {
 		return 0;
 	}
-	undefs *current = file->ud;
+	current = file->ud;
 
 	for (i = 0; i < nlabels; i++) {
 		// store pointer to global in label info
@@ -1053,9 +1056,10 @@ printf("found undef'd label %s, resolved=%d, newidx=%d, (ri=%d, ro=%d)\n", u->na
 			obuf[ro++] = (old + diff) & 255;
 			ri += 3;	// skip position, segment, and low byte
 		} else {
+			undefs *u;
 			old = buf[addr-base+pos]*256 + buf[ri+4];
 			// undefined
-			undefs *u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
+			u = &fp->ud[buf[ri+2]+256*buf[ri+3]];
 			if (u->resolved == -1) {
 				// not resolved
 				diff = 0;
