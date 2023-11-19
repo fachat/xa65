@@ -1,0 +1,16 @@
+
+	.(
+
+	jsr single
+
+single 	jmp single
+
+	jmp lenerr
+
+	bne lenerr
+
+lenerr	jsr lenerr
+
+
+	.)
+

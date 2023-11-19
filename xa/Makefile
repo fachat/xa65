@@ -1,5 +1,6 @@
 # Unix gcc or DOS go32 cross-compiling gcc
 #
+VERS = 2.4.0
 CC = gcc
 LD = gcc
 # for testing. not to be used; build failures in misc/.
@@ -37,8 +38,8 @@ killxa:
 xa:
 	(cd src && LD=${LD} CC="${CC} ${CFLAGS}" ${MAKE})
 
-load:	
-	(cd loader && CC="${CC} ${CFLAGS}" ${MAKE})
+#load:	
+#	(cd loader && CC="${CC} ${CFLAGS}" ${MAKE})
 
 uncpk:
 	(cd misc && CC="${CC} ${CFLAGS}" ${MAKE})
@@ -54,11 +55,11 @@ mingw: clean
 	
 clean:
 	(cd src && ${MAKE} clean)
-	(cd loader && ${MAKE} clean)
+	#(cd loader && ${MAKE} clean)
 	(cd misc && ${MAKE} mrproper)
 	rm -f xa *.exe *.o65 *.s core
 
-install: xa uncpk
+install: all
 	$(MKDIR) $(BINDIR)
 	$(MKDIR) $(MANDIR)
 	$(INSTALL) xa reloc65 ldo65 file65 printcbm uncpk $(BINDIR)
@@ -66,9 +67,14 @@ install: xa uncpk
 	#$(MKDIR) $(DOCDIR)/xa65
 
 dist: clean
-	cd .. ; tar cvf xa-2.3.14.tar xa-2.3.14 ; gzip xa-2.3.14.tar
+	cd .. ; tar cvf xa-$(VERS).tar xa-$(VERS) ; gzip xa-$(VERS).tar
 
-test: xa uncpk
+# no prereqs to force parallel make to play nice
+test: 
+	rm -rf xa
+	$(MAKE) xa
+	$(MAKE) uncpk
 	cd tests && ./harness \
 		-tests="$(TESTS)" \
-		-make="$(MAKE)" -cc="$(CC)" -cflags="$(CFLAGS)"
+		-cc="$(CC)" -cflags="$(CFLAGS)"  \
+		-make="$(MAKE)" -makeflags="$(MAKEFLAGS)"

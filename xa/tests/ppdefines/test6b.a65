@@ -1,0 +1,20 @@
+
+// testing some more complicated defines
+// this is the minimum I found to trigger the hang symptom
+
+
+#define max3420e_enable()       nop
+
+#define wrac(reg)               \
+        max3420e_enable()       :\
+        lda #(reg)       
+
+// just the definition of this macro hangs the xa indefinitely...
+
+#define CLRBIT(reg, val)        \
+        wrac(reg)
+
+
+//	*=$c000
+//	CLRBIT(1,2)
+

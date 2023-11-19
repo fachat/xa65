@@ -32,7 +32,7 @@
 
 static int pr[]= { P_START,P_ADD,P_ADD,P_MULT,P_MULT,P_SHIFT,P_SHIFT,P_CMP,
             P_CMP,P_EQU,P_CMP,P_CMP,P_EQU,P_AND,P_XOR,P_OR,
-            P_LAND,P_LOR };
+            P_LAND,P_LOR,P_EQU,P_START };
 
 static int pp,pcc;
 static int fundef;
@@ -77,7 +77,8 @@ int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
 	  if(afl) *pfl=A_HIGH | ((afl<<8) & A_FMASK) | (*v & 255);
           *v=(*v>>8)&255;
      }
-     else {
+     else 
+     if(s[pp]!=T_END) {
           er=ag_term(s,P_START,v,&afl, label);
 	  bfl = afl & (A_MASK>>8);
 	  if(bfl && (bfl != (A_ADR>>8)) ) {
@@ -85,10 +86,12 @@ int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
 	    errout(W_ADDRACC);
 	  }
 	  if(afl) *pfl = A_ADR | ((afl<<8) & A_FMASK);
+     } else {
+	er = E_SYNTAX;
      }
 
      *l=pp;
-/* printf("a_term: afl->%04x *pfl=%04x, (pc=%04x)\n",afl,*pfl, xpc); */
+//fprintf(stderr, "a_term: nolink=%d, noundef=%d ->er=%d; l=%d, pp=%d, afl->%04x *pfl=%04x, (pc=%04x)\n",nolink, noundef ,er, *l, pp, afl,*pfl, xpc); 
      return(er);
 }
 
@@ -98,15 +101,28 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
 
      afl = 0;
 
-/*
-printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
-*/
+//fprintf(stderr, "ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
+
      while(s[pp]=='-')
      {
           pp++;
           mf=-mf;
      }
 
+#if(0) /* NYI: this is hacked into .assert for now */
+     if(s[pp]==18) /* logical not */
+     {
+          pp++;
+          if(!(er=ag_term(s,P_START,v,&afl,label)))
+          {
+               if(s[pp]!=')')
+                    er=E_SYNTAX;
+               else 
+                    pp++;
+          }
+          *v = !(*v);
+     } else
+#endif
      if(s[pp]=='(')
      {
           pp++;
@@ -121,25 +137,31 @@ printf("ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
      if(s[pp]==T_LABEL)
      {
           er=l_get(cval(s+pp+1),v, &afl);
+
 /*
  printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
 			er, segment, afl, nolink, fundef);
 */
 	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( nolink || (afl==SEG_UNDEF)) {
+	    if( nolink || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
 	      er = E_OK;
 	      *v = 0;
-	      afl = SEG_UNDEF;
+	      if(afl!=SEG_UNDEFZP) {
+	        afl = SEG_UNDEF;
+	      }
 	      *label = cval(s+pp+1);
 	    }
 	  }
           pp+=3;
      }
      else
-     if(s[pp]==T_VALUE)
+     if(s[pp]==T_VALUE || s[pp] == T_CAST)
      {
+	  while (s[pp] == T_CAST) {
+		pp+=2;
+	  }
           *v=lval(s+pp+1);
-          pp+=4;
+          pp+=5;
 /*
 printf("value: v=%04x\n",*v);
 */
@@ -149,7 +171,7 @@ printf("value: v=%04x\n",*v);
      {
 	  afl = s[pp+1];
           *v=cval(s+pp+2);
-          pp+=4;
+          pp+=6;
 /*
 printf("pointer: v=%04x, afl=%04x\n",*v,afl);
 */
@@ -160,15 +182,16 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
           *v=pcc;
           pp++;
 	  afl = segment;
-     }
+     } 
      else {
           er=E_SYNTAX;
 	}
 
      *v *= mf;
 
-     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END)
+     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
      {
+//fprintf(stderr, "ag_term while: s[pp=%d]=%02x\n", pp, s[pp]);
           er=get_op(s,&o);
 
           if(!er && pr[o]>p)
@@ -177,18 +200,24 @@ printf("pointer: v=%04x, afl=%04x\n",*v,afl);
                if(!(er=ag_term(s,pr[o],&w, nafl, label)))
                {
 		    if(afl || *nafl) {	/* check pointer arithmetic */
-		      if((afl == *nafl) && (afl!=SEG_UNDEF) && o==2) {
-			afl = 0; 	/* substract two pointers */
+		      if((afl == *nafl) && (afl!=SEG_UNDEFZP) && (afl!=SEG_UNDEF) && o==2) {
+			afl = 0; 	/* subtract two pointers */
 		      } else 
 		      if(((afl && !*nafl) || (*nafl && !afl)) && o==1) {
 			afl=(afl | *nafl);  /* add constant to pointer */
 		      } else 
 		      if((afl && !*nafl) && o==2) {
-			afl=(afl | *nafl);  /* substract constant from pointer */
+			afl=(afl | *nafl);  /* subtract constant from pointer */
 		      } else {
-                        /* allow math in the same segment */
+       		        if((!afl && *nafl) && o==2) {
+			  /* subtract pointer from constant */
+			  errout(W_SUBTRACT);
+			}
+                 	/* allow math in the same segment */
 			if(segment!=SEG_ABS && segment != afl) { 
 			  if(!dsb_len) {
+			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
+			    /* e.g. adding two pointers, adding two undefined values */
 			    er=E_ILLSEGMENT;
 			  }
 			}
@@ -211,10 +240,18 @@ static int get_op(signed char *s, int *o)
 
      *o=s[pp];
 
-     if(*o<1 || *o>17)
+     if(*o<1 || *o>17) {
+/*
+	printf("*o=%d, pp=%d, s=%s\n", *o, pp, s);
+	for (int i=0; i< 10; i++) {
+		printf(" %02x", s[i]);
+	}
+	printf("\n");
+*/
           er=E_SYNTAX;
-     else
+     } else {
           er=E_OK;
+     }
 
      return(er);
 }

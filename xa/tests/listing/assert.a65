@@ -1,0 +1,8 @@
+        *=$0400
+
+        .assert *<$17e6, "routine too long"
+
+        lda #<$17e6 >> 2
+
+        lda *-2
+

@@ -46,6 +46,8 @@ void usage(FILE *fp)
 	fprintf(fp,
 		"Usage: %s [OPTION]... [FILE]...\n"
 		"List CBM BASIC programs\n"
+                "This tool is deprecated as of xa 2.4 and will be removed in a future version.\n"
+                "Please consider migrating to VICE petcat, which has many more options.\n"
 		"\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n",
@@ -62,7 +64,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (strstr(argv[1], "--help")) {
+	if (strstr(argv[1], "--help") || strstr(argv[1], "-?")) {
 		usage(stdout);
 		exit(0);
 	}

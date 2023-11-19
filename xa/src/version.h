@@ -19,7 +19,7 @@
 #ifndef __XA65_VERSION_H__
 #define __XA65_VERSION_H__
 
-void version(const char *programname, const char *progversion,
+void version(const char *programname, const char *version,
 	     const char *authors, const char *copyright)
 {
 	fprintf(stdout,
@@ -31,7 +31,7 @@ void version(const char *programname, const char *progversion,
 		"copying conditions.  There is NO\n"
 		"warranty; not even for MERCHANTABILIY or "
 		"FITNESS FOR A PARTICULAR PURPOSE.\n",
-		programname, progversion, authors, copyright);
+		programname, version, authors, copyright);
 }
 
 #endif  /* __XA65_VERSION_H__ */

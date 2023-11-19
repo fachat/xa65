@@ -1,0 +1,8 @@
+
+	.org $1000
+
+#include "include1a.a65"
+
+.include "include1a.a65"
+
+

@@ -1,0 +1,32 @@
+<html><head><title>(null)</title></head><body><pre>
+
+listca65_2.a65
+
+
+    2 A:1000                                    ; tests the html listing feature with blocks that 
+    3 A:1000                                    ; contain the same label names, but in different scopes
+
+    5 A:1000                                     *= $1000
+
+    7 A:1000  a9 00                    <a name="0U0"> </a>:           lda #$00
+
+    9 A:1002                                     .include "listca65_2b.a65"
+
+listca65_2b.a65
+
+
+    2 A:1002                                    ; to be included in listca65_2.a65
+    3 A:1002                                    ; to check HTML linkage of unnamed labels across files
+
+    5 A:1002  c8                       <a name="0U1"> </a>:           iny 
+    6 A:1003  d0 fd                              bne <a href="#0U1">:-</a>
+
+listca65_2.a65
+
+
+   11 A:1005                           <a name="0_label2"> </a>label2    
+   11 A:1005  c8                                 iny 
+   12 A:1006  f0 fd                              beq <a href="#0_label2">label2</a>
+
+   14 A:1008  4c 02 10                           jmp <a href="#0U1">:-</a>
+</pre></body></html>

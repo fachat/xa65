@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 André Fachat (fachat@web.de)
  *
  * Undefined label tracking module (also see xal.c)
  *
@@ -27,15 +27,13 @@
 #include "xah.h"
 #include "xal.h"
 
-/*
-static int *ulist = NULL;
-static int un = 0;
-static int um = 0;
-*/
+#undef DEBUG_UNDEF
 
 int u_label(int labnr) {
 	int i;
-/*printf("u_label: %d\n",labnr);*/
+#ifdef DEBUG_UNDEF
+printf("u_label: %d\n",labnr);
+#endif
 	if(!afile->ud.ulist) {
 	  afile->ud.ulist = malloc(200*sizeof(int));
 	  if(afile->ud.ulist) afile->ud.um=200;

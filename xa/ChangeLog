@@ -397,3 +397,44 @@ xa-2.3.14
 
 -- Cameron Kaiser <ckaiser@floodgap.com> 7 February 2023
 
+xa-2.4.0
+
+  * Listing feature in plain text or HTML, along with .listbytes to control
+    how hex bytes get listed in the output.
+  * Add -E commandline option to not stop after 20 errors, but show all
+    of them.
+  * Introduce -X compatibility set commandline option, to distinguish 
+    between MASM and CA65 compatibility options; also adds C option for
+    0x and 0 to specify hex or octal. As a result, -M is now deprecated,
+    and colons in comments may become the default in a future version.
+  * Implement CA65 "cheap local labels", ":=" label definitions,
+    and various pseudo-opcodes (.include, .import, .importzp,
+    .zeropage, .proc (anonymous only), .endproc, .code, .org, .reloc).
+  * -U option to allow all undefined labels in relocation mode; this
+    allows exporting them to an o65 file and link at a later time (or
+    specify one at a time with -L).
+  * Globals may also be specified manually with -g.
+  * #error allows preprocessor-level assertions.
+  * .assert allows assembler-level assertions.
+  * Better fix for segfault with smaller arity macro issue.
+  * Main Makefile fixes.
+  * Fixed parallel make in tests, incorporating a patch from Sergei
+    Trofimovich.
+  * Added a test case that failed in 2.3.14 from Tom Hargreaves.
+  * Some 2.3.x features still allowed with -XXA23, which is obviously
+    deprecated.
+  * The quote escape character is now the \ (backslash), except if -XXA23.
+  * Recursive /* */ comments are no longer allowed, except if -XXA23.
+  * XA_MAJOR and XA_MINOR predefined macros, except if -XXA23.
+  * Testsuite greatly expanded.
+  * The old loader/ testsuite and doc/ archive are now in attic/, which is
+    the repository for old unsupported components. It may be purged in a
+    future version.
+  * -M is now deprecated (use -XMASM), just in case you forgot.
+  * printcbm(1) is now deprecated (use VICE petcat, it does a lot more).
+  * Previously deprecated options (16-bit mvn/mvp argument, -S, -x) finally
+    removed. If you need this support, you must use 2.3.x.
+
+ -- André Fachat <afachat@gmx.de> and
+ -- Cameron Kaiser <ckaiser@floodgap.com>, 18 November, 2023
+

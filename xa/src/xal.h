@@ -21,7 +21,12 @@
 
 #include <stdio.h>	/* for FILE */
 
+/* nasty stuff - "lz" is exported from xal.c so xa.c can print the name
+ * of the label that was last searched for in the error message that the
+ * label was not found... 
+ */
 extern char *lz;
+
 
 int l_init(void);
 int ga_lab(void);
@@ -30,6 +35,10 @@ long gm_labm(void);
 long ga_labm(void);
 
 int lg_set(char *);
+int lg_import(int);
+int lg_importzp(int);
+// used to re-define undef'd labels as global for -U option
+int lg_toglobal(char *);
 
 int b_init(void);
 int b_depth(void);
@@ -40,9 +49,11 @@ int ga_blk(void);
 int l_def(char *s, int* l, int *x, int *f);
 int l_search(char *s, int *l, int *x, int *v, int *afl);
 void l_set(int n, int v, int afl);
+char* l_get_name(int n, xalabel_t *is_cll);
+char* l_get_unique_name(int n);
 int l_get(int n, int *v, int *afl);
 int l_vget(int n, int *v, char **s);
-int ll_search(char *s, int *n);
+int ll_search(char *s, int *n, xalabel_t labeltype);
 int ll_pdef(char *t);
 
 int b_open(void);

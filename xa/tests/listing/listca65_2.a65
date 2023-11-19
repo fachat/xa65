@@ -1,0 +1,15 @@
+
+; tests the html listing feature with blocks that 
+; contain the same label names, but in different scopes
+
+	.org $1000
+
+:	lda #$00
+
+	.include "listca65_2b.a65"
+
+label2:	iny
+	beq label2
+
+	jmp :-
+

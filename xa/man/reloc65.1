@@ -1,4 +1,4 @@
-.TH RELOC65 "1" "11 April 2006"
+.TH RELOC65 "1" "18 November 2023"
 
 .SH NAME
 reloc65 \- relocator for o65 object files
@@ -18,6 +18,9 @@ object format.
 .B \-o filename
 Set output filename. The default is
 .BR a.o65 \&.
+.TP
+.B \-v
+Verbose output.
 .TP
 .B \-b? addr
 Relocate segment
@@ -40,8 +43,9 @@ respectively. Not valid for bss or zero.
 .B \-X 
 Extract text and data segment together
 from the file instead of writing back the whole
-file. Relocating data segment to the end of the text segment
-(ignoring the \-xd option) before extracting.
+file. Relocating data segment to the end of the text segment and
+bss segment to the end of the data segment
+(\-xd and \-xb options override the derived address) before extracting.
 .TP
 .B \-\-help
 Show summary of options.

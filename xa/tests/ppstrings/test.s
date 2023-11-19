@@ -3,7 +3,7 @@
 
     .asc "DUP^@"
 
-    .asc '0DUP^@'
+    .asc '0DUP\@'
 
     .asc "D","UP^@"
 

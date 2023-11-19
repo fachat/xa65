@@ -1,0 +1,42 @@
+
+#define	MAX3421E_EnMask	$04
+
+
+#define max3421e_enable()       \
+        lda #MAX3421E_EnMask    :\
+        jsr spi_enable
+
+#define max3421e_disable()      \
+        jsr spi_disable
+
+#define	spi_wra()
+
+/********************************************************************/
+
+#define rPINCTL     (17<<3)
+
+#define bmFDUPSPI   $10
+
+#define bmINTLEVEL  $08
+
+#define wreg(reg, val)          \
+        max3421e_enable()       :\
+        lda #(reg) | $02       :\
+        spi_wra()               :\
+        lda #(val)              :\
+        spi_wra()               :\
+        max3421e_disable()
+
+/********************************************************************/
+
+; unrolled macrois ok
+	max3421e_enable()
+	lda #(rPINCTL) | $02
+	spi_wra()
+	lda #(bmFDUPSPI+bmINTLEVEL)
+	spi_wra()
+	max3421e_disable()
+
+; macro used o give syntax...
+        wreg(rPINCTL, bmFDUPSPI+bmINTLEVEL)
+

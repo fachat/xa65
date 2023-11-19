@@ -22,7 +22,11 @@
 extern int dsb_len;
 
 int t_p1(signed char *s, signed char *t, int *ll, int *al);
-int t_p2(signed char *t, int *ll, int fl, int *al);
+int t_p2_l(signed char *t, int *ll, int *al);
 int b_term(char *s, int *v, int *l, int pc);
+
+extern char *kt[];		// table of key words, needed for listing
+extern char *arith_ops[];	// table of arithmetic operators, needed for listing
+extern int number_of_valid_tokens; // as it says, in the "kt" table
 
 #endif /* __XA65_XAT_H__ */

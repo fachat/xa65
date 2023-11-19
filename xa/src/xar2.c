@@ -111,11 +111,17 @@ int rd_write(FILE *fp, int pc) {
 	    }
 	    fputc(pc2-pc, fp);
 	    pc=pc2;
-	    fputc((afl>>8)&255, fp);
-            if((afile->rd.rlist[p].afl&A_FMASK)==(SEG_UNDEF<<8)) {
+            if((afile->rd.rlist[p].afl&A_FMASK)==(SEG_UNDEFZP<<8)) {
+	      fputc((((afl & ~A_FMASK)>>8)&255)|SEG_UNDEF, fp);
+              fputc(afile->rd.rlist[p].lab & 255, fp);
+              fputc((afile->rd.rlist[p].lab>>8) & 255, fp);
+	    } else {
+	      fputc((afl>>8)&255, fp);
+              if(((afile->rd.rlist[p].afl&A_FMASK)==(SEG_UNDEF<<8))) {
                 fputc(afile->rd.rlist[p].lab & 255, fp);
                 fputc((afile->rd.rlist[p].lab>>8) & 255, fp);
-            }
+              }
+	    }
 	    if((afl&A_MASK)==A_HIGH) fputc(afl&255,fp);
 	  }
 	  p=afile->rd.rlist[p].next;

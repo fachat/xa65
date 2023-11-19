@@ -1,10 +1,18 @@
 o	nm65 that prints labels from o65 files
 
-o	`-L' option for ldo65, such that globals can be suppressed,
-	but KERNEL can be kept
-
 o	inc a -> ina, dec a -> dea (right now uses bare inc and dec)
 
 o	VICE label file support
 
-o	Smarter -X that can cope with non-block-aligned segment sizes
+o	Smarter -X that can cope with non-block-aligned segment sizes (in reloc65)
+
+o	The listing feature is not bug-free yet:
+	- ca65 and other assembler compatibility pseudo-opcodes will be
+	  listed as xa specific ones, not the original in the source
+	  E.g. a CA65 ".scope" will appear as ".(" in the listing
+	- The assembler has no pre-processor handling, so pp constants are
+	  resolved at parse time. Thus they appear as their value
+	  in the listing.
+	- One situation is ".listbytes unlimited",
+	  which will show as ".listbytes 0" in the listing
+

@@ -48,6 +48,8 @@ int rompar = 0;
 int romoff = 0;
 int labels = 0;
 
+int verbose = 0;
+
 void usage(FILE *fp)
 {
 	fprintf(fp,
@@ -62,13 +64,14 @@ void usage(FILE *fp)
 		"               in the same ROM. Add offset to start address.\n"
 		"  -A offset  same as `-a', but only print the start address of the next\n"
 		"               file in the ROM\n"
-		"  -V         print undefined and global labels\n"
+		"  -v         print undefined and global labels\n"
+		"  -vv        print undefined and global labels, and relocation tables\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n");
 }
 
 int main(int argc, char *argv[]) {
-	int i = 1, n, mode, hlen;
+	int i, j, n, mode, hlen;
 	FILE *fp;
 	char *aligntxt[4]= {"[align 1]","[align 2]","[align 4]","[align 256]"};
 	if(argc<=1) {
@@ -76,12 +79,14 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	if (strstr(argv[1], "--help")) {
+	i = 1;
+
+	if (strstr(argv[i], "--help") || strstr(argv[i], "-?")) {
           usage(stdout);
 	  exit(0);
 	}
 
-	if (strstr(argv[1], "--version")) {
+	if (strstr(argv[i], "--version")) {
           version(programname, progversion, author, copyright);
 	  exit(0);
 	}
@@ -90,11 +95,12 @@ int main(int argc, char *argv[]) {
 	  if(argv[i][0]=='-') {
 	    /* process options */
 	    switch(argv[i][1]) {
-	    case 'V':
-		labels = 1;
-		break;
 	    case 'v':
-		printf("file65: Version 0.2\n");
+		j = 1;
+		while (argv[i][j] == 'v') {
+			verbose ++;
+			j++;
+		}
 		break;
 	    case 'a':
 	    case 'A':
@@ -142,7 +148,7 @@ int main(int argc, char *argv[]) {
 		      printf(" zero segment @ $%04x - $%04x [$%04x bytes]\n", hdr[21]*256+hdr[20], hdr[21]*256+hdr[20]+hdr[23]*256+hdr[22], hdr[23]*256+hdr[22]);
 		      printf(" stack size $%04x bytes %s\n", hdr[25]*256+hdr[24],
 				(hdr[25]*256+hdr[24])==0?"(i.e. unknown)":"");
-		      if(labels) {
+		      if(verbose) {
 			read_options(fp);
 			print_labels(fp,  hdr[11]*256+hdr[10] +  hdr[15]*256+hdr[14]);
 		      }
@@ -231,13 +237,13 @@ void print_option(unsigned char *buf, int len) {
 }
 
 int read_options(FILE *fp) {
-	int c, l=0;
+	int c, d, l=0;
 	unsigned char tb[256];
 
 	c=fgetc(fp); l++;
 	while(c && c!=EOF) {
 	  c&=255;
-	  fread(tb, 1, c-1, fp);
+	  d = fread(tb, 1, c-1, fp);
 	  if(labels) print_option(tb, c);
 	  l+=c;
 	  c=fgetc(fp);
@@ -247,10 +253,16 @@ int read_options(FILE *fp) {
 
 int print_labels(FILE *fp, int offset) {
 	int i, nud, c, seg, off;
+	const char *segments[] = { "undef", "abs", "text", "data", "bss", "zero" };
+	const char *reltype[] = { "-", "LOW", "HIGH", "-", "WORD", "SEG", "SEGADDR" };
+
 /*
 printf("print_labels:offset=%d\n",offset);
 */
 	fseek(fp, offset, SEEK_CUR);
+
+	// -----------------------------------------------------------
+	// print undefined labels
 
 	nud = (fgetc(fp) & 0xff);
 	nud += ((fgetc(fp) << 8) & 0xff00);
@@ -269,25 +281,59 @@ printf("print_labels:offset=%d\n",offset);
 	  printf("\n");
 	}
 
+	// ---------------------------------------------------------
+	// skip relocation tables
+
+	// two tables, one for text one for data
 	for(i=0;i<2;i++) {
+	 unsigned char lowbyte;
+	 unsigned short index;
+	 unsigned short offset = 0;
+
+	 if (verbose > 1) {
+		 printf("Relocation table for %s:\n", i ? "text":"data");
+	 }
+
 	 c=fgetc(fp);
 	 while(c && c!=EOF) {
 	  c&= 0xff;
 	  while(c == 255 && c!= EOF) {
+ 	    offset += 254;
 	    c=fgetc(fp);
 	    if(c==EOF) break;
 	    c&= 0xff;
 	  }
 	  if(c==EOF) break;
+ 	  offset += c;
 
 	  c=fgetc(fp);
-	  if( (c & 0xe0) == 0x40 ) fgetc(fp);
-	  if( (c & 0x07) == 0 ) { fgetc(fp); fgetc(fp); }
-
+	  if( (c & 0xe0) == 0x40 ) {
+		  lowbyte = fgetc(fp);
+	  }
+	  if( (c & 0x07) == 0 ) {
+		  index = fgetc(fp) & 0xff;
+		  index += (fgetc(fp) & 0xff) << 8;
+	  }
+	  if (verbose > 1) {
+		printf("\t%d:%s(%s (%d)", offset, reltype[ (c>>5) & 0xf], segments[c & 0x07], (c&0x07));
+	  	if ( (c & 0xe0) == 0x40) {
+			printf(", %02x", lowbyte);
+		}
+		if ( (c & 0x07) == 0) {
+			printf(", %04x", index);
+		}
+		printf(")");
+	  }
 	  c=fgetc(fp);
+	 }
+	 if (verbose > 1) {
+		 printf("\n");
 	 }
 	}
 
+
+	// ---------------------------------------------------------
+	// print global labels
 	nud = (fgetc(fp) & 0xff);
 	nud += ((fgetc(fp) << 8) & 0xff00);
 	printf("Global Labels: %d\n", nud);

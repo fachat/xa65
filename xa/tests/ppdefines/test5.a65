@@ -1,0 +1,28 @@
+
+	; this tests the double-slash quote in lines with various disturbances...
+
+	lda #1		; test1
+
+	lda #2/1	; test2 with a constant division
+
+	lda #3*2	; test3 with multi
+
+	lda #4<<1	; test with shift left
+	lda #4>>1	; test with shift right
+
+	lda #"/"	; test with quotes
+
+	lda #'/'	; test with single quotes
+
+	.byt "/", "/", '/'	; test with multiple quotes
+
+	; test with comments in quotes
+	.byt "//"	; test with comment in quotes
+
+	; tests with escaped and quoted quotes
+	.byt '"'	; test xa65 specific escape code
+	.byt '"'	; test
+
+	.byt "'"	; test xa65 specific escape code
+	.byt "'"	; test
+

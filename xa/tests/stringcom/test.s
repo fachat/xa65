@@ -9,13 +9,10 @@
     .asc "SIEy256SN" // baz
 	.asc "PASS/*PASS*///PASS//PASS"
 
-#if(0)
-/* enable when backslashed quotes are supported in 2.4 */
 	.asc "PASS\"\\PASS/*PASS*///PASS//\"\\PASS"
-#endif
 
 	.asc "SIE/*256*/N"
-	/* .asc "SIE/*256*/N"
+	/* .asc "SIE/*256
 	.asc "FAIL"
 	*/ .asc "PASS" // .asc "FAIL" /* .asc "FAIL*/" */
 

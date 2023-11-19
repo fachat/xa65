@@ -1,0 +1,24 @@
+
+; tests the html listing feature with blocks that 
+; contain the same label names, but in different scopes
+
+	.org $1000
+
+:	lda #$00
+
+	.scope
+:	sta $02
+:	bne :-
+	.endscope
+
+	.scope
+@label2: lda $02		; again!
+	bne @label2
+	.endscope
+
+label2:	iny
+	beq label2
+
+	beq :---
+	jmp :--
+

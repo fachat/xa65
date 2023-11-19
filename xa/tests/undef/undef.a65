@@ -1,0 +1,23 @@
+
+	.text
+
+	lda l1
+
+	*=$2000
+
+#ifdef FAIL
+	lda l2
+#endif
+
+	*=
+
+	lda l3
+
+	.(
+
+	lda l4
+
+	.)
+l4=1
+	lda l5
+l5
