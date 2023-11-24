@@ -653,7 +653,7 @@ int ll_search(char *s, int *n, xalabel_t cll_fl)          /* search Label in Tab
           {
                for (k=0;(k<j)&&(ltp->n[k]==s[k]);k++);
 
-	       if (cll_fl == CHEAP) {
+	       if ( (j == k) && cll_fl == CHEAP) {
 			if (ltp->blk == cll_getcur()) {
 				er=E_OK;
 				break;
