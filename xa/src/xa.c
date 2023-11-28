@@ -535,10 +535,6 @@ int main(int argc,char *argv[])
 		   sprintf(out,"Warning: bss segment ($%04x) start address doesn't align to %d!\n", bbase, align);
 		   logout(out);
 	       }
-	       if(zbase & (align-1)) {
-		   sprintf(out,"Warning: zero segment ($%04x) start address doesn't align to %d!\n", zbase, align);
-		   logout(out);
-	       }
                if (n65816>0)
                    fmode |= 0x8000;
 	       switch(align) {

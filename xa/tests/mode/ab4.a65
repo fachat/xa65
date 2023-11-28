@@ -1,0 +1,6 @@
+
+	.align 4
+
+	.bss
+	.byt 0
+

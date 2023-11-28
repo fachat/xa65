@@ -418,7 +418,7 @@ int main(int argc, char *argv[]) {
 	    }
 	}
 	if (maxalign) {
-		printf("Info: file %s requires alignment at %d-boundaries\n", alignfname, maxalign + 1);
+		printf("Info: Alignment at %d-boundaries required\n", maxalign + 1);
 	}
 	switch (maxalign) {
 	case 0:
@@ -447,19 +447,22 @@ int main(int argc, char *argv[]) {
 	// then check start addresses
 	file = fp[0];
 	if (file->align != 0) {
-		int er = 1;
+		int er = 0;
 		if (tbase & file->align) {
-			fprintf(stderr, "Error: text segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+			fprintf(stderr, "Error: text segment start address ($%04x) "
+				"not aligned as required by first file (at %d bytes)\n", 
 				tbase, file->align + 1);
 			er = 1;
 		}
 		if (dbase & file->align) {
-			fprintf(stderr, "Error: data segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+			fprintf(stderr, "Error: data segment start address ($%04x) "
+				"not aligned as required by first file (at %d bytes)\n", 
 				dbase, file->align + 1);
 			er = 1;
 		}
 		if (bbase & file->align) {
-			fprintf(stderr, "Error: bss segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+			fprintf(stderr, "Error: bss segment start address ($%04x) "
+				"not aligned as required (by first file at %d bytes)\n", 
 				bbase, file->align + 1);
 			er = 1;
 		}
@@ -473,14 +476,30 @@ int main(int argc, char *argv[]) {
 	  file = fp[i];
 
 	  /* compute align fillers */
-	  file->talign = file->align - ((tbase + ttlen) & file->align);
-	  file->dalign = file->align - ((dbase + tdlen) & file->align);
-	  file->balign = file->align - ((bbase + tblen) & file->align);
+	  file->talign = 0;
+	  file->dalign = 0;
+	  file->balign = 0;
+	  // filler only needed if align not zero ...
+	  if (file->align) {
+		// ... and respective segment not empty
+		if (file->tlen) {
+			//file->talign = file->align + 1 - ((tbase + ttlen) & file->align);
+			file->talign = ( -((tbase + ttlen) & file->align) ) & file->align;
+		}
+		if (file->dlen) {
+			//file->dalign = file->align + 1 - ((dbase + tdlen) & file->align);
+			file->dalign = ( -((dbase + tdlen) & file->align) ) & file->align;
+		}
+		if (file->blen) {
+			//file->balign = file->align + 1 - ((bbase + tblen) & file->align);
+			file->balign = ( -((bbase + tblen) & file->align) ) & file->align;
+		}
+	  }
 
 	  /* insert align fillers */
 	  ttlen += file->talign;
-	  tdlen += file->talign;
-	  tblen += file->talign;
+	  tdlen += file->dalign;
+	  tblen += file->balign;
 
 	  /* compute relocation differences */
 	  file->tdiff =  ((tbase + ttlen) - file->tbase);
@@ -514,6 +533,31 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 	  tzlen += file->zlen;
 	}
 
+	// validate various situations.
+	if (maxalign != 0) {
+		int er = 0;
+		if (tbase & maxalign) {
+			fprintf(stderr, "Error: text segment start address ($%04x) "
+				"not aligned as first required by file %s (at %d bytes)\n", 
+				tbase, alignfname, maxalign + 1);
+			er = 1;
+		}
+		if (dbase & maxalign) {
+			fprintf(stderr, "Error: data segment start address ($%04x) "
+				"not aligned as first required by file %s (at %d bytes)\n", 
+				dbase, alignfname, maxalign + 1);
+			er = 1;
+		}
+		if (bbase & maxalign) {
+			fprintf(stderr, "Error: bss segment start address ($%04x) "
+				"not aligned as first required (by file %s (at %d bytes)\n", 
+				bbase, alignfname, maxalign + 1);
+			er = 1;
+		}
+		if (er) {
+			exit(1);
+		}
+	}
 	// validate various situations.
 	{
 		int er = 0;
@@ -659,7 +703,7 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 	//
 
 	// prepare header
-	hdr[ 6] = 0;           hdr[ 7] = 0;
+	hdr[ 6] = trgmode & 255;  hdr[ 7] = (trgmode>>8)& 255;
 	hdr[ 8] = tbase & 255; hdr[ 9] = (tbase>>8) & 255;
 	hdr[10] = ttlen & 255; hdr[11] = (ttlen >>8)& 255;
 	hdr[12] = dbase & 255; hdr[13] = (dbase>>8) & 255;

@@ -1,0 +1,6 @@
+
+	.align 256
+
+	.data
+	.byt 0
+
