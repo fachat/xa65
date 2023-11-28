@@ -140,11 +140,19 @@ int main(int argc,char *argv[])
      char old_o[MAXLINE];
 
      tim1=time(NULL);
-     
-     ncmos=0;
-     n65816=0;
+    
+     // note: unfortunately we do no full distinction between 65C02 and 65816.
+     // The conflict is in the column 7 and column f opcodes, where the 65C02
+     // has the BBR/BBS/SMB/RMB opcodes, but the 65816 has its own.
+     // Also, we potentially could support the 65SC02, which is the 65C02, but
+     // without the conflicting BBR/BBS/SMB/RMB opcodes.
+     // This, however, is a TODO for a later version.
      cmosfl=1;
+     //fmode = FM_CPU2_65C02;
      w65816=0;	/* default: 6502 only */
+
+     ncmos=0;	// counter for CMOS opcodes used
+     n65816=0;	// counter for 65816-specific opcodes used
 
      altppchar = '#' ; /* i.e., NO alternate char */
 
@@ -218,7 +226,7 @@ int main(int argc,char *argv[])
 		}
 		if (argv[i][2] == '#')
 			fprintf(stderr,
-				"using -p# is evidence of stupidity\n");
+				"using -p# is not necessary, '#' is the default\n");
 		altppchar = argv[i][2];
 		if (argv[i][3] != '\0')
 			fprintf(stderr,
@@ -299,12 +307,29 @@ int main(int argc,char *argv[])
 		break;
 	  case 'C':
 		cmosfl = 0;
+		fmode &= ~FM_CPU2;	// fall back to standard 6502
+		// breaks existing tests (compare with pre-assembled files)
+		//if (w65816) {
+		//	fmode |= FM_CPU2_65816E;
+		//}
 		break;
           case 'W':
                 w65816 = 0;
+		fmode &= ~FM_CPU;
+		fmode &= ~FM_CPU2;
+		// breaks existing tests (compare with pre-assembled files)
+		//if (cmosfl) {
+		//	fmode |= FM_CPU2_65C02;
+		//}
                 break;
           case 'w':
+		// note: we do not disable cmos here, as opcode tables note CMOS for
+		// opcodes common to both, CMOS and 65816 as well.
                 w65816 = 1;
+		fmode &= ~FM_CPU2;
+		// breaks existing tests (compare with pre-assembled files)
+		//fmode |= FM_CPU;	// 65816 bit
+		//fmode |= FM_CPU2_65816E;// 6502 in 65816 emu, to manage opcode compatibility in ldo65
                 break;
 	  case 'B':
 		showblk = 1;
@@ -612,32 +637,6 @@ int h_length(void) {
 	return 26+o_length();
 }
 
-#if 0
-/* write header for relocatable output format */
-int h_write(FILE *fp, int tbase, int tlen, int dbase, int dlen, 
-				int bbase, int blen, int zbase, int zlen) {
-
-	fputc(1, fp);			/* version byte */
-	fputc(0, fp);			/* hi address 0 -> no C64 */
-	fputc("o", fp);
-	fputc("6", fp);
-	fputc("5", fp);			
-	fputc(0, fp);			/* format version */
-	fputw(mode, fp);		/* file mode */
-	fputw(tbase,fp);		/* text base */
-	fputw(tlen,fp);			/* text length */
-	fputw(dbase,fp);		/* data base */
-	fputw(dlen,fp);			/* data length */
-	fputw(bbase,fp);		/* bss base */
-	fputw(blen,fp);			/* bss length */
-	fputw(zbase,fp);		/* zerop base */
-	fputw(zlen,fp);			/* zerop length */
-
-	o_write(fp);
-
-	return 0;
-}
-#endif
 
 static int setfext(char *s, char *ext)
 {
@@ -665,11 +664,6 @@ static int setfext(char *s, char *ext)
      return(0);
 }
 
-/*
-static char *tmp;
-static unsigned long tmpz;
-static unsigned long tmpe;
-*/
 
 static long ga_p1(void)
 {

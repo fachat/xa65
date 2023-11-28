@@ -67,12 +67,21 @@ typedef struct {
 	size_t		fsize;		/* length of file */
 	unsigned char	*buf;		/* file content */
 
+	int		mode;		/* mode value */	
+	int		align;		/* align value */
+
 	int		tbase;		/* header: text base */
 	int		tlen;		/* text length */
+	int		talign;		/* insert to get correct alignment */
+
 	int		dbase;		/* data base */
 	int		dlen;		/* data length */
+	int		dalign;		/* insert to get correct alignment */
+
 	int		bbase;		/* bss base */
 	int		blen;		/* bss length */
+	int		balign;		/* insert to get correct alignment */
+
 	int		zbase;		/* zero base */
 	int		zlen;		/* zero length */
 
@@ -150,6 +159,7 @@ int main(int argc, char *argv[]) {
 	int noglob=0;
 	int undefok=0;
 	int i = 1;
+	// default output segment addresses, overwritten by cmdline params
 	int tbase = 0x0400, dbase = 0x1000, bbase = 0x4000, zbase = 0x0002;
 	int ttlen, tdlen, tblen, tzlen, routtlen, routdlen, tro, dro;
 	int lasttaddr, lastdaddr;
@@ -158,8 +168,11 @@ int main(int argc, char *argv[]) {
 	int j, jm;
 	file65 *file, **fp = NULL;
 	FILE *fd;
-	int nundef = 0;	// counter/index in list of remaining undef'd labels
-
+	int nundef = 0;		// counter/index in list of remaining undef'd labels
+	int maxalign;		// maximum alignment over all files
+	char *alignfname;	// (first) file that requires that alignment
+	int trgmode = 0;	// mode for the output file
+	char alignbuf[256];	// to efficiently write align fillers
 	char *arg;
 
 	char **defined = NULL;	
@@ -283,6 +296,146 @@ int main(int argc, char *argv[]) {
 	}
 
 	// -------------------------------------------------------------------------
+	// compute target file mode value
+
+	// compute target mode and max align value
+	trgmode = 0;
+	maxalign = 0;
+	alignfname = "<none>";
+	{
+	    int er = 0;
+	    int trgcpu = 0;
+	    const char *modenames[16] = {
+		"documented 6502",
+		"65C02 (CMOS with BBR/BBS/RMB/SMB)",
+		"65SC02 (CMOS without BBR/BBS/RMB/SMB)",
+		"65CE02",
+		"6502 with undocumented opcodes",
+		"65816 in 6502 emulation mode",
+		"n/a", "n/a"
+		"6809?", "n/a",				// 1000 -
+		"Z80?", "n/a", "n/a", 			// 1010 -
+		"8086?",				// 1101 -
+		"80286?",				// 1110 -
+		"n/a"
+	    };
+	    for(i=0;i<j;i++) {
+		int fcpu;
+		file = fp[i];
+		if (file->align > maxalign) {
+			maxalign = file->align;
+			alignfname = file->fname;
+		}
+		if (file->mode & 0x8000) {
+			// 65816
+			trgmode |= 0x8000;
+			if (trgcpu == 4) {
+				fprintf(stderr, "Error: file '%s' in 65816 CPU mode is incompatible with previous NMOS undocumented opcodes CPU mode\n",
+					file->fname);
+				er = 1;
+			}
+		}
+		if (file->mode & 0x0200) {
+			// zero out bss
+			trgmode |= 0x0200;
+		}
+		// CPU bits
+		fcpu = (file->mode & 0x00f0) >> 4;
+		switch (fcpu) {
+		case 0x0:	// bare minimum documented 6502 is just fine
+			break;
+
+		case 0x1: 	// 65C02 - CMOS with BBR/BBS/RMB/SMB, incompatible with 65816
+		case 0x3: 	// 65CE02 - CMOS with BBR/... and add'l opcodes, incompatible w/ 65816
+			if (trgmode & 0x8000 || trgcpu == 5) {
+				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) "
+					"is incompatible with previous 65816 CPU mode\n",
+					file->fname, fcpu, modenames[fcpu]);
+				er = 1;
+			}
+			// fall-through
+		case 0x2: 	// 65SC02 - CMOS without BBR/BBS/RMB/SMB, compatible with 65816
+		case 0x5: 	// 65816 in 6502 emulation mode
+ 			if (trgcpu == 4) {
+				// is incompatible with nmos6502 with undocumented opcodes
+				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) "
+					"is incompatible with previous files with mode %d (%s)\n",
+					file->fname, fcpu, modenames[fcpu], trgcpu, modenames[trgcpu]);
+				er = 1;
+			}
+			break;
+
+		case 0x4: 	// NMOS 6502 with undocumented opcodes
+ 			if (trgcpu == 1 || trgcpu == 2 || trgcpu == 3 || trgcpu == 5) {
+				// is incompatible with nmos6502 with undocumented opcodes
+				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) is "
+					"incompatible with previous files with mode %d (%s)\n",
+					file->fname, fcpu, modenames[fcpu], trgcpu, modenames[trgcpu]);
+				er = 1;
+			}
+			if (trgmode & 0x8000) {
+				fprintf(stderr, "Error: file '%s' in mode %d (%s) is incompatible with previous 65816 CPU mode\n",
+					file->fname, 4, modenames[4]);
+				er = 1;
+			}
+			break;
+		default:
+			if (fcpu > 5) {
+				printf("Warning: unknown CPU mode %d (%s) detected in file %s\n",
+					fcpu, modenames[fcpu], file->fname);
+			}
+			break;
+		}
+		// setting the new mode
+		switch (fcpu) {
+		case 0x0:		// compatible with everything, no change
+			break;
+		case 0x3: 		// 65CE02 -> supersedes 6502, 65SC02, and 65C02
+			if (trgcpu == 1) {
+				// 65C02
+				trgcpu = fcpu;
+			}
+			// fall-through
+		case 0x5: 		// 65816 in 6502 emu mode, supersedes documented NMOS and 65SC02
+		case 0x1:		// CMOS w/ BBR.. -> supersedes documented NMOS and 65SC02
+			if (trgcpu == 2) {
+				// 65SC02
+				trgcpu = fcpu;
+			}
+			// fall-through
+		case 0x2:		// 65SC02 -> supersedes only NMOS 6502
+		case 0x4: 		// NMOS 6502 w/ undocumented opcodes
+		default:
+			if (trgcpu == 0) {
+				// NMOS 6502
+				trgcpu = fcpu;
+			}
+			break;
+		}
+	    }
+	    if (er) {
+		exit(1);
+	    }
+	}
+	if (maxalign) {
+		printf("Info: file %s requires alignment at %d-boundaries\n", alignfname, maxalign + 1);
+	}
+	switch (maxalign) {
+	case 0:
+		break;
+	case 1:
+		trgmode |= 1;
+		break;
+	case 3:
+		trgmode |= 2;
+		break;
+	case 255:
+		trgmode |= 3;
+		break;
+	}
+
+
+	// -------------------------------------------------------------------------
 	// step 2 - calculate new segment base addresses per file, by 
 	//          concatenating the segments per type
 
@@ -290,9 +443,44 @@ int main(int argc, char *argv[]) {
 	/* set total length to zero */
 	ttlen = tdlen = tblen = tzlen = 0;
 
+
+	// then check start addresses
+	file = fp[0];
+	if (file->align != 0) {
+		int er = 1;
+		if (tbase & file->align) {
+			fprintf(stderr, "Error: text segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+				tbase, file->align + 1);
+			er = 1;
+		}
+		if (dbase & file->align) {
+			fprintf(stderr, "Error: data segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+				dbase, file->align + 1);
+			er = 1;
+		}
+		if (bbase & file->align) {
+			fprintf(stderr, "Error: bss segment start address ($%04x) not aligned as required (at %d bytes)\n", 
+				bbase, file->align + 1);
+			er = 1;
+		}
+		if (er) {
+			exit(1);
+		}
+	}
+
 	/* find new addresses for the files and read globals */
 	for(i=0;i<j;i++) {
 	  file = fp[i];
+
+	  /* compute align fillers */
+	  file->talign = file->align - ((tbase + ttlen) & file->align);
+	  file->dalign = file->align - ((dbase + tdlen) & file->align);
+	  file->balign = file->align - ((bbase + tblen) & file->align);
+
+	  /* insert align fillers */
+	  ttlen += file->talign;
+	  tdlen += file->talign;
+	  tblen += file->talign;
 
 	  /* compute relocation differences */
 	  file->tdiff =  ((tbase + ttlen) - file->tbase);
@@ -309,13 +497,13 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 
 	  if (verbose > 0) {
 		  printf("Relocating file: %s\n", file->fname);
-		  printf("    text: from %04x to %04x (diff is %04x, length is %04x)\n",
-				  file->tbase, file->tbase + file->tdiff, file->tdiff, file->tlen);
-		  printf("    data: from %04x to %04x (diff is %04x, length is %04x)\n",
-				  file->dbase, file->dbase + file->ddiff, file->ddiff, file->dlen);
-		  printf("    bss:  from %04x to %04x (diff is %04x, length is %04x)\n",
-				  file->bbase, file->bbase + file->bdiff, file->bdiff, file->blen);
-		  printf("    zero: from %02x to %02x (diff is %02x, length is %02x)\n",
+		  printf("    text: align fill %04x, relocate from %04x to %04x (diff is %04x, length is %04x)\n",
+				  file->talign, file->tbase, file->tbase + file->tdiff, file->tdiff, file->tlen);
+		  printf("    data: align fill %04x, relocate from %04x to %04x (diff is %04x, length is %04x)\n",
+				  file->dalign, file->dbase, file->dbase + file->ddiff, file->ddiff, file->dlen);
+		  printf("    bss:  align fill %04x, relocate from %04x to %04x (diff is %04x, length is %04x)\n",
+				  file->balign, file->bbase, file->bbase + file->bdiff, file->bdiff, file->blen);
+		  printf("    zero: relocate from %02x to %02x (diff is %02x, length is %02x)\n",
 				  file->zbase, file->zbase + file->zdiff, file->zdiff, file->zlen);
 	  }
 
@@ -499,13 +687,22 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 	}
 	fputc(0,fd);
 
+	// align filler is NOP, just in case
+	memset(alignbuf, 0xea, sizeof(alignbuf));
+
 	// write text segment 
 	for(i=0;i<j;i++) {
+	  if (fp[i]->talign) {
+	    fwrite(alignbuf, 1, fp[i]->talign, fd);
+	  }
 	  fwrite(fp[i]->buf + fp[i]->tpos, 1, fp[i]->tlen, fd);
 	}
 
 	// write data segment 
 	for(i=0;i<j;i++) {
+	  if (fp[i]->dalign) {
+	    fwrite(alignbuf, 1, fp[i]->dalign, fd);
+	  }
 	  fwrite(fp[i]->buf + fp[i]->dpos, 1, fp[i]->dlen, fd);
 	}
 
@@ -732,6 +929,7 @@ file65 *load_file(char *fname) {
 	struct stat fs;
 	FILE *fp;
 	int mode, hlen;
+	int align;
 	size_t n;
 
 	file=malloc(sizeof(file65));
@@ -757,6 +955,7 @@ file65 *load_file(char *fname) {
 	  fclose(fp);
 	  if((n>=file->fsize) && (!memcmp(file->buf, cmp, 5))) {
 	    mode=file->buf[7]*256+file->buf[6];
+	    file->mode = mode;
 	    if(mode & 0x2000) {
 	      fprintf(stderr,"file65: %s: 32 bit size not supported\n", fname);
 	      free(file->buf); free(file); file=NULL;
@@ -766,14 +965,38 @@ file65 *load_file(char *fname) {
 									fname);
 	      free(file->buf); free(file); file=NULL;
 	    } else {
+
+	      align = mode & 3;
+	      switch(align) {
+	      case 0:
+		align = 0;
+		break;
+	      case 1:
+		// word align
+		align = 1;
+		break;
+	      case 2:
+		// long align
+		align = 3;
+		break;
+	      case 3:
+		// page align
+		align = 255;
+		break;
+	      }
+	      file->align = align;
+
 	      hlen = BUF+read_options(file->buf+BUF);
 		  
 	      file->tbase = file->buf[ 9]*256+file->buf[ 8];
 	      file->tlen  = file->buf[11]*256+file->buf[10];
+	      file->talign= 0;
 	      file->dbase = file->buf[13]*256+file->buf[12];
 	      file->dlen  = file->buf[15]*256+file->buf[14];
+	      file->dalign= 0;
 	      file->bbase = file->buf[17]*256+file->buf[16];
 	      file->blen  = file->buf[19]*256+file->buf[18];
+	      file->balign= 0;
 	      file->zbase = file->buf[21]*256+file->buf[20];
 	      file->zlen  = file->buf[23]*256+file->buf[22];
 

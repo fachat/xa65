@@ -5,8 +5,8 @@ CC = gcc
 LD = gcc
 # for testing. not to be used; build failures in misc/.
 #CFLAGS = -O2 -W -Wall -pedantic -ansi
-#CFLAGS = -O2 -g
-CFLAGS = -O2 
+CFLAGS = -g
+#CFLAGS = -O2 
 LDFLAGS = -lc
 
 # for DOS?
