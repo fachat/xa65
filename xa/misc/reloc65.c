@@ -34,6 +34,21 @@
 #define author		"Written by Andre Fachat"
 #define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
+/* o65 file format mode bits */
+#define FM_OBJ          0x1000
+#define FM_SIZE         0x2000
+#define FM_RELOC        0x4000
+#define FM_CPU          0x8000
+
+#define FM_CPU2         0x00f0
+
+#define FM_CPU2_6502    0x0000
+#define FM_CPU2_65C02   0x0010
+#define FM_CPU2_65SC02  0x0020
+#define FM_CPU2_65CE02  0x0030
+#define FM_CPU2_NMOS    0x0040
+#define FM_CPU2_65816E  0x0050
+
 typedef struct {
 	char 		*fname;
 	size_t 		fsize;
@@ -74,13 +89,32 @@ void usage(FILE *fp)
 		"  -X         extracts the file such that text and data\n"
 		"               segments are chained, i.e. possibly relocating\n"
 		"               the data segment to the end of the text segment\n" 
+		"  -C <CPU>   Set the o65 CPU flags in the output for the following CPUs:\n"
+		"               6502, 65SC02, 65C02, 65CE02, 65816, NMOS6502\n"
+		"               (for details see the man page)\n"
 		"  -v         verbose output\n"
 		"  --version  output version information and exit\n"
 		"  --help     display this help and exit\n");
 }
 
+const char *cpunames[16] = {
+               "6502",
+               "65C02",
+               "65SC02",
+               "65CE02",
+               "NMOS6502",
+               "65816",
+               NULL, NULL,
+               "6809", NULL,                          // 1000 -
+               "Z80", NULL, NULL,                     // 1010 -
+               "8086",                                // 1101 -
+               "80286",                               // 1110 -
+               NULL
+};
+
 int main(int argc, char *argv[]) {
 	int i = 1, mode, hlen;
+	int j;
 	size_t n;
 	FILE *fp;
 	int tflag = 0, dflag = 0, bflag = 0, zflag = 0;
@@ -89,13 +123,15 @@ int main(int argc, char *argv[]) {
 	char *outfile = "a.o65";
 	int extract = 0;
 	int verbose = 0;
+	int trgcpu = -1;	// output file target CPU flag (-1 = do not change)
+	char *arg;		// temporary argument pointer
 
 	if (argc <= 1) {
 	  usage(stderr);
 	  exit(1);
 	}
 
-	if (strstr(argv[1], "--help") || strstr(argv[1], "-?")) {
+	if (strstr(argv[1], "--help") || strstr(argv[1], "-?") || strstr(argv[1], "-h")) {
           usage(stdout);
 	  exit(0);
 	}
@@ -106,6 +142,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	while(i<argc) {
+	  arg = NULL;
 	  if(argv[i][0]=='-') {
 	    /* process options */
 	    switch(argv[i][1]) {
@@ -166,8 +203,27 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		break;
+	    case 'C':
+		if(argv[i][2]) arg=argv[i]+2;
+		else if(i + 1 < argc) arg=argv[++i];
+		if (arg == NULL) {
+			printf("Missing CPU parameter to -C - ignored\n");
+			break;
+		}
+		for(j = 0; j < 16; j++) {
+			if (cpunames[j] != NULL && !strcmp(arg, cpunames[j])) {
+				break;
+			}
+		}
+		if (j == 16) {
+			printf("Unknown CPU identifier '%s' for -C - ignored\n",
+				arg);
+		} else {
+			trgcpu = j;
+		}
+		break;
 	    default:
-		fprintf(stderr,"%s: %s unknown option, use '-?' for help\n",programname,argv[i]);
+		fprintf(stderr,"%s: %s unknown option, use '-h' for help\n",programname,argv[i]);
 		break;
 	    }
 	  } else {
@@ -187,12 +243,26 @@ int main(int argc, char *argv[]) {
 	      fclose(fp);
 	      if((n>=file.fsize) && (!memcmp(file.buf, cmp, 5))) {
 		mode=file.buf[7]*256+file.buf[6];
-		if(mode & 0x2000) {
+		if(mode & FM_SIZE) {
 	          fprintf(stderr,"reloc65: %s: 32 bit size not supported\n", argv[i]);
 		} else
-		if(mode & 0x4000) {
+		if(mode & FM_RELOC) {
 	          fprintf(stderr,"reloc65: %s: pagewise relocation not supported\n", argv[i]);
 		} else {
+		  if (trgcpu >= 0) {
+			// change CPU flags
+			mode &= ~FM_CPU;
+			mode &= ~FM_CPU2;
+			mode |= (trgcpu << 4);
+			if (trgcpu == 5) {
+				// this trgcpu is actually 65816 in emulation mode
+				// unsure if we should do an own cmdline option
+				mode |= FM_CPU;		// 65816 native
+			}
+		  }
+		  file.buf[6] = mode & 0xff;
+		  file.buf[7] = (mode >> 8) & 0xff;
+
 		  hlen = BUF+read_options(file.buf+BUF);
 		  
 		  file.tbase = file.buf[ 9]*256+file.buf[ 8];

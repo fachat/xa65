@@ -54,6 +54,22 @@ The process of linking works as follows:
 
 */
 
+/* o65 file format mode bits */
+#define FM_OBJ          0x1000
+#define FM_SIZE         0x2000
+#define FM_RELOC        0x4000
+#define FM_CPU          0x8000
+
+#define FM_CPU2         0x00f0
+
+#define FM_CPU2_6502    0x0000
+#define FM_CPU2_65C02   0x0010
+#define FM_CPU2_65SC02  0x0020
+#define FM_CPU2_65CE02  0x0030
+#define FM_CPU2_NMOS    0x0040
+#define FM_CPU2_65816E  0x0050
+
+
 typedef struct {
 	char	*name;
 	int	len;
@@ -133,6 +149,21 @@ file65 file;
 unsigned char cmp[] = { 1, 0, 'o', '6', '5' };
 unsigned char hdr[26] = { 1, 0, 'o', '6', '5', 0 };
 
+const char *cpunames[16] = {
+	"documented 6502",
+	"65C02 (CMOS with BBR/BBS/RMB/SMB)",
+	"65SC02 (CMOS without BBR/BBS/RMB/SMB)",
+	"65CE02",
+	"6502 with undocumented opcodes",
+	"65816 in 6502 emulation mode",
+	"n/a", "n/a",
+	"6809?", "n/a",				// 1000 -
+	"Z80?", "n/a", "n/a", 			// 1010 -
+	"8086?",				// 1101 -
+	"80286?",				// 1110 -
+	"n/a"
+};
+
 int verbose = 0;
 
 void usage(FILE *fp)
@@ -189,7 +220,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	if (strstr(argv[1], "--help") || strstr(argv[1], "-?")) {
+	if (strstr(argv[1], "--help") || strstr(argv[1], "-?") || strstr(argv[1], "-h")) {
           usage(stdout);
 	  exit(0);
 	}
@@ -201,6 +232,7 @@ int main(int argc, char *argv[]) {
 
 	/* read options */
 	while(i<argc && argv[i][0]=='-') {
+	    arg = NULL;
 	    /* process options */
 	    switch(argv[i][1]) {
 	    case 'v':
@@ -271,7 +303,7 @@ int main(int argc, char *argv[]) {
 		}
 		break;
 	    default:
-		fprintf(stderr,"file65: %s unknown option, use '-?' for help\n",argv[i]);
+		fprintf(stderr,"file65: %s unknown option, use '-h for help\n",argv[i]);
 		break;
 	    }
 	    i++;
@@ -305,20 +337,10 @@ int main(int argc, char *argv[]) {
 	{
 	    int er = 0;
 	    int trgcpu = 0;
-	    const char *modenames[16] = {
-		"documented 6502",
-		"65C02 (CMOS with BBR/BBS/RMB/SMB)",
-		"65SC02 (CMOS without BBR/BBS/RMB/SMB)",
-		"65CE02",
-		"6502 with undocumented opcodes",
-		"65816 in 6502 emulation mode",
-		"n/a", "n/a"
-		"6809?", "n/a",				// 1000 -
-		"Z80?", "n/a", "n/a", 			// 1010 -
-		"8086?",				// 1101 -
-		"80286?",				// 1110 -
-		"n/a"
-	    };
+	    if (verbose) {
+		printf("Starting CPU type calculation with mode %s (%d) ...\n",
+		cpunames[trgcpu], trgcpu);
+	    }
 	    for(i=0;i<j;i++) {
 		int fcpu;
 		file = fp[i];
@@ -340,7 +362,11 @@ int main(int argc, char *argv[]) {
 			trgmode |= 0x0200;
 		}
 		// CPU bits
-		fcpu = (file->mode & 0x00f0) >> 4;
+		fcpu = (file->mode & FM_CPU2) >> 4;
+		if (verbose) {
+			printf("Matching file %s with CPU %s (%d) to target %s (%d) ...\n",
+				file->fname, cpunames[fcpu], fcpu, cpunames[trgcpu], trgcpu);
+		}
 		switch (fcpu) {
 		case 0x0:	// bare minimum documented 6502 is just fine
 			break;
@@ -350,17 +376,26 @@ int main(int argc, char *argv[]) {
 			if (trgmode & 0x8000 || trgcpu == 5) {
 				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) "
 					"is incompatible with previous 65816 CPU mode\n",
-					file->fname, fcpu, modenames[fcpu]);
+					file->fname, fcpu, cpunames[fcpu]);
 				er = 1;
 			}
 			// fall-through
 		case 0x2: 	// 65SC02 - CMOS without BBR/BBS/RMB/SMB, compatible with 65816
-		case 0x5: 	// 65816 in 6502 emulation mode
  			if (trgcpu == 4) {
 				// is incompatible with nmos6502 with undocumented opcodes
 				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) "
 					"is incompatible with previous files with mode %d (%s)\n",
-					file->fname, fcpu, modenames[fcpu], trgcpu, modenames[trgcpu]);
+					file->fname, fcpu, cpunames[fcpu], trgcpu, cpunames[trgcpu]);
+				er = 1;
+			}
+			break;
+
+		case 0x5: 	// 65816 in 6502 emulation mode
+ 			if (trgcpu == 1 || trgcpu == 3) {
+				// 65C02 and 65CE02 are incompatible with nmos6502 with undocumented opcodes
+				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) is "
+					"incompatible with previous files with mode %d (%s)\n",
+					file->fname, fcpu, cpunames[fcpu], trgcpu, cpunames[trgcpu]);
 				er = 1;
 			}
 			break;
@@ -370,19 +405,19 @@ int main(int argc, char *argv[]) {
 				// is incompatible with nmos6502 with undocumented opcodes
 				fprintf(stderr, "Error: file '%s' in CPU mode %d (%s) is "
 					"incompatible with previous files with mode %d (%s)\n",
-					file->fname, fcpu, modenames[fcpu], trgcpu, modenames[trgcpu]);
+					file->fname, fcpu, cpunames[fcpu], trgcpu, cpunames[trgcpu]);
 				er = 1;
 			}
 			if (trgmode & 0x8000) {
 				fprintf(stderr, "Error: file '%s' in mode %d (%s) is incompatible with previous 65816 CPU mode\n",
-					file->fname, 4, modenames[4]);
+					file->fname, 4, cpunames[4]);
 				er = 1;
 			}
 			break;
 		default:
 			if (fcpu > 5) {
 				printf("Warning: unknown CPU mode %d (%s) detected in file %s\n",
-					fcpu, modenames[fcpu], file->fname);
+					fcpu, cpunames[fcpu], file->fname);
 			}
 			break;
 		}
@@ -412,10 +447,15 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		}
+		if (verbose && !er) {
+			printf("... to new target %s (%d)\n",
+				cpunames[trgcpu], trgcpu);
+		}
 	    }
 	    if (er) {
 		exit(1);
 	    }
+	    trgmode |= trgcpu << 4;
 	}
 	if (maxalign) {
 		printf("Info: Alignment at %d-boundaries required\n", maxalign + 1);
@@ -515,7 +555,7 @@ printf("zbase=%04x+len=%04x->%04x, file->zbase=%04x, f.zlen=%04x -> zdiff=%04x\n
 */
 
 	  if (verbose > 0) {
-		  printf("Relocating file: %s\n", file->fname);
+		  printf("Relocating file: %s [CPU %s]\n", file->fname, cpunames[((file->mode & FM_CPU2) >> 4) & 0x0f]);
 		  printf("    text: align fill %04x, relocate from %04x to %04x (diff is %04x, length is %04x)\n",
 				  file->talign, file->tbase, file->tbase + file->tdiff, file->tdiff, file->tlen);
 		  printf("    data: align fill %04x, relocate from %04x to %04x (diff is %04x, length is %04x)\n",

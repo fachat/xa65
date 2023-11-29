@@ -47,6 +47,15 @@ file. Relocating data segment to the end of the text segment and
 bss segment to the end of the data segment
 (\-xd and \-xb options override the derived address) before extracting.
 .TP
+.B \-C cputype
+Define a new CPU type for the output file. Available values are
+"6502" - documented 6502 opcodes only
+"NMOS6502" - "6502" plus undocumented opcodes are being used
+"65SC02" - extends "6502" with the CMOS opcodes, except BBR/BBS/SMB/RMB
+"65C02" - extends "65SC02" with the BBR/BBS/SMB/RMB opcodes
+"65CE02" - extends 65C02 with additional CE-specific opcodes
+"65816" - i.e. 65816 in 6502 emulation mode; extends "65SC02"(!) 
+.TP
 .B \-\-help
 Show summary of options.
 .TP

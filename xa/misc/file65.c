@@ -37,6 +37,36 @@
 #define author		"Written by Andre Fachat"
 #define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
+/* o65 file format mode bits */
+#define FM_OBJ          0x1000
+#define FM_SIZE         0x2000
+#define FM_RELOC        0x4000
+#define FM_CPU          0x8000
+
+#define FM_CPU2         0x00f0
+
+#define FM_CPU2_6502    0x0000
+#define FM_CPU2_65C02   0x0010
+#define FM_CPU2_65SC02  0x0020
+#define FM_CPU2_65CE02  0x0030
+#define FM_CPU2_NMOS    0x0040
+#define FM_CPU2_65816E  0x0050
+
+const char *cpunames[16] = {
+               "6502",
+               "65C02",
+               "65SC02",
+               "65CE02",
+               "NMOS6502",
+               "65816",
+               NULL, NULL,
+               "6809", NULL,                          // 1000 -
+               "Z80", NULL, NULL,                     // 1010 -
+               "8086",                                // 1101 -
+               "80286",                               // 1110 -
+               NULL
+};
+
 int read_options(FILE *fp);
 int print_labels(FILE *fp, int offset);
 
@@ -81,7 +111,7 @@ int main(int argc, char *argv[]) {
 
 	i = 1;
 
-	if (strstr(argv[i], "--help") || strstr(argv[i], "-?")) {
+	if (strstr(argv[i], "--help") || strstr(argv[i], "-?") || strstr(argv[i], "-h")) {
           usage(stdout);
 	  exit(0);
 	}
@@ -114,7 +144,7 @@ int main(int argc, char *argv[]) {
 		xapar = 1;
 		break;
 	    default:
-		fprintf(stderr,"%s: %s unknown option\n",programname,argv[i]);
+		fprintf(stderr,"%s: %s unknown option, use '-h' for help\n",programname,argv[i]);
 		break;
 	    }
 	  } else {
@@ -127,11 +157,12 @@ int main(int argc, char *argv[]) {
 		  printf("%s: o65 version %d %s file\n", argv[i], hdr[5],
 				hdr[7]&0x10 ? "object" : "executable");
 		  printf(" mode: %04x =",mode );
-		  printf("%s%s%s%s%s\n", 
-			(mode & 0x1000)?"[object]":"[executable]",
-			(mode & 0x2000)?"[32bit]":"[16bit]",
-			(mode & 0x4000)?"[page relocation]":"[byte relocation]",
-			(mode & 0x8000)?"[CPU 65816]":"[CPU 6502]",
+		  printf("[%s][%sbit][%s relocation][CPU %s][CPU2 %s]%s\n", 
+			(mode & 0x1000)?"object":"executable",
+			(mode & 0x2000)?"32":"16",
+			(mode & 0x4000)?"page":"byte",
+			(mode & 0x8000)?"65816":"6502",
+			cpunames[(mode & FM_CPU2) >> 4],
 			aligntxt[mode & 3]);
 		}
 		if(mode & 0x2000) {
