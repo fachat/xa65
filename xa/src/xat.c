@@ -834,12 +834,12 @@ printf("reloc: er=%d, l=%d, segment=%d, pc[%d]=%04x, pc[abs(%d)]=%04x, pc[text(%
 		    t[0]=Kdsb;
 		    i=1;
 		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp, 0);
+		    wval(i,tmp, 0);	// 5 byte
                     t[i++]=',';
 		    tmp2= 0xea;
-		    wval(i,tmp2, 0);	/* nop opcode */
+		    wval(i,tmp2, 0);	/* nop opcode, another 5 byte */
                     t[i++]=T_END;
-		    *ll=9;
+		    *ll=wval_len * 2 + 3; //13; //9;
 		    er=E_OKDEF;
 		  } else {
 		    *ll=0;	/* ignore if aligned right */
