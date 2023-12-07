@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #ifndef __XA65_XAM_H__
 #define __XA65_XAM_H__
 
-FILE *xfopen(const char *fn, const char *mode);
-void reg_include(char *);
+FILE* xfopen(const char *fn, const char *mode);
+void reg_include(char*);
 
 #endif /* __XA65_XAM_H__ */

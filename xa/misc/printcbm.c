@@ -1,7 +1,7 @@
 /* printcbm -- A part of xa65 - 65xx/65816 cross-assembler and utility suite
  * list CBM BASIC programs
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,33 +29,28 @@
 #define author		"Written by Andre Fachat"
 #define copyright	"Copyright (C) 1997-2002 Andre Fachat."
 
-char *cmd[] = {
-	"end", "for", "next", "data", "input#", "input", "dim", "read",
-	"let", "goto", "run", "if", "restore", "gosub", "return",
-	"rem", "stop", "on", "wait", "load", "save", "verify", "def",
-	"poke", "print#", "print", "cont", "list", "clr", "cmd", "sys",
-	"open", "close", "get", "new", "tab(", "to", "fn", "spc(",
-	"then", "not", "step", "+", "-", "*", "/", "^", "and", "or",
-	">", "=", "<", "sgn", "int", "abs", "usr", "fre", "pos", "sqr",
-	"rnd", "log", "exp", "cos", "sin", "tan", "atn", "peek", "len",
-	"str$", "val", "asc", "chr$", "left$", "right$", "mid$", "go"
-};
+char *cmd[] = { "end", "for", "next", "data", "input#", "input", "dim", "read",
+		"let", "goto", "run", "if", "restore", "gosub", "return", "rem", "stop",
+		"on", "wait", "load", "save", "verify", "def", "poke", "print#",
+		"print", "cont", "list", "clr", "cmd", "sys", "open", "close", "get",
+		"new", "tab(", "to", "fn", "spc(", "then", "not", "step", "+", "-", "*",
+		"/", "^", "and", "or", ">", "=", "<", "sgn", "int", "abs", "usr", "fre",
+		"pos", "sqr", "rnd", "log", "exp", "cos", "sin", "tan", "atn", "peek",
+		"len", "str$", "val", "asc", "chr$", "left$", "right$", "mid$", "go" };
 
-void usage(FILE *fp)
-{
+void usage(FILE *fp) {
 	fprintf(fp,
-		"Usage: %s [OPTION]... [FILE]...\n"
-		"List CBM BASIC programs\n"
-                "This tool is deprecated as of xa 2.4 and will be removed in a future version.\n"
-                "Please consider migrating to VICE petcat, which has many more options.\n"
-		"\n"
-		"  --version  output version information and exit\n"
-		"  --help     display this help and exit\n",
-		programname);
+			"Usage: %s [OPTION]... [FILE]...\n"
+					"List CBM BASIC programs\n"
+					"This tool is deprecated as of xa 2.4 and will be removed in a future version.\n"
+					"Please consider migrating to VICE petcat, which has many more options.\n"
+					"\n"
+					"  --version  output version information and exit\n"
+					"  --help     display this help and exit\n",
+			programname);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	FILE *fp;
 	int a, b, c;
 

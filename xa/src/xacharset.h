@@ -20,8 +20,8 @@
 #define __XA65_XA_CHARSET_H__
 
 /* set the target character set the chars - values in quotes - should
-   be converted to 
-   returns 0 on success and -1 when the name is not found */
+ be converted to 
+ returns 0 on success and -1 when the name is not found */
 int set_charset(char *charset_name);
 
 /* convert a char */

@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,18 +20,16 @@
 #define __XA65_VERSION_H__
 
 void version(const char *programname, const char *progversion,
-	     const char *authors, const char *copyright)
-{
-	fprintf(stdout,
-		"%s (xa65) %s\n"
-		"%s\n"
-		"\n"
-		"%s\n"
-		"This is free software; see the source for "
-		"copying conditions.  There is NO\n"
-		"warranty; not even for MERCHANTABILIY or "
-		"FITNESS FOR A PARTICULAR PURPOSE.\n",
-		programname, progversion, authors, copyright);
+		const char *authors, const char *copyright) {
+	fprintf(stdout, "%s (xa65) %s\n"
+			"%s\n"
+			"\n"
+			"%s\n"
+			"This is free software; see the source for "
+			"copying conditions.  There is NO\n"
+			"warranty; not even for MERCHANTABILIY or "
+			"FITNESS FOR A PARTICULAR PURPOSE.\n", programname, progversion,
+			authors, copyright);
 }
 
 #endif  /* __XA65_VERSION_H__ */

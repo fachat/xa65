@@ -20,7 +20,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-
 #include <stdio.h>
 #include <string.h>
 
@@ -58,11 +57,11 @@ static signed char convert_char_petscii(signed char c) {
 static signed char convert_char_petscreen(signed char c) {
 	int i;
 
-	i = (int)convert_char_petscii(c);
+	i = (int) convert_char_petscii(c);
 #ifdef SIGH
 fprintf(stderr, "input: %i output: %i\n", c, i);
 #endif
-	if (i< 0)
+	if (i < 0)
 		i += 0x80;
 	i ^= 0xe0;
 #ifdef SIGH
@@ -74,37 +73,33 @@ fprintf(stderr, "(1)input: %i output: %i\n", c, i);
 fprintf(stderr, "(2)input: %i output: %i\n", c, i);
 #endif
 	if (i < 0x80)
-		return (signed char)i;
+		return (signed char) i;
 	i += 0x40;
 	i &= 0xff;
 #ifdef SIGH
 fprintf(stderr, "(3)input: %i output: %i\n", c, i);
 #endif
 	if (i < 0x80)
-		return (signed char)i;
+		return (signed char) i;
 	i ^= 0xa0;
 #ifdef SIGH
 fprintf(stderr, "(4)input: %i output: %i\n", c, i);
 #endif
-	return (signed char)i;
+	return (signed char) i;
 }
 
 static signed char convert_char_high(signed char c) {
 	return (c | 0x80);
 }
-	
-typedef struct { 
+
+typedef struct {
 	char *name;
 	signed char (*func)(signed char);
 } charset;
 
-static charset charsets[] = {
-	{ "ASCII", convert_char_ascii },
-	{ "PETSCII", convert_char_petscii },
-	{ "PETSCREEN", convert_char_petscreen },
-	{ "HIGH", convert_char_high },
-	{ NULL, NULL }
-};
+static charset charsets[] = { { "ASCII", convert_char_ascii }, { "PETSCII",
+		convert_char_petscii }, { "PETSCREEN", convert_char_petscreen }, {
+		"HIGH", convert_char_high }, { NULL, NULL } };
 
 int set_charset(char *charset_name) {
 	int i = 0;
@@ -121,5 +116,4 @@ int set_charset(char *charset_name) {
 signed char convert_char(signed char c) {
 	return convert_func(c);
 }
-
 

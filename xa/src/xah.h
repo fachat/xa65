@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  * Maintained by Cameron Kaiser
  *
  * This program is free software; you can redistribute it and/or modify
@@ -38,10 +38,7 @@
 #define TMPMEM		2000000L	/* temporary memory buffer from Pass1 to Pass 2 (includes all source, thus enlarged) */
 
 typedef enum {
-        STD = 0,
-        CHEAP = 1,
-        UNNAMED = 2,
-        UNNAMED_DEF = 3
+	STD = 0, CHEAP = 1, UNNAMED = 2, UNNAMED_DEF = 3
 } xalabel_t;
 
 typedef struct LabOcc {
@@ -58,14 +55,14 @@ typedef struct {
 	int origblk;	// only for fl=3
 	int val;
 	int len;
-	int fl;		/* 0 = label value not valid/known,
-			 * 1 = label value known
-			 * 2 = label value not known, external global label (imported on link)
-			 * 3 = label value not known, temporarily on external global label list (for -U)
-			 */
-	int afl;	/* 0 = no address (no relocation), 1 = address label */
+	int fl; /* 0 = label value not valid/known,
+	 * 1 = label value known
+	 * 2 = label value not known, external global label (imported on link)
+	 * 3 = label value not known, temporarily on external global label list (for -U)
+	 */
+	int afl; /* 0 = no address (no relocation), 1 = address label */
 	int nextindex;
-	xalabel_t is_cll;	/* 0 is normal label, 1 is cheap local label (used for listing) */
+	xalabel_t is_cll; /* 0 is normal label, 1 is cheap local label (used for listing) */
 	char *n;
 	struct LabOcc *occlist;
 	// within a block, make a linked list for the unnamed label counting
@@ -83,7 +80,6 @@ typedef struct {
 	int nextindex;
 } List;
 
-
 #define MEMLEN		(4 + TMPMEM + MAXPP + LABMEM +			\
 			 (long)(sizeof (Labtab) * ANZLAB) +		\
 			 (long)(sizeof (List) * ANZDEF))
@@ -91,9 +87,9 @@ typedef struct {
 #define DIRCHAR		'/'
 #define DIRCSTRING	"/"
 /* for Atari:
-#define DIRCHAR		'\\'
-#define DIRCSTRING	"\\"
-*/
+ #define DIRCHAR		'\\'
+ #define DIRCSTRING	"\\"
+ */
 
 #define	BUFSIZE		4096	/* File-Puffegroesse (wg Festplatte) */
 
@@ -219,7 +215,7 @@ typedef struct {
 #define SEG_UNDEFZP     7	/* is being mapped to UNDEF */
 
 typedef struct Fopt {
-	signed char *text;	/* text after pass1 */
+	signed char *text; /* text after pass1 */
 	int len;
 } Fopt;
 

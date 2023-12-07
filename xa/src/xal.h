@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,18 +27,17 @@
  */
 extern char *lz;
 
-
 int l_init(void);
 int ga_lab(void);
 int gm_lab(void);
 long gm_labm(void);
 long ga_labm(void);
 
-int lg_set(char *);
+int lg_set(char*);
 int lg_import(int);
 int lg_importzp(int);
 // used to re-define undef'd labels as global for -U option
-int lg_toglobal(char *);
+int lg_toglobal(char*);
 
 int b_init(void);
 int b_depth(void);
@@ -46,7 +45,7 @@ int b_depth(void);
 void printllist(FILE *fp);
 int ga_blk(void);
 
-int l_def(char *s, int* l, int *x, int *f);
+int l_def(char *s, int *l, int *x, int *f);
 int l_search(char *s, int *l, int *x, int *v, int *afl);
 void l_set(int n, int v, int afl);
 char* l_get_name(int n, xalabel_t *is_cll);

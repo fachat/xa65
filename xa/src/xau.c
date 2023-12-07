@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (fachat@web.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (fachat@web.de)
  *
  * Undefined label tracking module (also see xal.c)
  *
@@ -34,21 +34,23 @@ int u_label(int labnr) {
 #ifdef DEBUG_UNDEF
 printf("u_label: %d\n",labnr);
 #endif
-	if(!afile->ud.ulist) {
-	  afile->ud.ulist = malloc(200*sizeof(int));
-	  if(afile->ud.ulist) afile->ud.um=200;
+	if (!afile->ud.ulist) {
+		afile->ud.ulist = malloc(200 * sizeof(int));
+		if (afile->ud.ulist)
+			afile->ud.um = 200;
 	}
 
-	for(i=0;i<afile->ud.un;i++) {
-	  if(afile->ud.ulist[i] == labnr) return i;
+	for (i = 0; i < afile->ud.un; i++) {
+		if (afile->ud.ulist[i] == labnr)
+			return i;
 	}
-	if(afile->ud.un>=afile->ud.um) {
-	  afile->ud.um *= 1.5;
-	  afile->ud.ulist = realloc(afile->ud.ulist, afile->ud.um * sizeof(int));
-	  if(!afile->ud.ulist) {
-	    fprintf(stderr, "Panic: No memory!\n");
-	    exit(1);
-	  }
+	if (afile->ud.un >= afile->ud.um) {
+		afile->ud.um *= 1.5;
+		afile->ud.ulist = realloc(afile->ud.ulist, afile->ud.um * sizeof(int));
+		if (!afile->ud.ulist) {
+			fprintf(stderr, "Panic: No memory!\n");
+			exit(1);
+		}
 	}
 	afile->ud.ulist[afile->ud.un] = labnr;
 	return afile->ud.un++;
@@ -57,15 +59,15 @@ printf("u_label: %d\n",labnr);
 void u_write(FILE *fp) {
 	int i, d;
 	char *s;
-/*printf("u_write: un=%d\n",afile->ud.un);*/
+	/*printf("u_write: un=%d\n",afile->ud.un);*/
 	fputw(afile->ud.un, fp);
 
-	for(i=0;i<afile->ud.un;i++) {
-	  l_vget(afile->ud.ulist[i], &d, &s);
-	  fprintf(fp,"%s", s);
-	  fputc(0,fp);
+	for (i = 0; i < afile->ud.un; i++) {
+		l_vget(afile->ud.ulist[i], &d, &s);
+		fprintf(fp, "%s", s);
+		fputc(0, fp);
 	}
 	free(afile->ud.ulist);
-	afile->ud.ulist=NULL;
+	afile->ud.ulist = NULL;
 	afile->ud.um = afile->ud.un = 0;
 }

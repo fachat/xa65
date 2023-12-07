@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 #define __XA65_XAA_H__
 
 /* f = 0 -> label must exist; f = 1 -> SEG_UNDEF entry */
-int a_term(signed char *s, int *v, int *l, int xpc, int *afl,
-	   int *label, int f);
+int a_term(signed char *s, int *v, int *l, int xpc, int *afl, int *label,
+		int f);
 
 #endif /* __XA65_XAA_H__ */

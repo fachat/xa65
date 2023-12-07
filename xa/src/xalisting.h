@@ -25,10 +25,11 @@ void list_end();
 void list_flush();			// debug helper
 
 void list_setfile(FILE *fp);
-void list_line(int l);          /* set line number for the coming listing output */
+void list_line(int l); /* set line number for the coming listing output */
 void list_filename(char *fname);/* set file name for the coming listing output */
 
 // list a single line/token set
-void do_listing(signed char *listing, int listing_len, signed char *bincode, int bincode_len);
+void do_listing(signed char *listing, int listing_len, signed char *bincode,
+		int bincode_len);
 
 #endif /* __XA65_XALISTING_H__ */

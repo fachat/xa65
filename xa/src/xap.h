@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ int pp_define(char *name);
 void pp_close(void);
 void pp_end(void);
 int pgetline(char *t);
-Datei *pp_getidat(void);
+Datei* pp_getidat(void);
 
 /* needed for .include pseudo opcode */
 int icl_open(char*);

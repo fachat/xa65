@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #define	RMODE_ABS	0
 #define	RMODE_RELOC	1
 
-extern File *alloc_file(void);
+extern File* alloc_file(void);
 
 /* jumps to r[td]_set, depending on segment */
 /*int r_set(int pc, int reloc, int len);*/
@@ -38,11 +38,11 @@ void r_mode(int mode);
 /* int rmode; */
 
 int h_write(FILE *fp, int mode, int tlen, int dlen, int blen, int zlen,
-	   int stacklen);
+		int stacklen);
 
 void seg_start(int fmode, int tbase, int dbase, int bbase, int zbase,
-	      int stacklen, int relmode);
-void seg_end(FILE *);
+		int stacklen, int relmode);
+void seg_end(FILE*);
 void seg_pass2(void);
 
 #endif /* __XA65_XAR_H__ */
