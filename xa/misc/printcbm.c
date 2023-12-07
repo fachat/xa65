@@ -1,7 +1,7 @@
 /* printcbm -- A part of xa65 - 65xx/65816 cross-assembler and utility suite
  * list CBM BASIC programs
  *
- * Copyright (C) 1989-1997 Andr� Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andre Fachat (afachat@gmx.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

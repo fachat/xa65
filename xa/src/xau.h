@@ -1,6 +1,6 @@
 /*
  xa65 - 6502 cross assembler and utility suite
- Copyright (C) 1989-1997 Andr� Fachat (a.fachat@physik.tu-chemnitz.de)
+ Copyright (C) 1989-1997 Andre Fachat (afachat@gmx.de)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

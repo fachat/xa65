@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 Andr� Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andre Fachat (afachat@gmx.de)
  * Maintained by Cameron Kaiser
  *
  * File handling and preprocessor (also see xaa.c) module
