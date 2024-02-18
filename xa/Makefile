@@ -1,12 +1,11 @@
 # Unix gcc or DOS go32 cross-compiling gcc
 #
-VERS = 2.4.0
+VERS = 2.4.1
 CC = gcc
 LD = gcc
 # for testing. not to be used; build failures in misc/.
-#CFLAGS = -O2 -W -Wall -pedantic -ansi
-#CFLAGS = -O2 -g
-CFLAGS = -O2 
+#CFLAGS = -O2 -W -Wall -pedantic -ansi -g
+CFLAGS = -O2 -g
 LDFLAGS = -lc
 
 # for DOS?

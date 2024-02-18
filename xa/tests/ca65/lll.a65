@@ -1,0 +1,28 @@
+; As extracted from https://codebase64.org/doku.php?id=base:256_bytes_tune_player
+        * = $326
+
+@musicdata:
+; errs
+@Voc0start:
+        .byte $00
+        .byte <(@Voc0komp-@musicdata)
+; errs
+@Voc1start:
+        .byte $40
+        .byte <(@Voc1melody-@musicdata)
+; errs
+@Voc2start:
+        ;-
+        ;-
+        .byte $50
+@Voc2loop:
+        .byte $60
+        .byte <(@Voc2loop-@musicdata)
+; errs
+@Voc0komp:
+        .byte $10
+        .byte <(@Voc0start-@musicdata)
+@Voc1melody:
+        .byte $20
+        .byte <(@Voc1start-@musicdata)
+

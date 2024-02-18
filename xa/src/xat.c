@@ -834,12 +834,12 @@ printf("reloc: er=%d, l=%d, segment=%d, pc[%d]=%04x, pc[abs(%d)]=%04x, pc[text(%
 		    t[0]=Kdsb;
 		    i=1;
 		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp, 0);
+		    wval(i,tmp, 0);	// 5 byte
                     t[i++]=',';
 		    tmp2= 0xea;
-		    wval(i,tmp2, 0);	/* nop opcode */
+		    wval(i,tmp2, 0);	/* nop opcode, another 5 byte */
                     t[i++]=T_END;
-		    *ll=9;
+		    *ll=wval_len * 2 + 3; //13; //9;
 		    er=E_OKDEF;
 		  } else {
 		    *ll=0;	/* ignore if aligned right */
@@ -1324,7 +1324,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 		} else {
 			er = E_SYNTAX;
 		}
-		/* get filename.
+		/* get error string.
 		   the tokenizer can either see it as a multichar string ... */
 		if (!er) {
 		   int k;
@@ -1344,7 +1344,7 @@ int t_p2(signed char *t, int *ll, int fl, int *al)
 			have been caught by the above) */
 		    } else
 			if(!(er=a_term(t+i,&c,&l,pc[segment],&afl,&label,1))) {
-			if (!result) fprintf(stderr, "%c", c);
+			if (!result) fprintf(stderr, "Assertion failed: %c", c);
 			i += l;
 		    }
 		}
@@ -1838,7 +1838,10 @@ fprintf(stderr, "Kdsb E_DSB %i\n", j);
                                    if(tolower(t[inp])=='s')
                                         sy=12;
                                    else
+                                   if(tolower(t[inp])=='x')
                                         sy=5;
+                                   else
+                                        er=E_SYNTAX;
                               } else
                                    er=E_SYNTAX;
                          }
@@ -1965,7 +1968,9 @@ fprintf(stderr, "byte length is now %d, am=%d, er=%d\n", bl, am, er);
                          } else {
                               n65816++;
                               if(!w65816) {
-fprintf(stderr,"n=%d, am=%d\n", n, am);
+#ifdef DEBUG_AM
+fprintf(stderr,"not 65816 n=%d, am=%d\n", n, am);
+#endif
                                   er=E_65816;
 			      }
                          }
@@ -2335,7 +2340,7 @@ static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
                     } else
 		    /* maybe it's a label 
  			Note that for ca65 cheap local labels, we check for "@" */
-                    if(isalpha(s[p]) || s[p]=='_' || ((s[p]==':' || s[p]=='@') && ca65))
+                    if(isalpha(s[p]) || s[p]=='_' || (s[p]==':' && collab) || ((s[p]==':' || s[p]=='@') && ca65))
                     {
                        
 			int p2 = 0; 
@@ -2770,7 +2775,7 @@ fprintf(stderr, "tg_asc token = %i\n", n);
 	  if (!n || n == Kbin || n == Kaasc) {
 		t[j++]=s[i];
 /* XXX 2.4 implement option for ^ for backwards compatibility */
-          } else if(ca65 || !xa23 || s[i]!='^') { 	/* no escape code "^" - TODO: does ca65 has an escape code */
+          } else if(ca65 || (!xa23 && !mask) || s[i]!='^') { 	/* no escape code "^" - TODO: does ca65 has an escape code */
                t[j++]=convert_char(s[i]);
           } else { 		/* escape code */
 		  signed char payload = s[i+1];
