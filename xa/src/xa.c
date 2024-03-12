@@ -58,7 +58,7 @@
 #define programname	"xa"
 /* progversion now in xa.h */
 #define authors		"Written by Andre Fachat, Jolse Maginnis, David Weinehall and Cameron Kaiser"
-#define copyright	"Copyright (C) 1989-2023 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
+#define copyright	"Copyright (C) 1989-2024 Andre Fachat, Jolse Maginnis, David Weinehall\nand Cameron Kaiser."
 
 /* exported globals */
 int ncmos, cmosfl, w65816, n65816;
@@ -66,6 +66,7 @@ int ncmos, cmosfl, w65816, n65816;
 /* compatibility flags */
 int masm = 0;	/* MASM */
 int ca65 = 0;	/* CA65 */
+int collab = 0; /* allow colon relative labels even without ca65 mode */
 int xa23 = 0;  /* ^ and recursive comments, disable \ escape */
 int ctypes = 0;	/* C compatibility, like "0xab" types */
 int nolink = 0;
@@ -74,6 +75,7 @@ int romaddr = 0;
 int noglob = 0;
 int showblk = 0;
 int crossref = 0;
+int mask = 0;
 int undefok = 0;	// -R only accepts -Llabels; with -U all undef'd labels are ok in -R mode
 char altppchar;
 
@@ -140,11 +142,19 @@ int main(int argc,char *argv[])
      char old_o[MAXLINE];
 
      tim1=time(NULL);
-     
-     ncmos=0;
-     n65816=0;
+    
+     // note: unfortunately we do no full distinction between 65C02 and 65816.
+     // The conflict is in the column 7 and column f opcodes, where the 65C02
+     // has the BBR/BBS/SMB/RMB opcodes, but the 65816 has its own.
+     // Also, we potentially could support the 65SC02, which is the 65C02, but
+     // without the conflicting BBR/BBS/SMB/RMB opcodes.
+     // This, however, is a TODO for a later version.
      cmosfl=1;
+     //fmode = FM_CPU2_65C02;
      w65816=0;	/* default: 6502 only */
+
+     ncmos=0;	// counter for CMOS opcodes used
+     n65816=0;	// counter for 65816-specific opcodes used
 
      altppchar = '#' ; /* i.e., NO alternate char */
 
@@ -205,6 +215,15 @@ int main(int argc,char *argv[])
      while(i<argc) {
 	if(argv[i][0]=='-') {
 	  switch(argv[i][1]) {
+	  case 'a':
+		if (ca65) {
+		  collab=0; /* paranoia */
+		  fprintf(stderr, "Warning: -a not needed with -XCA65\n");
+		} else collab=1;
+		break;
+	  case 'k':
+		mask = 1;
+		break;
 	  case 'E':
 		ner_max = 0;
 		break;
@@ -218,7 +237,7 @@ int main(int argc,char *argv[])
 		}
 		if (argv[i][2] == '#')
 			fprintf(stderr,
-				"using -p# is evidence of stupidity\n");
+				"using -p# is not necessary, '#' is the default\n");
 		altppchar = argv[i][2];
 		if (argv[i][3] != '\0')
 			fprintf(stderr,
@@ -238,6 +257,10 @@ int main(int argc,char *argv[])
 		  }
 		  if (set_compat(name) < 0) {
 		    fprintf(stderr, "Compatibility set '%s' unknown - ignoring! (check case?)\n", name);
+		  }
+		  if (collab && ca65) {
+		    collab=0;
+		    fprintf(stderr, "Warning: -a not needed with -XCA65\n");
 		  }
 		}
 		break;
@@ -299,12 +322,29 @@ int main(int argc,char *argv[])
 		break;
 	  case 'C':
 		cmosfl = 0;
+		fmode &= ~FM_CPU2;	// fall back to standard 6502
+		// breaks existing tests (compare with pre-assembled files)
+		//if (w65816) {
+		//	fmode |= FM_CPU2_65816E;
+		//}
 		break;
           case 'W':
                 w65816 = 0;
+		fmode &= ~FM_CPU;
+		fmode &= ~FM_CPU2;
+		// breaks existing tests (compare with pre-assembled files)
+		//if (cmosfl) {
+		//	fmode |= FM_CPU2_65C02;
+		//}
                 break;
           case 'w':
+		// note: we do not disable cmos here, as opcode tables note CMOS for
+		// opcodes common to both, CMOS and 65816 as well.
                 w65816 = 1;
+		fmode &= ~FM_CPU2;
+		// breaks existing tests (compare with pre-assembled files)
+		//fmode |= FM_CPU;	// 65816 bit
+		//fmode |= FM_CPU2_65816E;// 6502 in 65816 emu, to manage opcode compatibility in ldo65
                 break;
 	  case 'B':
 		showblk = 1;
@@ -510,10 +550,6 @@ int main(int argc,char *argv[])
 		   sprintf(out,"Warning: bss segment ($%04x) start address doesn't align to %d!\n", bbase, align);
 		   logout(out);
 	       }
-	       if(zbase & (align-1)) {
-		   sprintf(out,"Warning: zero segment ($%04x) start address doesn't align to %d!\n", zbase, align);
-		   logout(out);
-	       }
                if (n65816>0)
                    fmode |= 0x8000;
 	       switch(align) {
@@ -612,32 +648,6 @@ int h_length(void) {
 	return 26+o_length();
 }
 
-#if 0
-/* write header for relocatable output format */
-int h_write(FILE *fp, int tbase, int tlen, int dbase, int dlen, 
-				int bbase, int blen, int zbase, int zlen) {
-
-	fputc(1, fp);			/* version byte */
-	fputc(0, fp);			/* hi address 0 -> no C64 */
-	fputc("o", fp);
-	fputc("6", fp);
-	fputc("5", fp);			
-	fputc(0, fp);			/* format version */
-	fputw(mode, fp);		/* file mode */
-	fputw(tbase,fp);		/* text base */
-	fputw(tlen,fp);			/* text length */
-	fputw(dbase,fp);		/* data base */
-	fputw(dlen,fp);			/* data length */
-	fputw(bbase,fp);		/* bss base */
-	fputw(blen,fp);			/* bss length */
-	fputw(zbase,fp);		/* zerop base */
-	fputw(zlen,fp);			/* zerop length */
-
-	o_write(fp);
-
-	return 0;
-}
-#endif
 
 static int setfext(char *s, char *ext)
 {
@@ -665,11 +675,6 @@ static int setfext(char *s, char *ext)
      return(0);
 }
 
-/*
-static char *tmp;
-static unsigned long tmpz;
-static unsigned long tmpe;
-*/
 
 static long ga_p1(void)
 {
@@ -932,6 +937,8 @@ static void usage(int default816, FILE *fp)
 	    "              (deprecated: prefer -XMASM)\n"
 	    " -Xcompatset  set compatibility flags for other assemblers, known values are:\n"
 	    "              C, MASM, CA65, XA23 (deprecated: for better 2.3 compatibility)\n"
+            " -a           Allow ca65-style unnamed labels with colons, implies -XMASM\n"
+	    " -k           Allow carat to mask character value with 31/$1f\n"
 	    " -R           start assembler in relocating mode\n"
 	    " -U           allow all undefined labels in relocating mode\n");
 	fprintf(fp,
@@ -1169,10 +1176,12 @@ static int xa_getline(char *s)
  			   we have ca65 compatibility, we ignore the colon */
 			// also check for ":+" and ":-"
 			
-			if (((!startofline) && l[i]!='=' && l[i]!='+' && l[i]!='-') || !ca65 || comcom) {
+//#error gotta get collab into this test
+			//if (((!startofline) && l[i]!='=' && l[i]!='+' && l[i]!='-') || !ca65 || comcom) {
+			if (((!startofline) && l[i]!='=' && l[i]!='+' && l[i]!='-') || !(ca65 || collab) || comcom) {
 				/* but otherwise we check if it is in a comment and we have
  				   MASM or CA65 compatibility, then we ignore the colon as well */
-				if(!comcom || !(masm || ca65)) {
+				if(!comcom || !(masm || ca65 || collab)) {
 					/* we found a colon, so we keep the current line in memory
 					   but return the part before the colon, and next time the part
 					   after the colon, so we can parse C64 BASIC text assembler... */

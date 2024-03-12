@@ -192,11 +192,22 @@ typedef struct {
 
 #define A_LONG		0xc000
 
+/* o65 file format mode bits */
 #define FM_OBJ		0x1000
 #define FM_SIZE		0x2000
 #define FM_RELOC	0x4000
 #define FM_CPU		0x8000
 
+#define	FM_CPU2		0x00f0
+
+#define	FM_CPU2_6502	0x0000
+#define	FM_CPU2_65C02	0x0010
+#define	FM_CPU2_65SC02	0x0020
+#define	FM_CPU2_65CE02	0x0030
+#define	FM_CPU2_NMOS	0x0040
+#define	FM_CPU2_65816E	0x0050
+
+/* segment definitions */
 #define SEG_ABS		0
 #define SEG_UNDEF	1
 #define SEG_TEXT	2

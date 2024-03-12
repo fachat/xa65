@@ -39,4 +39,6 @@
 				t[i++] = f & 255;			\
 			} while (0)
 
+#define	wval_len	5	/* number of bytes stored in wval() call */
+
 #endif /* __XA65_XAD_H__ */

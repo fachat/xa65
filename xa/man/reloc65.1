@@ -1,4 +1,4 @@
-.TH RELOC65 "1" "18 November 2023"
+.TH RELOC65 "1" "5 March 2024"
 
 .SH NAME
 reloc65 \- relocator for o65 object files
@@ -47,6 +47,43 @@ file. Relocating data segment to the end of the text segment and
 bss segment to the end of the data segment
 (\-xd and \-xb options override the derived address) before extracting.
 .TP
+.B \-C cputype
+Define a new CPU type for the output file. Available values are:
+.IP
+.B 6502
+- documented 6502 opcodes only
+.IP
+.B NMOS6502
+-
+.B 6502
+plus undocumented opcodes
+.IP
+.B 65SC02
+- extends
+.B 6502
+with CMOS opcodes, except for
+.BR BBR / BBS / SMB
+and
+.B RMB
+.IP
+.B 65C02
+- extends
+.B 65SC02
+with the
+.BR BBR / BBS / SMB
+and
+.B RMB
+opcodes
+.IP
+.B 65CE02
+- extends
+.B 65C02
+with additional CE-specific opcodes
+.IP
+.B 65816
+- 65816 in 6502 emulation mode; extends
+.B 65SC02
+.TP
 .B \-\-help
 Show summary of options.
 .TP
@@ -56,7 +93,6 @@ Show version of program.
 .SH "SEE ALSO"
 .BR file65 (1),
 .BR ldo65 (1),
-.BR printcbm (1),
 .BR uncpk (1),
 .BR dxa (1),
 .BR xa (1)
@@ -65,7 +101,7 @@ Show version of program.
 This manual page was written by David Weinehall <tao@acc.umu.se>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2023 Andre Fachat, Jolse Maginnis, David Weinehall and
+(C)1989-2024 Andre Fachat, Jolse Maginnis, David Weinehall and
 Cameron Kaiser. The current maintainer is Cameron Kaiser.
 
 .SH WEBSITE

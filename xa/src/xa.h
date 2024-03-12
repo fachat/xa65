@@ -23,11 +23,11 @@
 
 #define progmajor "2"
 #define progminor "4"
-#define progpatch "0"
+#define progpatch "1"
 #define progversion progmajor "." progminor "." progpatch
 
 extern int ncmos, cmosfl, w65816, n65816;
-extern int masm, ca65, xa23, nolink, undefok;
+extern int masm, ca65, xa23, nolink, undefok, collab, mask;
 extern int noglob;
 extern int showblk;
 extern int relmode;

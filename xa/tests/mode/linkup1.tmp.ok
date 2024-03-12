@@ -1,0 +1,7 @@
+linkup1.tmp.tmp: o65 version 0 executable file
+ mode: 0012 =[executable][16bit][byte relocation][CPU 6502][CPU2 65C02][align 4]
+ text segment @ $0400 - $0401 [$0001 bytes]
+ data segment @ $1000 - $1005 [$0005 bytes]
+ bss  segment @ $4000 - $4000 [$0000 bytes]
+ zero segment @ $0002 - $0002 [$0000 bytes]
+ stack size $0000 bytes (i.e. unknown)

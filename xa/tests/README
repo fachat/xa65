@@ -44,6 +44,7 @@ relmode/	tests concerning switches between segments and absolute mode
 mvnmvp/		Test MVN MVP unusual addressing mode ('816)
 dos51/		Regression test, label scoping, "real world code"
 cpktest/	Regression test, label listing, "real world code"
+usb65/		Unusual macro and scoping, "real world code"
 listing/	Test of listing feature
 op816/		Regression test for '816 opcodes (thanks Alessandro Gatti)
 branch/		Branch range test

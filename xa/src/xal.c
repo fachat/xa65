@@ -278,8 +278,8 @@ int l_def(char *s, int *l, int *x, int *f)
 	cll_clear();
      }
 
-     if((!isalpha(s[i])) && (s[i]!='_') && !(ca65 && ((cll_fl == UNNAMED) || isdigit(s[i])) ) ) {
-	  //printf("SYNTAX cll_fl=%d, i=%d, s[i]=%02x (%c)\n", cll_fl, i, s[i], s[i]);
+     if((!isalpha(s[i])) && (s[i]!='_') && !((ca65 || collab) && ((cll_fl == UNNAMED) || isdigit(s[i])) ) ) {
+	  //printf("SYNTAX ca65=%d collab=%d cll_fl=%d, i=%d, s[i]=%02x (%c)\n", ca65, collab, cll_fl, i, s[i], s[i]);
           er=E_SYNTAX;
      } else
      {
@@ -653,7 +653,7 @@ int ll_search(char *s, int *n, xalabel_t cll_fl)          /* search Label in Tab
           {
                for (k=0;(k<j)&&(ltp->n[k]==s[k]);k++);
 
-	       if (cll_fl == CHEAP) {
+	       if ( (j == k) && cll_fl == CHEAP) {
 			if (ltp->blk == cll_getcur()) {
 				er=E_OK;
 				break;

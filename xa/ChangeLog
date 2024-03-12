@@ -438,3 +438,20 @@ xa-2.4.0
  -- André Fachat <afachat@gmx.de> and
  -- Cameron Kaiser <ckaiser@floodgap.com>, 18 November, 2023
 
+xa 2.4.1
+
+  * Allow colon-based unnamed labels to be used separately of CA65 mode
+    (such as with 65816) with -a. Implies -XMASM.
+  * Restore ^ syntax for generating control sequences (e.g., "^m^j" evaluates
+    as 0d 0a) with -k.
+  * Fix a bug using cheap local labels in expressions.
+  * Properly tag and match CPU types in o65 objects during relocation and
+    linking.
+  * Fix a bug with .align when aligning segments.
+  * Better validation of arguments to indexed opcodes.
+  * Testsuite expanded.
+
+ -- André Fachat <afachat@gmx.de> and
+ -- Cameron Kaiser <ckaiser@floodgap.com>, 5 March, 2024
+
+

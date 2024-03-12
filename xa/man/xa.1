@@ -1,4 +1,4 @@
-.TH XA "1" "18 November 2023"
+.TH XA "1" "5 March 2024"
 
 .SH NAME
 xa \- 6502/R65C02/65816 cross-assembler
@@ -117,12 +117,21 @@ restores partial compatibility with
 .B xa
 2.3.x. In particular, it uses
 .B ^
-for quote escapes instead of 2.4's
+for generating control characters, disables escaped characters with
 .BR \e ,
 allows nested multi-line comments, and disables all predefined
 .B xa
-preprocessor macros. This option is inherently deprecated and may be removed
+preprocessor macros. Although some portions of this option remain
+supported syntax, the option itself is inherently deprecated and may be removed
 in the next 2.x or 3.x release.
+.TP
+.B \-a
+Support 
+.BR ca65 (1)-style
+unnamed labels using colons, but not the remainder of the other supported
+.BR ca65 (1)
+features. This allows their use with 65816 mode, for example. Implies
+.BR -XMASM .
 .TP
 .B \-M
 This option is deprecated and will be removed in a future version; use
@@ -130,6 +139,14 @@ This option is deprecated and will be removed in a future version; use
 instead. Allows colons to appear in comments for MASM compatibility. This does
 not affect colon interpretation elsewhere, and may become the default in a
 future version.
+.TP
+.B \-k
+Allow the carat
+.RB ( ^ )
+to mask a character with $1f/31. This can be used as a shorthand for
+control characters, such as
+.B "^m^j"
+becoming a carriage return followed by a linefeed.
 .TP
 .B \-R
 Start assembler in relocating mode, i.e. use segments.
@@ -323,14 +340,14 @@ and
 .LP
 If
 .B \-XCA65
-is specified, "cheap" local labels may be used, marked by the
-.B @
-prefix. Additionally, unnamed labels may be specified with
+or
+.B \-a
+is specified, "unnamed" labels may be specified with
 .B :
 (i.e., no label, just a colon); branches may then reference these unnamed
 labels with a colon and plus signs for forward branching or minus signs
 for backward branching. For example (from the
-.B ca65
+.BR ca65 (1)
 documentation),
 .LP
     :       lda     (ptr1),y        ; #1
@@ -366,6 +383,14 @@ documentation),
     :       ldx     #$01            ; #3
 .BR
     :       rts                     ; #4
+.LP
+Additionally, in
+.B \-XCA65
+mode, "cheap" local labels may be used, marked by the
+.B @
+prefix. These temporary labels exist only between two regular labels and
+automatically go out of scope with the next regular label. This allows,
+with reasonable care, reuse of common label names like "loop."
 .LP
 For those instructions where the accumulator is the implied argument (such as
 .B asl 
@@ -1175,7 +1200,6 @@ indexed, branching and so on.
 .SH "SEE ALSO"
 .BR file65 (1),
 .BR ldo65 (1),
-.BR printcbm (1),
 .BR reloc65 (1),
 .BR uncpk (1),
 .BR dxa (1)
@@ -1185,7 +1209,7 @@ This manual page was written by David Weinehall <tao@acc.umu.se>,
 Andre Fachat <fachat@web.de>
 and Cameron Kaiser <ckaiser@floodgap.com>.
 Original xa package (C)1989-1997 Andre Fachat. Additional changes
-(C)1989-2023 Andre Fachat, Jolse Maginnis, David Weinehall,
+(C)1989-2024 Andre Fachat, Jolse Maginnis, David Weinehall,
 Cameron Kaiser. The official maintainer is Cameron Kaiser.
 
 .SH OVER 30 YEARS OF XA
