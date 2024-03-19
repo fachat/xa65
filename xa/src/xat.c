@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  * maintained by Cameron Kaiser
  *
  * Core tokenizing module/pass 1 and pass 2
@@ -115,7 +115,8 @@ char *arith_ops[] = {
 };
 
 /* length of arithmetic operators indexed by operator number */
-static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2,2,2,1 };
+static int lp[] = { 0, 1, 1, 1, 1, 2, 2, 1, 1, 1, 2, 2, 2, 1, 1, 1, 2, 2, 2, 2,
+		1 };
 
 /* mvn and mvp are handled specially, they have a weird syntax */
 #define  Kmvp 38
@@ -179,7 +180,6 @@ static int lp[]= { 0,1,1,1,1,2,2,1,1,1,2,2,2,1,1,1,2,2,2,2,1 };
 /* last valid token+1 */
 #define	  Anzkey    Lastbef+43	/* define last valid token number; last define above plus one */
 
-
 #define   Kreloc    (Anzkey-256)   	/* *= (relocation mode) */
 #define   Ksegment  (Anzkey+1-256)	/* this actually now is above 127, which might be a problem as char is signed ... */
 
@@ -187,8 +187,8 @@ int number_of_valid_tokens = Anzkey;
 
 /* array used for hashing tokens (26 entries, a-z) */
 
-static int ktp[]={ 0,3,17,25,28,29,29,29,29,32,34,34,38,40,41,42,58,
-               58,65,76,90,90,90,92,94,94,94,Anzkey };
+static int ktp[] = { 0, 3, 17, 25, 28, 29, 29, 29, 29, 32, 34, 34, 38, 40, 41,
+		42, 58, 58, 65, 76, 90, 90, 90, 92, 94, 94, 94, Anzkey };
 
 #define   Admodes   24
 
@@ -384,67 +384,66 @@ static int opt[] ={ -1,-1,-1,-1,-1,-1,-1,-1,1,2,3,-1,4,5,-1,-1,
 
 /*********************************************************************************************/
 /* pass 1 */
-int t_p1(signed char *s, signed char *t, int *ll, int *al)
-{
-     static int er,l,n,v,nk,na1,na2,bl,am,sy,i,label,byte; /*,j,v2 ;*/
-     int afl = 0;
-     int tlen;	/* token listing length, to adjust length that is returned */
-     int inp;	/* input pointer in t[] */
-     unsigned char cast;
+int t_p1(signed char *s, signed char *t, int *ll, int *al) {
+	static int er, l, n, v, nk, na1, na2, bl, am, sy, i, label, byte; /*,j,v2 ;*/
+	int afl = 0;
+	int tlen; /* token listing length, to adjust length that is returned */
+	int inp; /* input pointer in t[] */
+	unsigned char cast;
 
-/* notes and typical conventions ... er = error code
-	am = addressing mode in use
-*/
+	/* notes and typical conventions ... er = error code
+	 am = addressing mode in use
+	 */
 
-     cast='\0';
-     bl=0;
-     *al = 0;
+	cast = '\0';
+	bl = 0;
+	*al = 0;
 
-/*     printf("\n"); */
+	/*     printf("\n"); */
 
-     /* convert the next token from string s */
+	/* convert the next token from string s */
 #ifdef DEBUG_AM
 fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
 #endif
-    
-     /* As the t_p1 code below always works through the tokens
-      * from t_conv in such a way that it always produces a shorter
-      * result, the conversion below takes place "in place".
-      * This, however, means that the original token sequence, which
-      * would be useful for some assembler listing, is overwritten.
-      * While the original assumption was ok for a constrained 
-      * environment like the Atari ST, this is no longer true.
-      * Converting the code below to have separate input and output
-      * areas would be error-prone, so we do some copy-magic here
-      * instead...*/
-     /* we keep three bytes buffer for "T_LISTING" and the length of the
-      * token list
-      */
-     t[0]=T_LISTING;
-     er=t_conv(s,t+6,&l,pc[segment],&nk,&na1,&na2,0,&byte);
-     tlen = l+6;
-     t[1]=tlen&255;
-     t[2]=(tlen>>8)&255;
-     t[3]=segment;
-     t[4]=pc[segment]&255;
-     t[5]=(pc[segment]>>8)&255;
-     /* now we have to duplicate the token sequence from the T_LISTING buffer
-      * to the end of "t", so we can then in-place convert it
-      * below. Non-overlapping, size is known in advance, so 
-      * using memcpy is fine here
-      */
-     inp = 0;
-     /* discard label definitions before copying the buffer, so we don't get
-      * label defined errors */
-     while (inp<l && t[6+inp]==T_DEFINE) {
-	inp+=3;
-     }
-     /* copy the buffer;
-      * t+tlen is directly after the T_LISTING buffer
-      * t+6+inp is the start of the T_LISTING buffer, after label defines
-      * l-inp is the length of the T_LISTING buffer, without label defines
-      */
-     memcpy(t+tlen, t+6+inp, l-inp);
+
+	/* As the t_p1 code below always works through the tokens
+	 * from t_conv in such a way that it always produces a shorter
+	 * result, the conversion below takes place "in place".
+	 * This, however, means that the original token sequence, which
+	 * would be useful for some assembler listing, is overwritten.
+	 * While the original assumption was ok for a constrained
+	 * environment like the Atari ST, this is no longer true.
+	 * Converting the code below to have separate input and output
+	 * areas would be error-prone, so we do some copy-magic here
+	 * instead...*/
+	/* we keep three bytes buffer for "T_LISTING" and the length of the
+	 * token list
+	 */
+	t[0] = T_LISTING;
+	er = t_conv(s, t + 6, &l, pc[segment], &nk, &na1, &na2, 0, &byte);
+	tlen = l + 6;
+	t[1] = tlen & 255;
+	t[2] = (tlen >> 8) & 255;
+	t[3] = segment;
+	t[4] = pc[segment] & 255;
+	t[5] = (pc[segment] >> 8) & 255;
+	/* now we have to duplicate the token sequence from the T_LISTING buffer
+	 * to the end of "t", so we can then in-place convert it
+	 * below. Non-overlapping, size is known in advance, so
+	 * using memcpy is fine here
+	 */
+	inp = 0;
+	/* discard label definitions before copying the buffer, so we don't get
+	 * label defined errors */
+	while (inp < l && t[6 + inp] == T_DEFINE) {
+		inp += 3;
+	}
+	/* copy the buffer;
+	 * t+tlen is directly after the T_LISTING buffer
+	 * t+6+inp is the start of the T_LISTING buffer, after label defines
+	 * l-inp is the length of the T_LISTING buffer, without label defines
+	 */
+	memcpy(t + tlen, t + 6 + inp, l - inp);
 
 #ifdef DEBUG_CONV
      printf("t_conv s:%s\n",s);
@@ -454,646 +453,610 @@ fprintf(stderr, "- p1 %d starting -\n", pc[segment]);
      printf("\n");
 #endif
 
-     // update pointers
-     t=t+tlen;
-     l-=inp;
-     /* the result of this is that we always have a Klisting entry in the buffer
-      * for each tokenization call */
-     /* here continue as before, except for adjusting the returne *ll length 
-      * in the end, just before return */
+	// update pointers
+	t = t + tlen;
+	l -= inp;
+	/* the result of this is that we always have a Klisting entry in the buffer
+	 * for each tokenization call */
+	/* here continue as before, except for adjusting the returne *ll length
+	 * in the end, just before return */
 
-     /* return length default is input length */
-     *ll=l;
+	/* return length default is input length */
+	*ll = l;
 
-     /* if text/data produced, then no more fopt allowed in romable mode */
-     /* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
-     if((romable>1) && (t[inp]<Kopen || t[inp]==Kbyte || t[inp]==Kpcdef)) {
-       afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
-       romable=1;
-     }
-     if(!er)
-     {
+	/* if text/data produced, then no more fopt allowed in romable mode */
+	/* TODO: need to check, Kbyte is being remapped to Kbyt. What is the effect here? */
+	if ((romable > 1)
+			&& (t[inp] < Kopen || t[inp] == Kbyte || t[inp] == Kpcdef)) {
+		afile->base[SEG_TEXT] = pc[SEG_TEXT] = romaddr + h_length();
+		romable = 1;
+	}
+	if (!er) {
 
-/*
- *
- * pseudo-op dispatch (except .byt, .asc)
- *
- */
-	  // fix sign
-          n=t[0]; // & 0xff;
+		/*
+		 *
+		 * pseudo-op dispatch (except .byt, .asc)
+		 *
+		 */
+		// fix sign
+		n = t[0]; // & 0xff;
 
-	  /* TODO: make that a big switch statement... */
-	  /* maybe later. Cameron */
+		/* TODO: make that a big switch statement... */
+		/* maybe later. Cameron */
 
-	  if(n==Kend || n==Klist || n==Kxlist) {
-	    *ll = 0;		/* ignore */
-	  } else
-	  if(n==Kinclude) {
-	    *ll = 0;		/* no output length */
-	    i=1;
-            if(t[i]=='\"') {
-	       int k,j=0;
-	       char binfname[255];
-               i++;
-               k=t[i]+i+1;
-               i++;
-               while(i<k && !er) {
-                 binfname[j++] = t[i++];
-                 if (j > 255)
-                    er = E_NOMEM; /* buffer overflow */
-               }
-               binfname[j] = '\0';
-	       er=icl_open(binfname);
-	    } else {
-	       er=E_SYNTAX;
-	    }
-	  } else
-	  if(n==Kfopt) {
-	    if(romable==1) er=E_ROMOPT;
-	    t[0] = Kbyt;
-	    set_fopt(l,t,nk+1-na1+na2);
-	    *ll = 0;
-	  } else
-          if(n==Klistbytes) {
-	    int p = 0;
-            if(!(er=a_term(t+1,&p,&l,pc[segment],&afl,&label,0))) {
-                er=E_OKDEF;
-	    }
-	    *ll = 3;
-	    t[0] = Klistbytes;
-	    t[1] = p & 0xff;
-	    t[2] = (p >> 8) & 0xff;
-	    //printf("Klistbytes p1: er=%d, l=%d\n", er, l);
-          } else
-          if(n==Kpcdef)
-          {
-	       int tmp;
-	       // get parameter for *=
-	       er=a_term(t+1,&tmp,&l,pc[segment],&afl,&label,0);
-	       // found?
-               if(!er)
-               {
-                    i=1;
-                    wval(i,tmp, 0);	/* writes T_VALUE, 3 bytes value, plus one byte */
-                    t[i++]=T_END;
-                    *ll=7;
-                    er=E_OKDEF;
+		if (n == Kend || n == Klist || n == Kxlist) {
+			*ll = 0; /* ignore */
+		} else if (n == Kinclude) {
+			*ll = 0; /* no output length */
+			i = 1;
+			if (t[i] == '\"') {
+				int k, j = 0;
+				char binfname[255];
+				i++;
+				k = t[i] + i + 1;
+				i++;
+				while (i < k && !er) {
+					binfname[j++] = t[i++];
+					if (j > 255)
+						er = E_NOMEM; /* buffer overflow */
+				}
+				binfname[j] = '\0';
+				er = icl_open(binfname);
+			} else {
+				er = E_SYNTAX;
+			}
+		} else if (n == Kfopt) {
+			if (romable == 1)
+				er = E_ROMOPT;
+			t[0] = Kbyt;
+			set_fopt(l, t, nk + 1 - na1 + na2);
+			*ll = 0;
+		} else if (n == Klistbytes) {
+			int p = 0;
+			if (!(er = a_term(t + 1, &p, &l, pc[segment], &afl, &label, 0))) {
+				er = E_OKDEF;
+			}
+			*ll = 3;
+			t[0] = Klistbytes;
+			t[1] = p & 0xff;
+			t[2] = (p >> 8) & 0xff;
+			//printf("Klistbytes p1: er=%d, l=%d\n", er, l);
+		} else if (n == Kpcdef) {
+			int tmp;
+			// get parameter for *=
+			er = a_term(t + 1, &tmp, &l, pc[segment], &afl, &label, 0);
+			// found?
+			if (!er) {
+				i = 1;
+				wval(i, tmp, 0); /* writes T_VALUE, 3 bytes value, plus one byte */
+				t[i++] = T_END;
+				*ll = 7;
+				er = E_OKDEF;
 #ifdef DEBUG_RELOC
 printf("set pc=%04x, oldsegment=%d, pc[segm]=%04x, ", 
 				pc[SEG_ABS], segment, pc[segment]);
 printf(" wrote %02x %02x %02x %02x %02x %02x, %02x, %02x\n",
 				t[0],t[1],t[2],t[3],t[4],t[5],t[6],t[7]);
 #endif
-		    if(segment==SEG_TEXT) {
-		      pc[SEG_ABS] = tmp;
-		      r_mode(RMODE_ABS);
-		    } else {
-		      if(!relmode) {
-		        pc[segment] = tmp;
-		      } else {
-			er = E_ILLSEGMENT;
-		      }
-		    }
-/*printf("newsegment=%d, pc[ABS]=%04x\n", segment, pc[SEG_ABS]);*/
-               } else {
-		 // no param found, only "*=". 
-		 // if we ABS, we switch back to reloc
+				if (segment == SEG_TEXT) {
+					pc[SEG_ABS] = tmp;
+					r_mode(RMODE_ABS);
+				} else {
+					if (!relmode) {
+						pc[segment] = tmp;
+					} else {
+						er = E_ILLSEGMENT;
+					}
+				}
+				/*printf("newsegment=%d, pc[ABS]=%04x\n", segment, pc[SEG_ABS]);*/
+			} else {
+				// no param found, only "*=".
+				// if we ABS, we switch back to reloc
 #ifdef DEBUG_RELOC
 printf("reloc: er=%d, l=%d, segment=%d, pc[%d]=%04x, pc[abs(%d)]=%04x, pc[text(%d)]=%04x\n",
 			er, l, segment, segment, pc[segment], SEG_ABS, pc[SEG_ABS],SEG_TEXT, pc[SEG_TEXT]);
 #endif
-	         if((segment==SEG_ABS) && (er==E_SYNTAX && l==0)) {
-		   t[0]=Kreloc;
-		   i=1;
-		   wval(i,pc[SEG_TEXT], 0);
-		   t[i++]=T_END;
-		   *ll=7;
-	  	   er=E_OKDEF;
-		   r_mode(RMODE_RELOC);
-/*printf("     : newseg=%d, pc[newseg]=%04x, pc[abs]=%04x, pc[text]=%04x\n",
-			segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
-	         }
-	       }
-          } else
-          if(n==Kopen)
-          {
-	       if(showblk) fprintf(stderr, "%s line %d: .(\n", pp_getidat()->fname, pp_getidat()->fline);
-               b_open();
-               er=E_NOLINE;
-          } else
-          if(n==Kclose)
-          {
-	       if(showblk) fprintf(stderr, "%s line %d: .)\n", pp_getidat()->fname, pp_getidat()->fline);
-               er=b_close();
-               if(!er) er=E_NOLINE;
-          } else
-          if(n==Kalong)
-          {
-		if (!w65816) {
-			er=E_65816;
-		} else {
-               memode=1;
-               t[0]=Kalong;
-               *ll=1;
-               er=E_OKDEF;
-		}
-          } else
-          if(n==Kashort)
-          {
-               memode=0;
-               t[0]=Kashort;
-               *ll=1;
-               er=E_OKDEF;
-          } else
-          if(n==Kxlong)
-          {
-		if (!w65816) {
-			er=E_65816;
-		} else {
-               xmode=1;
-               t[0]=Kxlong;
-               *ll=1;
-               er=E_OKDEF;
-		}
-          } else
-          if(n==Kxshort)
-          {
-               xmode=0;
-               t[0]=Kxshort;
-               *ll=1;
-               er=E_OKDEF;
-          } else
-          if(n==Kdsb)
-          {
-	       dsb_len = 1;
-               if(!(er=a_term(t+1,&bl,&l,pc[segment],&afl,&label,0))) {
-                    er=E_OKDEF;
-	       }
-	       dsb_len = 0;
-          } else
-	  if(n==Ktext) {
-	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
-	      segment = relmode ? SEG_TEXT : SEG_ABS;
-	      t[0]=Ksegment;
-	      t[1]=segment;
-	      *ll=2;
-              er=E_OKDEF;
-	  } else
-	  if(n==Kdata) {
-  	    if(relmode) {   
-	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
-	      segment = SEG_DATA;
-	      t[0]=Ksegment;
-	      t[1]=SEG_DATA;
-	      *ll=2;
-              er=E_OKDEF;
-	    } else {
-	      er=E_ILLSEGMENT;
-	    } 
-	  } else
-	  if(n==Kbss) {
-  	    if(relmode) { 
-	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
-	      segment = SEG_BSS;
-	      t[0]=Ksegment;
-	      t[1]=SEG_BSS;
-	      *ll=2;
-              er=E_OKDEF;
-	    } else {
-	      er=E_ILLSEGMENT;
-	    } 
-	  } else
-	  if(n==Kzero) {
-  	    if(relmode) {   
-	      r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
-	      segment = SEG_ZERO;
-	      t[0]=Ksegment;
-	      t[1]=SEG_ZERO;
-	      *ll=2;
-              er=E_OKDEF;
-	    } else {
-	      er=E_ILLSEGMENT;
-	    }  
-	  } else
-	if (n==Kassert) { /* ignore this in first pass, just check syntax */
-		int x;
-		i = 1;
-
-                /* XXX: sadly, can't implement unary logical not yet */
-		if(!(er=a_term(t+i,&x,&l,pc[segment],&afl,&label,1))) {
-			i += l;
-		}
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-		/* get filename.
-		   the tokenizer can either see it as a multichar string ... */
-		if (!er) {
-		   int k;
-		
-		   if(t[i]=='\"') {
-			i++;
-			k=t[i]+i+1;
-			i++;
-			while(i<k && !er) { i++; }
-		/* or as a 'char' if it's a single character ("word" would
-			have been caught by the above) */
-		    } else
-			if(!(er=a_term(t+i,&x,&l,pc[segment],&afl,&label,1))) {
-			i += l;
-		    }
-		}
-
-		/* two arguments only please */
-		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
-			er = E_SYNTAX;
-		}
-		if (!er) {
-			/* pass parameters back to xa.c */
-			*ll=i+1;
-			bl=0; /* zero length */
-			er = E_OKDEF; /* defer to pass 2 */
-		}
-	} else
-	if (n==Kbin) {
-		int j;
-		int l;
-
-		/* this first pass just calculates a prospective length
-			for pass 2. */
-		char binfnam[255];
-		int offset;
-		int length;
-
-		i = 1;
-		j = 0;
-
-		/* get offset */
-		if(!(er=a_term(t+i,&offset,&l,pc[segment],&afl,&label,1))) {
-			i += l;
-		}
-		if (offset < 0)
-			er = E_ILLQUANT;
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-
-		/* get length */
-		if (!er &&
-			!(er=a_term(t+i,&length,&l,pc[segment],&afl,&label,1)))
-		{
-			i += l;
-		}
-		if (length < 0)
-			er = E_ILLQUANT;
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-
-		/* get filename.
-		   the tokenizer can either see it as a multichar string ... */
-		if (!er) {
-		   int k;
-		
-		   //fstart = i;
-		   if(t[i]=='\"') {
-			i++;
-			k=t[i]+i+1;
-			i++;
-			while(i<k && !er) {
-				binfnam[j++] = t[i++];
-				if (j > 255)
-					er = E_NOMEM; /* buffer overflow */
+				if ((segment == SEG_ABS) && (er == E_SYNTAX && l == 0)) {
+					t[0] = Kreloc;
+					i = 1;
+					wval(i, pc[SEG_TEXT], 0);
+					t[i++] = T_END;
+					*ll = 7;
+					er = E_OKDEF;
+					r_mode(RMODE_RELOC);
+					/*printf("     : newseg=%d, pc[newseg]=%04x, pc[abs]=%04x, pc[text]=%04x\n",
+					 segment, pc[segment], pc[SEG_ABS], pc[SEG_TEXT]);*/
+				}
 			}
-			binfnam[j] = '\0';
-		/* or as a 'char' if it's a single character ("word" would
-			have been caught by the above) */
-		    } else
-			if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1))) {
-			binfnam[0] = v;
-			binfnam[1] = '\0';
-			i += l;
-		    }
-		}
+		} else if (n == Kopen) {
+			if (showblk)
+				fprintf(stderr, "%s line %d: .(\n", pp_getidat()->fname,
+						pp_getidat()->fline);
+			b_open();
+			er = E_NOLINE;
+		} else if (n == Kclose) {
+			if (showblk)
+				fprintf(stderr, "%s line %d: .)\n", pp_getidat()->fname,
+						pp_getidat()->fline);
+			er = b_close();
+			if (!er)
+				er = E_NOLINE;
+		} else if (n == Kalong) {
+			if (!w65816) {
+				er = E_65816;
+			} else {
+				memode = 1;
+				t[0] = Kalong;
+				*ll = 1;
+				er = E_OKDEF;
+			}
+		} else if (n == Kashort) {
+			memode = 0;
+			t[0] = Kashort;
+			*ll = 1;
+			er = E_OKDEF;
+		} else if (n == Kxlong) {
+			if (!w65816) {
+				er = E_65816;
+			} else {
+				xmode = 1;
+				t[0] = Kxlong;
+				*ll = 1;
+				er = E_OKDEF;
+			}
+		} else if (n == Kxshort) {
+			xmode = 0;
+			t[0] = Kxshort;
+			*ll = 1;
+			er = E_OKDEF;
+		} else if (n == Kdsb) {
+			dsb_len = 1;
+			if (!(er = a_term(t + 1, &bl, &l, pc[segment], &afl, &label, 0))) {
+				er = E_OKDEF;
+			}
+			dsb_len = 0;
+		} else if (n == Ktext) {
+			r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
+			segment = relmode ? SEG_TEXT : SEG_ABS;
+			t[0] = Ksegment;
+			t[1] = segment;
+			*ll = 2;
+			er = E_OKDEF;
+		} else if (n == Kdata) {
+			if (relmode) {
+				r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
+				segment = SEG_DATA;
+				t[0] = Ksegment;
+				t[1] = SEG_DATA;
+				*ll = 2;
+				er = E_OKDEF;
+			} else {
+				er = E_ILLSEGMENT;
+			}
+		} else if (n == Kbss) {
+			if (relmode) {
+				r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
+				segment = SEG_BSS;
+				t[0] = Ksegment;
+				t[1] = SEG_BSS;
+				*ll = 2;
+				er = E_OKDEF;
+			} else {
+				er = E_ILLSEGMENT;
+			}
+		} else if (n == Kzero) {
+			if (relmode) {
+				r_mode(RMODE_RELOC); // use of segments restores previous segment / reloc mode
+				segment = SEG_ZERO;
+				t[0] = Ksegment;
+				t[1] = SEG_ZERO;
+				*ll = 2;
+				er = E_OKDEF;
+			} else {
+				er = E_ILLSEGMENT;
+			}
+		} else if (n == Kassert) { /* ignore this in first pass, just check syntax */
+			int x;
+			i = 1;
 
-		/* three arguments only please */
-		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
-			er = E_SYNTAX;
-		}
+			/* XXX: sadly, can't implement unary logical not yet */
+			if (!(er = a_term(t + i, &x, &l, pc[segment], &afl, &label, 1))) {
+				i += l;
+			}
+			if (t[i] == ',') { /* skip comma */
+				i++;
+			} else {
+				er = E_SYNTAX;
+			}
+			/* get filename.
+			 the tokenizer can either see it as a multichar string ... */
+			if (!er) {
+				int k;
 
-		if (!er) {
-			FILE *foo;
+				if (t[i] == '\"') {
+					i++;
+					k = t[i] + i + 1;
+					i++;
+					while (i < k && !er) {
+						i++;
+					}
+					/* or as a 'char' if it's a single character ("word" would
+					 have been caught by the above) */
+				} else if (!(er = a_term(t + i, &x, &l, pc[segment], &afl,
+						&label, 1))) {
+					i += l;
+				}
+			}
+
+			/* two arguments only please */
+			if (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				er = E_SYNTAX;
+			}
+			if (!er) {
+				/* pass parameters back to xa.c */
+				*ll = i + 1;
+				bl = 0; /* zero length */
+				er = E_OKDEF; /* defer to pass 2 */
+			}
+		} else if (n == Kbin) {
+			int j;
+			int l;
+
+			/* this first pass just calculates a prospective length
+			 for pass 2. */
+			char binfnam[255];
+			int offset;
+			int length;
+
+			i = 1;
+			j = 0;
+
+			/* get offset */
+			if (!(er = a_term(t + i, &offset, &l, pc[segment], &afl, &label, 1))) {
+				i += l;
+			}
+			if (offset < 0)
+				er = E_ILLQUANT;
+			if (t[i] == ',') { /* skip comma */
+				i++;
+			} else {
+				er = E_SYNTAX;
+			}
+
+			/* get length */
+			if (!er
+					&& !(er = a_term(t + i, &length, &l, pc[segment], &afl,
+							&label, 1))) {
+				i += l;
+			}
+			if (length < 0)
+				er = E_ILLQUANT;
+			if (t[i] == ',') { /* skip comma */
+				i++;
+			} else {
+				er = E_SYNTAX;
+			}
+
+			/* get filename.
+			 the tokenizer can either see it as a multichar string ... */
+			if (!er) {
+				int k;
+
+				//fstart = i;
+				if (t[i] == '\"') {
+					i++;
+					k = t[i] + i + 1;
+					i++;
+					while (i < k && !er) {
+						binfnam[j++] = t[i++];
+						if (j > 255)
+							er = E_NOMEM; /* buffer overflow */
+					}
+					binfnam[j] = '\0';
+					/* or as a 'char' if it's a single character ("word" would
+					 have been caught by the above) */
+				} else if (!(er = a_term(t + i, &v, &l, pc[segment], &afl,
+						&label, 1))) {
+					binfnam[0] = v;
+					binfnam[1] = '\0';
+					i += l;
+				}
+			}
+
+			/* three arguments only please */
+			if (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				er = E_SYNTAX;
+			}
+
+			if (!er) {
+				FILE *foo;
 
 #ifdef DEBUG_AM
 			fprintf(stderr,
 "binclude1 offset = %i len = %i filename = %s endchar = %i\n",
 		offset, length, binfnam, i);
 #endif
-			if (!(foo = fopen(binfnam, "rb"))) {
-				er = E_FNF;
-			} else {
-				fseek(foo, 0, SEEK_END);
-				if ((length+offset) > ftell(foo)) {
-					er = E_OUTOFDATA;
+				if (!(foo = fopen(binfnam, "rb"))) {
+					er = E_FNF;
 				} else {
-					length = (length) ? length :
-						(ftell(foo)-offset);
+					fseek(foo, 0, SEEK_END);
+					if ((length + offset) > ftell(foo)) {
+						er = E_OUTOFDATA;
+					} else {
+						length = (length) ? length : (ftell(foo) - offset);
+					}
+					fclose(foo);
 				}
-				fclose(foo);
-			}
-			if (!er) {
-				if (length > 65535 && !w65816) {
-					errout(W_OVER64K);
-				} else if (length > 16777215) {
-					errout(W_OVER16M);
+				if (!er) {
+					if (length > 65535 && !w65816) {
+						errout(W_OVER64K);
+					} else if (length > 16777215) {
+						errout(W_OVER16M);
+					}
+					/* pass parameters back to xa.c */
+					*ll = i + 1;
+					/*
+					 bl=length+2;
+					 */
+					bl = length;
+					er = E_OKDEF; /* defer to pass 2 */
 				}
-				/* pass parameters back to xa.c */
-				*ll=i+1;
-/*
-				bl=length+2;
-*/
-				bl=length;
-				er = E_OKDEF; /* defer to pass 2 */
 			}
-		}
-	} else
-	  if(n==Kalign) {
-	    int tmp;
-	    if(segment!=SEG_ABS) {
-              if(!(er=a_term(t+1,&tmp,&l,pc[segment],&afl,&label,0))) {
-		if(tmp == 1 || tmp == 2 || tmp == 4 || tmp == 256) {
-		  set_align(tmp);
-		  if(pc[segment] & (tmp-1)) { /* not aligned */
-		    int tmp2;
-		    t[0]=Kdsb;
-		    i=1;
-		    bl=tmp=(tmp - (pc[segment] & (tmp-1))) & (tmp-1);
-		    wval(i,tmp, 0);	// 5 byte
-                    t[i++]=',';
-		    tmp2= 0xea;
-		    wval(i,tmp2, 0);	/* nop opcode, another 5 byte */
-                    t[i++]=T_END;
-		    *ll=wval_len * 2 + 3; //13; //9;
-		    er=E_OKDEF;
-		  } else {
-		    *ll=0;	/* ignore if aligned right */
-		  }
-		} else {
-		  er=E_ILLALIGN;
-		}
-	      }
-	    } else {
-	      er=E_ILLSEGMENT;
-	    }
-	  } else
-            /* optimization okay on pass 1: use 0 for fl */
+		} else if (n == Kalign) {
+			int tmp;
+			if (segment != SEG_ABS) {
+				if (!(er = a_term(t + 1, &tmp, &l, pc[segment], &afl, &label, 0))) {
+					if (tmp == 1 || tmp == 2 || tmp == 4 || tmp == 256) {
+						set_align(tmp);
+						if (pc[segment] & (tmp - 1)) { /* not aligned */
+							int tmp2;
+							t[0] = Kdsb;
+							i = 1;
+							bl = tmp = (tmp - (pc[segment] & (tmp - 1)))
+									& (tmp - 1);
+							wval(i, tmp, 0);	// 5 byte
+							t[i++] = ',';
+							tmp2 = 0xea;
+							wval(i, tmp2, 0); /* nop opcode, another 5 byte */
+							t[i++] = T_END;
+							*ll = wval_len * 2 + 3; //13; //9;
+							er = E_OKDEF;
+						} else {
+							*ll = 0; /* ignore if aligned right */
+						}
+					} else {
+						er = E_ILLALIGN;
+					}
+				}
+			} else {
+				er = E_ILLSEGMENT;
+			}
+		} else
+		/* optimization okay on pass 1: use 0 for fl */
 		{
 #ifdef DEBUG_AM
 fprintf(stderr, "E_OK ... t_p2 xat.c %i %i\n", t[0], *ll);
 #endif
-	       /* this actually calls pass2 on the current tokenization stream,
- 		* but without including the Klisting token listing */
-               er=t_p2(t,ll,(0 | byte), al);
+			/* this actually calls pass2 on the current tokenization stream,
+			 * but without including the Klisting token listing */
+			er = t_p2(t, ll, (0 | byte), al);
 #ifdef DEBUG_AM
 fprintf(stderr, "... --> er=%d\n", er);
 #endif
-	}
-          
-     } else
-     if(er==E_NODEF)
-     {
+		}
 
-     /*
-      * no label was found from t_conv!
-      * try to figure out most likely length
-      *
-      */
+	} else if (er == E_NODEF) {
+
+		/*
+		 * no label was found from t_conv!
+		 * try to figure out most likely length
+		 *
+		 */
 
 #ifdef DEBUG_AM
 fprintf(stderr, "E_NODEF pass1 xat.c\n");
 #endif
-	er = E_OK; /* stuff error */
-          n=t[0];	/* look at first token */
+		er = E_OK; /* stuff error */
+		n = t[0]; /* look at first token */
 
-	/* mnemonic dispatch -- abbreviated form in t_p2, but changed here
-		to not do anything other than 24-bit optimization since we
-		don't know the value of the label */
+		/* mnemonic dispatch -- abbreviated form in t_p2, but changed here
+		 to not do anything other than 24-bit optimization since we
+		 don't know the value of the label */
 
 		/* choose addressing mode; add commas found */
 
-          if(n>=0 && n<=Lastbef && n != Kmvn && n != Kmvp) /* not for mvn/p */
-          {
-	       int inp = 1;	/* input pointer */
+		if (n >= 0 && n <= Lastbef && n != Kmvn && n != Kmvp) /* not for mvn/p */
+		{
+			int inp = 1; /* input pointer */
 
-               if(t[inp]==T_END || t[inp]==T_COMMENT)
-               {
-                    sy=0;	/* implied */
-		    inp++;
-               } else
-               if(t[inp]=='#')
-               {
-                    sy=1+nk;	/* immediate */
-		    inp++;
-               } else
-               if(t[inp]=='(')
-               {
-                    sy=7+nk;	/* computed */
-		    inp++;
-               } else {
-                    sy=4+nk;	/* absolute or zero page */
-	       }
+			if (t[inp] == T_END || t[inp] == T_COMMENT) {
+				sy = 0; /* implied */
+				inp++;
+			} else if (t[inp] == '#') {
+				sy = 1 + nk; /* immediate */
+				inp++;
+			} else if (t[inp] == '(') {
+				sy = 7 + nk; /* computed */
+				inp++;
+			} else {
+				sy = 4 + nk; /* absolute or zero page */
+			}
 
-	       /* this actually finds the cast for all addressing modes,
- 		  but t_conv() only puts it there for immediate (#) or absolute/
-		  absolute indexed addressing modes */
-	       if (t[inp] == T_CAST) {
-		    inp++;
-		    cast = t[inp];
-		    inp++;
+			/* this actually finds the cast for all addressing modes,
+			 but t_conv() only puts it there for immediate (#) or absolute/
+			 absolute indexed addressing modes */
+			if (t[inp] == T_CAST) {
+				inp++;
+				cast = t[inp];
+				inp++;
 #ifdef DEBUG_CAST
 	printf("Found cast to: %c\n", cast);
 #endif
-	       }
-
-	       /* length counter set to maximum length + 1 */
-	       if (w65816 || (t[l-1]=='@' || t[l-1] == '!')) {
-		       	/* for 65816 allow addressing modes up to 4 byte overall length */
-               		bl=Maxbyt+1;
-	       } else {
-		       	/* for other modes only check for addressing modes up to 3 byte overall length */
-		 	bl=Maxbyt;
-	       }
-               
-		/* find best fit for length of this operand */
-               while(--bl)
-               {
-
-		/* look at syntax table (at) using syntax (sy) as index.
-			is there an addressing mode for an operand
-			of this length? am = addressing mode */
-
-                    if((am=at[sy][bl-1])>=0)
-                    {
-                         if(am>Admodes-1) /* no, it's -1, syntax error */
-                         {
-                              er=E_SYNTAX;
-                              break;
-                         }
-                         if(ct[n][am]>=0) /* yes, valid token *and* mode,
-						so we're done */
-                              break;
-
-			/* no valid mode for this token, see if it's something
-				ambiguous; if so, try to interpret in that
-				context. */
-                         for(v=0;v<AnzAlt;v++)
-                              if(xt[v][0]==am && ct[n][xt[v][1]]>=0)
-                                   break;
-                         if(v<AnzAlt) /* got a match for another context */
-                         {
-                              am=xt[v][1];
-                              break;
-                         }
-                    }
-               }
-
-		/* optimize operand length for 24-bit quantities */
-		/* look at cast byte from t_conv */
-
-               if (cast!='@' && cast!= '!')
-               {
-                     if(bl && !er && opt[am]>=0 && am>16) /* <<< NOTE! */
-                          if(ct[n][opt[am]]>=0)
-                               am=opt[am];
-               }
-		/* if ` is declared, force further optimization */
-		if (cast=='`') {
-			if (opt[am]<0 || ct[n][opt[am]]<0)
-				errout(E_ADRESS);
-			am=opt[am];
-		}
-		/* if ! is declared, force to 16-bit quantity */
-		if (cast=='!' && am>16 && opt[am]>=0 && bl) {
-			am=opt[am];
-		}
-
-		/* couldn't match anything for this opcode */
-               if(!bl)
-                    er=E_SYNTAX;
-               else {
-		/* ok, get length of instruction */
-                    bl=le[am];
-		/* and add one for 65816 special instruction modes */
-                    if( ((ct[n][am]&0x400) && memode) ||
-			((ct[n][am]&0x800) && xmode)) {
-                          bl++;
 			}
-                }
 
+			/* length counter set to maximum length + 1 */
+			if (w65816 || (t[l - 1] == '@' || t[l - 1] == '!')) {
+				/* for 65816 allow addressing modes up to 4 byte overall length */
+				bl = Maxbyt + 1;
+			} else {
+				/* for other modes only check for addressing modes up to 3 byte overall length */
+				bl = Maxbyt;
+			}
 
-		if (er == E_NODEF)
-			er = E_OK;
+			/* find best fit for length of this operand */
+			while (--bl) {
 
-		/* .byt, .asc, .word, .dsb, .fopt pseudo-op dispatch */
+				/* look at syntax table (at) using syntax (sy) as index.
+				 is there an addressing mode for an operand
+				 of this length? am = addressing mode */
 
-          } else
-	  if(n==Kimportzp) {
-	    int i;
-	    *ll=0;		/* no output */
-	    bl = 0;		/* no output length */
-	    /* import labels; next follow a comma-separated list of labels that are
- 	       imported. Tokenizer has already created label entries, we only need to
-	       set the flags appropriately */
-	    i=1;
-/*printf("Kimport: t[i]=%d\n",t[i]);*/
-	    while(t[i]==T_LABEL) {
-		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
-/*printf("lg_import: %d\n",n);*/
-		lg_importzp(n);
-		i+=3;
-		while (t[i]==' ') i++;
-		if (t[i]!=',') break;
-		i++;
-		while (t[i]==' ') i++;
-	    }
-	    er=E_NOLINE;
-	  } else
-	  if(n==Kimport) {
-	    int i;
-	    *ll=0;		/* no output */
-	    bl = 0;		/* no output length */
-	    /* import labels; next follow a comma-separated list of labels that are
- 	       imported. Tokenizer has already created label entries, we only need to
-	       set the flags appropriately */
-	    i=1;
-/*printf("Kimport: t[i]=%d\n",t[i]);*/
-	    while(t[i]==T_LABEL) {
-		int n = (t[i+1] & 255) | (t[i+2] << 8); 	/* label number */
-/*printf("lg_import: %d\n",n);*/
-		lg_import(n);
-		i+=3;
-		while (t[i]==' ') i++;
-		if (t[i]!=',') break;
-		i++;
-		while (t[i]==' ') i++;
-	    }
-	    er=E_NOLINE;
-	  } else
-	  if(n==Kmvn || n==Kmvp)
-	  {
-               bl=3;
-		if (!w65816) er = E_65816;
-	  } else
-          if(n==Kbyt || n==Kasc || n==Kaasc)
-          {
+				if ((am = at[sy][bl - 1]) >= 0) {
+					if (am > Admodes - 1) /* no, it's -1, syntax error */
+					{
+						er = E_SYNTAX;
+						break;
+					}
+					if (ct[n][am] >= 0) /* yes, valid token *and* mode,
+					 so we're done */
+						break;
+
+					/* no valid mode for this token, see if it's something
+					 ambiguous; if so, try to interpret in that
+					 context. */
+					for (v = 0; v < AnzAlt; v++)
+						if (xt[v][0] == am && ct[n][xt[v][1]] >= 0)
+							break;
+					if (v < AnzAlt) /* got a match for another context */
+					{
+						am = xt[v][1];
+						break;
+					}
+				}
+			}
+
+			/* optimize operand length for 24-bit quantities */
+			/* look at cast byte from t_conv */
+
+			if (cast != '@' && cast != '!') {
+				if (bl && !er && opt[am] >= 0 && am > 16) /* <<< NOTE! */
+					if (ct[n][opt[am]] >= 0)
+						am = opt[am];
+			}
+			/* if ` is declared, force further optimization */
+			if (cast == '`') {
+				if (opt[am] < 0 || ct[n][opt[am]] < 0)
+					errout(E_ADRESS);
+				am = opt[am];
+			}
+			/* if ! is declared, force to 16-bit quantity */
+			if (cast == '!' && am > 16 && opt[am] >= 0 && bl) {
+				am = opt[am];
+			}
+
+			/* couldn't match anything for this opcode */
+			if (!bl)
+				er = E_SYNTAX;
+			else {
+				/* ok, get length of instruction */
+				bl = le[am];
+				/* and add one for 65816 special instruction modes */
+				if (((ct[n][am] & 0x400) && memode)
+						|| ((ct[n][am] & 0x800) && xmode)) {
+					bl++;
+				}
+			}
+
+			if (er == E_NODEF)
+				er = E_OK;
+
+			/* .byt, .asc, .word, .dsb, .fopt pseudo-op dispatch */
+
+		} else if (n == Kimportzp) {
+			int i;
+			*ll = 0; /* no output */
+			bl = 0; /* no output length */
+			/* import labels; next follow a comma-separated list of labels that are
+			 imported. Tokenizer has already created label entries, we only need to
+			 set the flags appropriately */
+			i = 1;
+			/*printf("Kimport: t[i]=%d\n",t[i]);*/
+			while (t[i] == T_LABEL) {
+				int n = (t[i + 1] & 255) | (t[i + 2] << 8); /* label number */
+				/*printf("lg_import: %d\n",n);*/
+				lg_importzp(n);
+				i += 3;
+				while (t[i] == ' ')
+					i++;
+				if (t[i] != ',')
+					break;
+				i++;
+				while (t[i] == ' ')
+					i++;
+			}
+			er = E_NOLINE;
+		} else if (n == Kimport) {
+			int i;
+			*ll = 0; /* no output */
+			bl = 0; /* no output length */
+			/* import labels; next follow a comma-separated list of labels that are
+			 imported. Tokenizer has already created label entries, we only need to
+			 set the flags appropriately */
+			i = 1;
+			/*printf("Kimport: t[i]=%d\n",t[i]);*/
+			while (t[i] == T_LABEL) {
+				int n = (t[i + 1] & 255) | (t[i + 2] << 8); /* label number */
+				/*printf("lg_import: %d\n",n);*/
+				lg_import(n);
+				i += 3;
+				while (t[i] == ' ')
+					i++;
+				if (t[i] != ',')
+					break;
+				i++;
+				while (t[i] == ' ')
+					i++;
+			}
+			er = E_NOLINE;
+		} else if (n == Kmvn || n == Kmvp) {
+			bl = 3;
+			if (!w65816)
+				er = E_65816;
+		} else if (n == Kbyt || n == Kasc || n == Kaasc) {
 #ifdef DEBUG_AM
 fprintf(stderr, "byt pass 1 %i\n", nk+1-na1+na2);
 #endif
-               bl=nk+1-na1+na2;
-          } else
-          if(n==Kword)
-          {
-               bl=2*nk+2;
-          } else
-          if(n==Kdsb)
-          {
-               er=a_term(t+1,&bl,&l,pc[segment],&afl,&label,0);
-          } else
-	  if(n==Kfopt) 
-	  {
-	    set_fopt(l-1,t+1, nk+1-na1+na2);
-	    *ll = 0;
-	  } else
-          if(n==T_OP)
-          {
-               er=E_OKDEF;
-          } else
-               er=E_NODEF;
-          
-          if(!er)
-               er=E_OKDEF;
+			bl = nk + 1 - na1 + na2;
+		} else if (n == Kword) {
+			bl = 2 * nk + 2;
+		} else if (n == Kdsb) {
+			er = a_term(t + 1, &bl, &l, pc[segment], &afl, &label, 0);
+		} else if (n == Kfopt) {
+			set_fopt(l - 1, t + 1, nk + 1 - na1 + na2);
+			*ll = 0;
+		} else if (n == T_OP) {
+			er = E_OKDEF;
+		} else
+			er = E_NODEF;
+
+		if (!er)
+			er = E_OKDEF;
 #ifdef DEBUG_AM
 fprintf(stderr, "guessing instruction length is %d\n", bl);
 #endif
-     }
-     if(er==E_NOLINE)
-     {
-          er=E_OK;
-          *ll=0;
-     }
+	}
+	if (er == E_NOLINE) {
+		er = E_OK;
+		*ll = 0;
+	}
 
-     *al += bl;
-     pc[segment]+=bl;
-     if(segment==SEG_TEXT) pc[SEG_ABS]+=bl;
-     if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
+	*al += bl;
+	pc[segment] += bl;
+	if (segment == SEG_TEXT)
+		pc[SEG_ABS] += bl;
+	if (segment == SEG_ABS)
+		pc[SEG_TEXT] += bl;
 
-     /* adjust length by token listing buffer length */
+	/* adjust length by token listing buffer length */
 #ifdef DEBUG_CONV 
      printf("converted: (er=%d, t=%p, ll=%d, tlen=%d):",er, t, *ll, tlen);
      for(i=0;i<*ll;i++)
@@ -1102,8 +1065,8 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
      printf("adjusted len=%d\n", *ll+tlen);
 #endif
 
-     *ll = *ll + tlen;
-     return(er);
+	*ll = *ll + tlen;
+	return (er);
 }
 
 /*********************************************************************************************/
@@ -1131,12 +1094,12 @@ fprintf(stderr, "guessing instruction length is %d\n", bl);
  * 	into the file; note that for .dsb and .bin, this does NOT match
  * 	the length in the internal data structures!
  */
-int t_p2_l(signed char *t, int *ll, int *al)
-{
+int t_p2_l(signed char *t, int *ll, int *al) {
 	int er = E_OK;
 	int l = *ll;
 
-	if (l < 0) l = -l;
+	if (l < 0)
+		l = -l;
 
 #if 0
      {
@@ -1147,43 +1110,42 @@ int t_p2_l(signed char *t, int *ll, int *al)
      }
 #endif
 
-
 	if (t[0] == T_LISTING) {
-	    int tlen;
-	    tlen=((t[2]&255)<<8) | (t[1]&255);
-	    if (*ll<0) {
-	    	*ll=(*ll) + tlen;
-	    } else {
-	    	*ll=(*ll) - tlen;
-	    }
+		int tlen;
+		tlen = ((t[2] & 255) << 8) | (t[1] & 255);
+		if (*ll < 0) {
+			*ll = (*ll) + tlen;
+		} else {
+			*ll = (*ll) - tlen;
+		}
 
-	    if (tlen > l) 
-     	    {
-		int i;
+		if (tlen > l) {
+			int i;
 
-		// that is corrupt data and should not happen
-		list_flush();
-        	printf("corrupt: t_p2_l (l=%d, tlen=%d, ll=%d, t=%p):", l, tlen, *ll, t);
-        	for(i=0;i<l;i++)
-          	printf("%02x,",t[i] & 0xff);
-        	printf("\n");
-     	    }
+			// that is corrupt data and should not happen
+			list_flush();
+			printf("corrupt: t_p2_l (l=%d, tlen=%d, ll=%d, t=%p):", l, tlen,
+					*ll, t);
+			for (i = 0; i < l; i++)
+				printf("%02x,", t[i] & 0xff);
+			printf("\n");
+		}
 
-	    if (*ll != 0) {
-  	    	er = t_p2(t+tlen, ll, 1, al);
-	    }
+		if (*ll != 0) {
+			er = t_p2(t + tlen, ll, 1, al);
+		}
 
-	    /* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
-	    do_listing(t+3, tlen-3, t+tlen, *ll);
+		/* do the actual listing (*ll-2 as we need to substract the place for the tlen value) */
+		do_listing(t + 3, tlen - 3, t + tlen, *ll);
 
-	    // adapt back, i.e. remove token listing 
-	    // Use the input token length as delimiter.
-	    if (*ll != 0) {
-	 	memmove(t, t+tlen, l-tlen);
-	    }
+		// adapt back, i.e. remove token listing
+		// Use the input token length as delimiter.
+		if (*ll != 0) {
+			memmove(t, t + tlen, l - tlen);
+		}
 
 	} else {
-	  er = t_p2(t, ll, 1, al);
+		er = t_p2(t, ll, 1, al);
 	}
 	return er;
 }
@@ -1201,882 +1163,807 @@ int t_p2_l(signed char *t, int *ll, int *al)
  * fl	when set, do not do length optimization, when not set,
  * 	allow length optimization (when called from p1)
  */
-int t_p2(signed char *t, int *ll, int fl, int *al)
-{
-     static int afl,nafl, i,j,k,er,v,n,l,bl,sy,am,c,vv[3],v2,label;
-     static int rlt[3];	/* relocation table */
-     static int lab[3];	/* undef. label table */
+int t_p2(signed char *t, int *ll, int fl, int *al) {
+	static int afl, nafl, i, j, k, er, v, n, l, bl, sy, am, c, vv[3], v2, label;
+	static int rlt[3]; /* relocation table */
+	static int lab[3]; /* undef. label table */
 
+	er = E_OK;
+	bl = 0;
+	if (*ll < 0) /* <0 when E_OK, >0 when E_OKDEF     */
+	{
+		*ll = -*ll;
+		bl = *ll;
+		er = E_OK;
 
-     er=E_OK;
-     bl=0;
-     if(*ll<0) /* <0 when E_OK, >0 when E_OKDEF     */
-     {
-          *ll=-*ll;
-          bl=*ll;
-          er=E_OK;
-	
-     } else
-     {
-          n=t[0];
-          if(n==T_OP)
-          {
-               n=cval(t+1);
-               er=a_term(t+4,&v,&l,pc[segment],&nafl,&label,0);
+	} else {
+		n = t[0];
+		if (n == T_OP) {
+			n = cval(t + 1);
+			er = a_term(t + 4, &v, &l, pc[segment], &nafl, &label, 0);
 
-               if(!er)
-               {
-                    if(t[3]=='=')
-                    {
-                      v2=v;
-                    } else {
-                      if( (!(er=l_get(n,&v2, &afl))) 
-				&& ((afl & A_FMASK)!=(SEG_UNDEF<<8)) 
-				&& ((afl & A_FMASK)!=(SEG_UNDEFZP<<8)) )
-                      {
-                         if(t[3]=='+')
-                         {
-			      if(afl && nafl) { errout(E_WPOINTER); nafl=0; }
-			      nafl = afl;
-                              v2+=v;
-                         } else
-                         if(t[3]=='-')
-                         {	
-			      if( (((nafl & A_FMASK)>>8) != afl) 
-					|| ((nafl & A_MASK)==A_HIGH) ) {
-			        errout(E_WPOINTER); 
-				nafl=0; 
-			      } else {
-				nafl = afl;
-			      }
-                              v2-=v;
-                         } else
-                         if(t[3]=='*')
-                         {
-			      if(afl || nafl) { errout(E_WPOINTER); nafl=0; }
-                              v2*=v;
-                         } else
-                         if(t[3]=='/')
-                         {
-			      if(afl || nafl) { errout(E_WPOINTER); nafl=0; }
-                              if(v)
-                                   v2/=v;
-                              else
-                                   er=E_DIV;
-                         } else
-                         if(t[3]=='|')
-                         {
-			      if(afl || nafl) { errout(E_WPOINTER); nafl=0; }
-                              v2=v|v2;
-                         } else
-                         if(t[3]=='&')
-                         {
-			      if(afl || nafl) { errout(E_WPOINTER); nafl=0; }
-                              v2=v2&v;
-                         }
-                      }
-		    }
-                    l_set(n,v2,nafl>>8);	
+			if (!er) {
+				if (t[3] == '=') {
+					v2 = v;
+				} else {
+					if ((!(er = l_get(n, &v2, &afl)))
+							&& ((afl & A_FMASK) != (SEG_UNDEF << 8))
+							&& ((afl & A_FMASK) != (SEG_UNDEFZP << 8))) {
+						if (t[3] == '+') {
+							if (afl && nafl) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							}
+							nafl = afl;
+							v2 += v;
+						} else if (t[3] == '-') {
+							if ((((nafl & A_FMASK) >> 8) != afl)
+									|| ((nafl & A_MASK) == A_HIGH)) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							} else {
+								nafl = afl;
+							}
+							v2 -= v;
+						} else if (t[3] == '*') {
+							if (afl || nafl) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							}
+							v2 *= v;
+						} else if (t[3] == '/') {
+							if (afl || nafl) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							}
+							if (v)
+								v2 /= v;
+							else
+								er = E_DIV;
+						} else if (t[3] == '|') {
+							if (afl || nafl) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							}
+							v2 = v | v2;
+						} else if (t[3] == '&') {
+							if (afl || nafl) {
+								errout(E_WPOINTER);
+								nafl = 0;
+							}
+							v2 = v2 & v;
+						}
+					}
+				}
+				l_set(n, v2, nafl >> 8);
 
-                    *ll=0;
-                    if(!er)
-                         er=E_NOLINE;
-               }
-          } else
-          if(n==Kword)
-          {
-               i=1;
-               j=0;
-               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
-               {
-                    if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
-                    {   
-/*if(afl) printf("relocation 1 %04x at pc=$%04x, value now =$%04x\n",
-							afl,pc[segment],v); */
-			 if(afl) u_set(pc[segment]+j, afl, label, 2);
-                         t[j++]=v&255;
-                         t[j++]=(v>>8)&255;
+				*ll = 0;
+				if (!er)
+					er = E_NOLINE;
+			}
+		} else if (n == Kword) {
+			i = 1;
+			j = 0;
+			while (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				if (!(er = a_term(t + i, &v, &l, pc[segment], &afl, &label, 1))) {
+					/*if(afl) printf("relocation 1 %04x at pc=$%04x, value now =$%04x\n",
+					 afl,pc[segment],v); */
+					if (afl)
+						u_set(pc[segment] + j, afl, label, 2);
+					t[j++] = v & 255;
+					t[j++] = (v >> 8) & 255;
 
-                         i+=l;     
-                         if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
-                              er=E_SYNTAX;
-                         else
-                         if(t[i]==',')
-                              i++;
+					i += l;
+					if (t[i] != T_END && t[i] != T_COMMENT && t[i] != ',')
+						er = E_SYNTAX;
+					else if (t[i] == ',')
+						i++;
 
-                    }
-               }
-               *ll=j;
-               bl=j;
-          } else
-          if (n == Kassert)
-          {
-		int result = 0;
-		int c;
-		i = 1;
+				}
+			}
+			*ll = j;
+			bl = j;
+		} else if (n == Kassert) {
+			int result = 0;
+			int c;
+			i = 1;
 
-		/* this time, actually check something */
-		if(!(er=a_term(t+i,&result,&l,pc[segment],&afl,&label,1))) {
-			i += l;
-		}
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-		/* get error string.
-		   the tokenizer can either see it as a multichar string ... */
-		if (!er) {
-		   int k;
-
-		   if (!result)
-			fprintf(stderr, "Assertion failed: ");
-		   if(t[i]=='\"') {
-			i++;
-			k=t[i]+i+1;
-			i++;
-			while(i<k && !er) {
-				if (!result)
-					fprintf(stderr, "%c", t[i]);
+			/* this time, actually check something */
+			if (!(er = a_term(t + i, &result, &l, pc[segment], &afl, &label, 1))) {
+				i += l;
+			}
+			if (t[i] == ',') { /* skip comma */
 				i++;
+			} else {
+				er = E_SYNTAX;
 			}
-		/* or as a 'char' if it's a single character ("word" would
-			have been caught by the above) */
-		    } else
-			if(!(er=a_term(t+i,&c,&l,pc[segment],&afl,&label,1))) {
-			if (!result) fprintf(stderr, "Assertion failed: %c", c);
-			i += l;
-		    }
-		}
+			/* get error string.
+			 the tokenizer can either see it as a multichar string ... */
+			if (!er) {
+				int k;
 
-		/* two arguments only please */
-		if (!er && !result && t[i] != T_END && t[i] != T_COMMENT) {
-			er = E_SYNTAX;
-		}
-		if (!er && !result) {
-			fprintf(stderr, "\n");
-			return E_AERROR; /* assertion failed, fail now */
-		}
-		*ll = 0;
-		bl = 0;
-          } else
-          if (n == Kbin)
-          {
-		int j;
-		int l;
-
-		/* figure out our parameters again. repeat most of
-			the error checking since we might not be over
-			the total number of bogosities */
-		char binfnam[255];
-		int offset;
-		int length;
-		int fstart;
-		int flen;
-
-		i = 1;
-		j = 0;
-		flen = 0;
-
-		/* get offset */
-		if(!(er=a_term(t+i,&offset,&l,pc[segment],&afl,&label,1))) {
-			i += l;
-		}
-		if (offset < 0)
-			er = E_ILLQUANT;
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-
-		/* get length */
-		if (!er &&
-			!(er=a_term(t+i,&length,&l,pc[segment],&afl,&label,1)))
-		{
-			i += l;
-		}
-		if (length < 0)
-			er = E_ILLQUANT;
-		if(t[i] == ',') { /* skip comma */
-			i++;
-		} else {
-			er = E_SYNTAX;
-		}
-
-		/* get filename.
-		   the tokenizer can either see it as a multichar string ... */
-		if (!er) {
-		   int k;
-		
-		   fstart = i;
-		   if(t[i]=='\"') {
-			i++;
-			k=t[i]+i+1;
-			i++;
-			while(i<k && !er) {
-				binfnam[j++] = t[i++];
-				if (j > 255)
-					er = E_NOMEM; /* buffer overflow */
+				if (!result)
+					fprintf(stderr, "Assertion failed: ");
+				if (t[i] == '\"') {
+					i++;
+					k = t[i] + i + 1;
+					i++;
+					while (i < k && !er) {
+						if (!result)
+							fprintf(stderr, "%c", t[i]);
+						i++;
+					}
+					/* or as a 'char' if it's a single character ("word" would
+					 have been caught by the above) */
+				} else if (!(er = a_term(t + i, &c, &l, pc[segment], &afl,
+						&label, 1))) {
+					if (!result)
+						fprintf(stderr, "Assertion failed: %c", c);
+					i += l;
+				}
 			}
-			binfnam[j] = '\0';
-			flen = j;
-		/* or as a 'char' if it's a single character ("word" would
-			have been caught by the above) */
-		    } else
-			if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1))) {
-			binfnam[0] = v;
-			binfnam[1] = '\0';
-			i += l;
-			flen = 1;
-		    }
-		}
 
-		/* three arguments only please */
-		if (!er && t[i] != T_END && t[i] != T_COMMENT) {
-			er = E_SYNTAX;
-		}
+			/* two arguments only please */
+			if (!er && !result && t[i] != T_END && t[i] != T_COMMENT) {
+				er = E_SYNTAX;
+			}
+			if (!er && !result) {
+				fprintf(stderr, "\n");
+				return E_AERROR; /* assertion failed, fail now */
+			}
+			*ll = 0;
+			bl = 0;
+		} else if (n == Kbin) {
+			int j;
+			int l;
 
-		if (!er) {
-			FILE *foo;
+			/* figure out our parameters again. repeat most of
+			 the error checking since we might not be over
+			 the total number of bogosities */
+			char binfnam[255];
+			int offset;
+			int length;
+			int fstart;
+			int flen;
+
+			i = 1;
+			j = 0;
+			flen = 0;
+
+			/* get offset */
+			if (!(er = a_term(t + i, &offset, &l, pc[segment], &afl, &label, 1))) {
+				i += l;
+			}
+			if (offset < 0)
+				er = E_ILLQUANT;
+			if (t[i] == ',') { /* skip comma */
+				i++;
+			} else {
+				er = E_SYNTAX;
+			}
+
+			/* get length */
+			if (!er
+					&& !(er = a_term(t + i, &length, &l, pc[segment], &afl,
+							&label, 1))) {
+				i += l;
+			}
+			if (length < 0)
+				er = E_ILLQUANT;
+			if (t[i] == ',') { /* skip comma */
+				i++;
+			} else {
+				er = E_SYNTAX;
+			}
+
+			/* get filename.
+			 the tokenizer can either see it as a multichar string ... */
+			if (!er) {
+				int k;
+
+				fstart = i;
+				if (t[i] == '\"') {
+					i++;
+					k = t[i] + i + 1;
+					i++;
+					while (i < k && !er) {
+						binfnam[j++] = t[i++];
+						if (j > 255)
+							er = E_NOMEM; /* buffer overflow */
+					}
+					binfnam[j] = '\0';
+					flen = j;
+					/* or as a 'char' if it's a single character ("word" would
+					 have been caught by the above) */
+				} else if (!(er = a_term(t + i, &v, &l, pc[segment], &afl,
+						&label, 1))) {
+					binfnam[0] = v;
+					binfnam[1] = '\0';
+					i += l;
+					flen = 1;
+				}
+			}
+
+			/* three arguments only please */
+			if (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				er = E_SYNTAX;
+			}
+
+			if (!er) {
+				FILE *foo;
 
 #ifdef DEBUG_AM
 			fprintf(stderr,
 "binclude2 offset = %i len = %i filename = %s endchar = %i\n",
 		offset, length, binfnam, i);
 #endif
-			if (!(foo = fopen(binfnam, "rb"))) {
-				er = E_FNF;
-			} else {
-				fseek(foo, 0, SEEK_END);
-				if ((length+offset) > ftell(foo)) {
-					er = E_OUTOFDATA;
+				if (!(foo = fopen(binfnam, "rb"))) {
+					er = E_FNF;
 				} else {
-					length = (length) ? length :
-						(ftell(foo)-offset);
+					fseek(foo, 0, SEEK_END);
+					if ((length + offset) > ftell(foo)) {
+						er = E_OUTOFDATA;
+					} else {
+						length = (length) ? length : (ftell(foo) - offset);
+					}
+					fclose(foo);
 				}
-				fclose(foo);
-			}
-			if (!er) {
-				if (length > 65535 && !w65816) {
-					errout(W_OVER64K);
-				} else if (length > 16777215) {
-					errout(W_OVER16M);
+				if (!er) {
+					if (length > 65535 && !w65816) {
+						errout(W_OVER64K);
+					} else if (length > 16777215) {
+						errout(W_OVER16M);
+					}
+					/* pass parameters back to xa.c */
+					*ll = length;
+					/*
+					 bl=length+2;
+					 */
+					bl = length;
+					t[0] = offset & 255;
+					t[1] = (offset >> 8) & 255;
+					t[2] = (offset >> 16) & 255;
+					/* God help us if the index is > 65535 */
+					t[3] = fstart & 255;
+					t[4] = (fstart >> 8) & 255;
+					t[5] = flen; /* to massage 'char' types */
+					er = E_BIN;
 				}
-				/* pass parameters back to xa.c */
-				*ll=length;
-/*
-				bl=length+2;
-*/
-				bl=length;
-				t[0] = offset & 255;
-				t[1] = (offset >> 8) & 255;
-				t[2] = (offset >> 16) & 255;
-				/* God help us if the index is > 65535 */
-				t[3] = fstart & 255;
-				t[4] = (fstart >> 8) & 255;
-				t[5] = flen; /* to massage 'char' types */
-				er = E_BIN;
 			}
-		}
-	} else
-	if (n==Kmvn || n==Kmvp)
-	{
-	/* special case these instructions' syntax */
-		int wide=0;
-		i=1;
-		j=1;
-		/* write opcode */
-		t[0] = ((n == Kmvp) ? 0x44 : 0x54);
-		while(!er && t[i]!=T_END && t[i]!=T_COMMENT)
-		{
-			if (wide) /* oops */
-				er = E_SYNTAX;
+		} else if (n == Kmvn || n == Kmvp) {
+			/* special case these instructions' syntax */
+			int wide = 0;
+			i = 1;
+			j = 1;
+			/* write opcode */
+			t[0] = ((n == Kmvp) ? 0x44 : 0x54);
+			while (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				if (wide) /* oops */
+					er = E_SYNTAX;
 #ifdef DEBUG_AM
 fprintf(stderr, "mvn mvp: %i %i %i %i %i\n", t[0], t[i], wide, i, j);
 #endif
-			if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
-			{   
-/*if(afl) printf("relocation 1 %04x at pc=$%04x, value now =$%04x\n",
-							afl,pc[segment],v); */
-				if(afl) u_set(pc[segment]+j, afl, label, 2);
-				i+=l;     
-				if (v & 0xff00)
-					er=E_ILLQUANT;
-				else
-					t[j++]=v;
+				if (!(er = a_term(t + i, &v, &l, pc[segment], &afl, &label, 1))) {
+					/*if(afl) printf("relocation 1 %04x at pc=$%04x, value now =$%04x\n",
+					 afl,pc[segment],v); */
+					if (afl)
+						u_set(pc[segment] + j, afl, label, 2);
+					i += l;
+					if (v & 0xff00)
+						er = E_ILLQUANT;
+					else
+						t[j++] = v;
+				}
+				if (j > 3)
+					er = E_SYNTAX;
+				if (t[i] != T_END && t[i] != T_COMMENT && t[i] != ',')
+					er = E_SYNTAX;
+				else if (t[i] == ',')
+					i++;
 			}
-			if (j > 3)
-				er=E_SYNTAX;
-			if(t[i]!=T_END && t[i]!=T_COMMENT && t[i]!=',')
-				er=E_SYNTAX;
-			else
-			if(t[i]==',')
-                              i++;
-		}
-		if (j != 3) er = E_SYNTAX; /* oops */
+			if (j != 3)
+				er = E_SYNTAX; /* oops */
 
-		/* before we leave, swap the bytes. although disassembled as
-			mv? src,dest it's actually represented as
-			mv? $ddss -- see 
-			http://6502org.wikidot.com/software-65816-memorymove */
-		i = t[2];
-		t[2] = t[1];
-		t[1] = i;
+			/* before we leave, swap the bytes. although disassembled as
+			 mv? src,dest it's actually represented as
+			 mv? $ddss -- see
+			 http://6502org.wikidot.com/software-65816-memorymove */
+			i = t[2];
+			t[2] = t[1];
+			t[1] = i;
 
-		*ll = j;
-		bl = j;
-		if (!w65816) er = E_65816;
-	} else if(n==Kasc || n==Kbyt || n==Kaasc) {
-               i=1;
-               j=0;
-               while(!er && t[i]!=T_END && t[i] != T_COMMENT)
-               {
-                    if(t[i]=='\"')
-                    {
-                         i++;
-                         k=t[i]+i+1;
-                         i++;
-                         while(i<k)
-                              t[j++]=t[i++];
-                    } else
-                    {
-                         if(!(er=a_term(t+i,&v,&l,pc[segment],&afl,&label,1)))
-                         {
-/*if(afl) printf("relocation 2 %04x at pc=$%04x, value now =$%04x\n",afl,pc[segment]+j,v); */
-			      if(afl) u_set(pc[segment]+j, afl, label, 1);
-                              if(v&0xff00)
-                                   er=E_OVERFLOW;
-                              else
-                              {
-                                   t[j++]=v;                        
-                                   i+=l;     
-                              }
-                         }
-                    }
-                    if(t[i]!=T_END && t[i] != T_COMMENT && t[i]!=',')
-                         er=E_SYNTAX;
-                    else
-                         if(t[i]==',')
-                              i++;
-               }
-               *ll=j;
-               bl=j;
-          } else
-          if(n==Kalong)
-          {
-               memode=1;
-               *ll=0;
-          } else
-          if(n==Kashort)
-          {
-               memode=0;
-               *ll=0;
-          } else
-          if(n==Kxlong)
-          {
-               xmode=1;
-               *ll=0;
-          } else
-          if(n==Kxshort)
-          {
-               xmode=0;
-               *ll=0;
-          } else
-          if(n==Kpcdef)
-          {
-	       int npc;
-               er=a_term(t+1,&npc,&l,pc[segment],&afl,&label,0);
-               bl=0;     
-               *ll=0;
-	       if(segment==SEG_TEXT) {
-	         r_mode(RMODE_ABS);
-	       }
-	       pc[segment] = npc;
-          } else
-          if(n==Kreloc) {
-	       int npc;
-               er=a_term(t+1,&npc,&l,pc[segment],&afl,&label,0);
-/*printf("Kreloc: segment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
-               bl=0;     
-               *ll=0;
-	       r_mode(RMODE_RELOC);
-	       pc[segment] = npc;
-/*printf("Kreloc: newsegment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
-	  } else
-	  if(n==Klistbytes) {
-	       int nbytes = (t[1] & 0xff) + (t[2] << 8);
-	       //printf("Klistbytes --> er=%d, nbytes=%d\n", er, nbytes);
-	       list_setbytes(nbytes);
-	       l = 2;
-	       *ll=0;
-	       bl =0;
-	  } else
-	  if(n==Ksegment) {
-	       segment = t[1];
-	       *ll=0;
-	       bl =0;
-	  } else
-          if(n==Kdsb)
-          {
-	       dsb_len = 1;
-               if(!(er=a_term(t+1,&j,&i,pc[segment],&afl,&label,0)))
-               {
-                    if (j<0)
-			er=E_NEGDSBLEN;
-		    else
-/*
-                    if(t[i+1]!=',')
-                         er=E_SYNTAX;
-                    else
-*/
-/*
-		    if((segment!=SEG_ABS) && afl) 
-			 er=E_ILLPOINTER;
-		    else
-*/
-                    {
-			 dsb_len = 0;
+			*ll = j;
+			bl = j;
+			if (!w65816)
+				er = E_65816;
+		} else if (n == Kasc || n == Kbyt || n == Kaasc) {
+			i = 1;
+			j = 0;
+			while (!er && t[i] != T_END && t[i] != T_COMMENT) {
+				if (t[i] == '\"') {
+					i++;
+					k = t[i] + i + 1;
+					i++;
+					while (i < k)
+						t[j++] = t[i++];
+				} else {
+					if (!(er = a_term(t + i, &v, &l, pc[segment], &afl, &label,
+							1))) {
+						/*if(afl) printf("relocation 2 %04x at pc=$%04x, value now =$%04x\n",afl,pc[segment]+j,v); */
+						if (afl)
+							u_set(pc[segment] + j, afl, label, 1);
+						if (v & 0xff00)
+							er = E_OVERFLOW;
+						else {
+							t[j++] = v;
+							i += l;
+						}
+					}
+				}
+				if (t[i] != T_END && t[i] != T_COMMENT && t[i] != ',')
+					er = E_SYNTAX;
+				else if (t[i] == ',')
+					i++;
+			}
+			*ll = j;
+			bl = j;
+		} else if (n == Kalong) {
+			memode = 1;
+			*ll = 0;
+		} else if (n == Kashort) {
+			memode = 0;
+			*ll = 0;
+		} else if (n == Kxlong) {
+			xmode = 1;
+			*ll = 0;
+		} else if (n == Kxshort) {
+			xmode = 0;
+			*ll = 0;
+		} else if (n == Kpcdef) {
+			int npc;
+			er = a_term(t + 1, &npc, &l, pc[segment], &afl, &label, 0);
+			bl = 0;
+			*ll = 0;
+			if (segment == SEG_TEXT) {
+				r_mode(RMODE_ABS);
+			}
+			pc[segment] = npc;
+		} else if (n == Kreloc) {
+			int npc;
+			er = a_term(t + 1, &npc, &l, pc[segment], &afl, &label, 0);
+			/*printf("Kreloc: segment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
+			bl = 0;
+			*ll = 0;
+			r_mode(RMODE_RELOC);
+			pc[segment] = npc;
+			/*printf("Kreloc: newsegment=%d, pc[seg]=%04x\n", segment, pc[segment]);*/
+		} else if (n == Klistbytes) {
+			int nbytes = (t[1] & 0xff) + (t[2] << 8);
+			//printf("Klistbytes --> er=%d, nbytes=%d\n", er, nbytes);
+			list_setbytes(nbytes);
+			l = 2;
+			*ll = 0;
+			bl = 0;
+		} else if (n == Ksegment) {
+			segment = t[1];
+			*ll = 0;
+			bl = 0;
+		} else if (n == Kdsb) {
+			dsb_len = 1;
+			if (!(er = a_term(t + 1, &j, &i, pc[segment], &afl, &label, 0))) {
+				if (j < 0)
+					er = E_NEGDSBLEN;
+				else
+				/*
+				 if(t[i+1]!=',')
+				 er=E_SYNTAX;
+				 else
+				 */
+				/*
+				 if((segment!=SEG_ABS) && afl)
+				 er=E_ILLPOINTER;
+				 else
+				 */
+				{
+					dsb_len = 0;
 
-			 if(t[i+1]==',') {
-                           er=a_term(t+2+i,&v,&l,pc[segment],&afl,&label,0);
-			 } else {
-			   v=0;
-			 }
-                         if(!er && v>>8)
-                              er=E_OVERFLOW;
-                         t[0]=v&255;
-                         if(!er)
-                         {
-                              *ll=j;
-                              bl=j;
+					if (t[i + 1] == ',') {
+						er = a_term(t + 2 + i, &v, &l, pc[segment], &afl,
+								&label, 0);
+					} else {
+						v = 0;
+					}
+					if (!er && v >> 8)
+						er = E_OVERFLOW;
+					t[0] = v & 255;
+					if (!er) {
+						*ll = j;
+						bl = j;
 #ifdef DEBUG_AM
 fprintf(stderr, "Kdsb E_DSB %i\n", j);
 #endif
-                              er=E_DSB;
-                         }
-                    }
-                    if(!er)
-                         bl=j;
-               }
-	       dsb_len = 0;
-          } else
-          if(n>=0 && n<=Lastbef)
-          {
-	       int inp = 1;		/* input pointer */
-	       signed char cast = '\0';	/* cast value */
+						er = E_DSB;
+					}
+				}
+				if (!er)
+					bl = j;
+			}
+			dsb_len = 0;
+		} else if (n >= 0 && n <= Lastbef) {
+			int inp = 1; /* input pointer */
+			signed char cast = '\0'; /* cast value */
 
-	       c = t[inp];
+			c = t[inp];
 
-               if(c=='#')
-               {
-                    inp++;
-		    if (t[inp] == T_CAST) {
-			inp++;
-			cast = t[inp];
-			inp++;
+			if (c == '#') {
+				inp++;
+				if (t[inp] == T_CAST) {
+					inp++;
+					cast = t[inp];
+					inp++;
 #ifdef DEBUG_CAST
 	printf("Found cast to (2): %c\n", cast);
 #endif
-		    }
-                    sy=1;
-                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
-                    {
-/* if(1) printf("a_term returns afl=%04x\n",afl); */
+				}
+				sy = 1;
+				if (!(er = a_term(t + inp, vv, &l, pc[segment], &afl, &label, 1))) {
+					/* if(1) printf("a_term returns afl=%04x\n",afl); */
 
-			 rlt[0] = afl;
-			 lab[0] = label;
-                         inp+=l;
-                         if(t[inp]!=T_END && t[inp] != T_COMMENT)
-                         {
-                              if(t[inp]!=',')
-                                   er=E_SYNTAX;
-                              else
-                              {
-                                   inp++;
-                                   sy++;
-                                   if(!(er=a_term(t+inp,vv+1,&l,pc[segment],&afl,&label,1)))
-                                   {
-			                rlt[1] = afl;
-					lab[1] = label;
-                                        inp+=l;
-                                        if(t[inp]!=T_END && t[inp] != T_COMMENT)
-                                        {
-                                             if(t[inp]!=',')
-                                                  er=E_SYNTAX;
-                                             else
-                                             {
-                                                  inp++;
-                                                  sy++;
-                                                  if(!(er=a_term(t+inp,vv+2,&l,pc[segment],&afl,&label,1)))
-                                                  {
-			                               rlt[2] = afl;
-						       lab[2] = label;
-                                                       inp+=l;
-                                                       if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                                                            er=E_SYNTAX;
-                                                  }
-                                             }
-                                        }
-                                   }
-                              }
-                         }
-                    }
-               } else
-               if(c==T_END || c==T_COMMENT)
-               {
-                    sy=0;
-               } else
-               if(c=='(')
-               {
-		    inp++;
-		    if (t[inp] == T_CAST) {
-			inp++;
-			cast = t[inp];
-			inp++;
+					rlt[0] = afl;
+					lab[0] = label;
+					inp += l;
+					if (t[inp] != T_END && t[inp] != T_COMMENT) {
+						if (t[inp] != ',')
+							er = E_SYNTAX;
+						else {
+							inp++;
+							sy++;
+							if (!(er = a_term(t + inp, vv + 1, &l, pc[segment],
+									&afl, &label, 1))) {
+								rlt[1] = afl;
+								lab[1] = label;
+								inp += l;
+								if (t[inp] != T_END && t[inp] != T_COMMENT) {
+									if (t[inp] != ',')
+										er = E_SYNTAX;
+									else {
+										inp++;
+										sy++;
+										if (!(er = a_term(t + inp, vv + 2, &l,
+												pc[segment], &afl, &label, 1))) {
+											rlt[2] = afl;
+											lab[2] = label;
+											inp += l;
+											if (t[inp] != T_END
+													&& t[inp] != T_COMMENT)
+												er = E_SYNTAX;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			} else if (c == T_END || c == T_COMMENT) {
+				sy = 0;
+			} else if (c == '(') {
+				inp++;
+				if (t[inp] == T_CAST) {
+					inp++;
+					cast = t[inp];
+					inp++;
 #ifdef DEBUG_CAST
 	printf("Found cast to (3): %c\n", cast);
 #endif
-		    }
-                    sy=7;
-                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
-                    {
-			 inp += l;
-			 rlt[0] = afl;
-			 lab[0] = label;
+				}
+				sy = 7;
+				if (!(er = a_term(t + inp, vv, &l, pc[segment], &afl, &label, 1))) {
+					inp += l;
+					rlt[0] = afl;
+					lab[0] = label;
 
-                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                         {
-                              if(t[inp]==',')
-                              {
-				   inp++;
-                                   if (tolower(t[inp])=='x')
-                                        sy=8;
-                                   else
-                                        sy=13;
+					if (t[inp] != T_END && t[inp] != T_COMMENT) {
+						if (t[inp] == ',') {
+							inp++;
+							if (tolower(t[inp]) == 'x')
+								sy = 8;
+							else
+								sy = 13;
 
-                              } else
-                              if(t[inp]==')')
-                              {
-				   inp++;
-                                   if(t[inp]==',')
-                                   {
+						} else if (t[inp] == ')') {
+							inp++;
+							if (t[inp] == ',') {
+								inp++;
+								if (tolower(t[inp]) == 'y')
+									sy = 9;
+								else
+									er = E_SYNTAX;
+							} else if (t[inp] != T_END && t[inp] != T_COMMENT)
+								er = E_SYNTAX;
+						}
+					} else
+						er = E_SYNTAX;
+				}
+			} else if (c == '[') {
+				inp++;
+				if (t[inp] == T_CAST) {
 					inp++;
-                                        if(tolower(t[inp])=='y')
-                                             sy=9;
-                                        else
-                                             er=E_SYNTAX;
-                                   } else
-                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                                        er=E_SYNTAX;
-                              } 
-                         } else
-                              er=E_SYNTAX;
-                    }
-               } else
-               if(c=='[')
-               {
-		    inp++;
-		    if (t[inp] == T_CAST) {
-			inp++;
-			cast = t[inp];
-			inp++;
+					cast = t[inp];
+					inp++;
 #ifdef DEBUG_CAST
 	printf("Found cast to (4): %c\n", cast);
 #endif
-		    }
-                    sy=10;
-                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
-                    {
-			 inp += l;
-                         rlt[0] = afl;
-			 lab[0] = label;
+				}
+				sy = 10;
+				if (!(er = a_term(t + inp, vv, &l, pc[segment], &afl, &label, 1))) {
+					inp += l;
+					rlt[0] = afl;
+					lab[0] = label;
 
-                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                         {
-                              if(t[inp]==']')
-                              {
-				   inp++;
-                                   if(t[inp]==',')
-                                   {
+					if (t[inp] != T_END && t[inp] != T_COMMENT) {
+						if (t[inp] == ']') {
+							inp++;
+							if (t[inp] == ',') {
+								inp++;
+								if (tolower(t[inp]) == 'y')
+									sy = 11;
+								else
+									er = E_SYNTAX;
+							} else if (t[inp] != T_END && t[inp] != T_COMMENT)
+								er = E_SYNTAX;
+						}
+					} else
+						er = E_SYNTAX;
+				}
+			} else {
+				if (t[inp] == T_CAST) {
 					inp++;
-                                        if(tolower(t[inp])=='y')
-                                             sy=11;
-                                        else
-                                             er=E_SYNTAX;
-                                   } else
-                                   if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                                        er=E_SYNTAX;
-                              } 
-                         } else
-                              er=E_SYNTAX;
-                    }
-               } else
-               {
-		    if (t[inp] == T_CAST) {
-			inp++;
-			cast = t[inp];
-			inp++;
+					cast = t[inp];
+					inp++;
 #ifdef DEBUG_CAST
 	printf("Found cast to (5): %c\n", cast);
 #endif
-		    }
-                    sy=4;
-                    if(!(er=a_term(t+inp,vv,&l,pc[segment],&afl,&label,1)))
-                    {
-			 inp += l;
-			 rlt[0] = afl;
-			 lab[0] = label;
-                         if(t[inp]!=T_END && t[inp]!=T_COMMENT)
-                         {
-                              if(t[inp]==',')
-                              {
-				   inp++;
-                                   if(tolower(t[inp])=='y')
-                                        sy=6;
-                                   else
-                                   if(tolower(t[inp])=='s')
-                                        sy=12;
-                                   else
-                                   if(tolower(t[inp])=='x')
-                                        sy=5;
-                                   else
-                                        er=E_SYNTAX;
-                              } else
-                                   er=E_SYNTAX;
-                         }
-                    }
-               }
-               
-	       /* set bl to maximum overall length +1 as while() below starts with decrementing it */
-	       if (w65816 || cast=='@' || cast== '!') {
-		       	/* for 65816 allow addressing modes up to 4 byte overall length */
-               		bl=Maxbyt+1;
-	       } else {
-		       	/* for other modes only check for addressing modes up to 3 byte overall length */
-		 	bl=Maxbyt;
-	       }
-              
+				}
+				sy = 4;
+				if (!(er = a_term(t + inp, vv, &l, pc[segment], &afl, &label, 1))) {
+					inp += l;
+					rlt[0] = afl;
+					lab[0] = label;
+					if (t[inp] != T_END && t[inp] != T_COMMENT) {
+						if (t[inp] == ',') {
+							inp++;
+							if (tolower(t[inp]) == 'y')
+								sy = 6;
+							else if (tolower(t[inp]) == 's')
+								sy = 12;
+							else if (tolower(t[inp]) == 'x')
+								sy = 5;
+							else
+								er = E_SYNTAX;
+						} else
+							er = E_SYNTAX;
+					}
+				}
+			}
+
+			/* set bl to maximum overall length +1 as while() below starts with decrementing it */
+			if (w65816 || cast == '@' || cast == '!') {
+				/* for 65816 allow addressing modes up to 4 byte overall length */
+				bl = Maxbyt + 1;
+			} else {
+				/* for other modes only check for addressing modes up to 3 byte overall length */
+				bl = Maxbyt;
+			}
+
 #ifdef DEBUG_AM
 	      printf("--- trying to find am using: (max+1) bl=%d, sy=%d\n", bl, sy); 
 #endif
-               while(--bl)
-               {
-                    if((am=at[sy][bl-1])>=0)
-                    {
-                         if(am>Admodes)
-                         {
-                              er=E_SYNTAX;
-                              break;
-                         }
-                         if(ct[n][am]>=0)
-                              break;
+			while (--bl) {
+				if ((am = at[sy][bl - 1]) >= 0) {
+					if (am > Admodes) {
+						er = E_SYNTAX;
+						break;
+					}
+					if (ct[n][am] >= 0)
+						break;
 
-                         for(v=0;v<AnzAlt;v++)
-                              if(xt[v][0]==am && ct[n][xt[v][1]]>=0)
-                                   break;
-                         if(v<AnzAlt) 
-                         {
-                              am=xt[v][1];
-                              break;
-                         }
-                    }
-               }
+					for (v = 0; v < AnzAlt; v++)
+						if (xt[v][0] == am && ct[n][xt[v][1]] >= 0)
+							break;
+					if (v < AnzAlt) {
+						am = xt[v][1];
+						break;
+					}
+				}
+			}
 
-/* FIXIT1 
-		fprintf(stderr, "t has: ");
-		for(v=0;v<l;v++) {
-			fprintf(stderr, "%02x ", t[v]);
-		}
-		fprintf(stderr, "\n");
-*/
+			/* FIXIT1
+			 fprintf(stderr, "t has: ");
+			 for(v=0;v<l;v++) {
+			 fprintf(stderr, "%02x ", t[v]);
+			 }
+			 fprintf(stderr, "\n");
+			 */
 
-/* only do optimization if we're being called in pass 1 -- never pass 2 */
-/* look at cast byte */
-               if (cast!='@')
-               {
+			/* only do optimization if we're being called in pass 1 -- never pass 2 */
+			/* look at cast byte */
+			if (cast != '@') {
 #ifdef DEBUG_AM
 fprintf(stderr,
 "b4: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %u, er=%d, bl=%d\n",
 	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), er, bl);
 #endif
 
-/* terrible KLUDGE!!!! OH NOES!!!1!
-   due to the way this is constructed, you must absolutely always specify @ to
-   get an absolute long or it will absolutely always be optimized down */
-/* now also checks for negative overflow, resp. not-overflow */
-                    if(bl 
-			&& am>16 
-			&& !er 
-			&& (((vv[0]&0xff8000)==0xff8000) || !(vv[0]&0xff0000)) 
-			&& opt[am]>=0)
-                         if(ct[n][opt[am]]>=0)
-                              am=opt[am];
+				/* terrible KLUDGE!!!! OH NOES!!!1!
+				 due to the way this is constructed, you must absolutely always specify @ to
+				 get an absolute long or it will absolutely always be optimized down */
+				/* now also checks for negative overflow, resp. not-overflow */
+				if (bl && am > 16 && !er
+						&& (((vv[0] & 0xff8000) == 0xff8000)
+								|| !(vv[0] & 0xff0000)) && opt[am] >= 0)
+					if (ct[n][opt[am]] >= 0)
+						am = opt[am];
 #ifdef DEBUG_AM
 fprintf(stderr,
 "aftaa1: pc= %d, am = %d and vv[0] = %d, optimize = %d, bitmask = %d, bl = %d\n",
 	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), bl);
 #endif
-                    if(cast!='!') {
-                         if(bl && !er && !(vv[0]&0xffff00) && opt[am]>=0) {
-                              if(ct[n][opt[am]]>=0) {
-				if (!fl || cast=='`') {
-                                   	am=opt[am];
-				} else {
-					errout(W_FORLAB);
+				if (cast != '!') {
+					if (bl && !er && !(vv[0] & 0xffff00) && opt[am] >= 0) {
+						if (ct[n][opt[am]] >= 0) {
+							if (!fl || cast == '`') {
+								am = opt[am];
+							} else {
+								errout(W_FORLAB);
+							}
+						}
+					}
 				}
-			      }
-			}
-                    }
 #ifdef DEBUG_AM
 fprintf(stderr,
 "aftaa2: pc=%d, am=%d and vv[0]=%d, optimize=%d, bitmask=%d, op=%d, bl=%d\n",
 	pc[segment], am, vv[0], fl, (vv[0]&0xffff00), ct[n][opt[am]], bl);
 #endif
-               }
+			}
 
-               if(!bl)
-                    er=E_SYNTAX;
-               else
-               {
-                    bl=le[am];
-                    if( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode)) {
-                         bl++;
-		    }
-		    if ((am != 11 && am != 16) && (vv[0] > 255 || vv[0] < -256) && bl == 2) {
-			    er = E_OVERFLOW;
-		    } else
-		    if ((am != 11 && am != 16) && (vv[0] > 65535 || vv[0] < -65536) && (bl == 2 || bl == 3)) {
-			    er = E_OVERFLOW;
-		    }
-                    *ll=bl;
-               }
+			if (!bl)
+				er = E_SYNTAX;
+			else {
+				bl = le[am];
+				if (((ct[n][am] & 0x400) && memode)
+						|| ((ct[n][am] & 0x800) && xmode)) {
+					bl++;
+				}
+				if ((am != 11 && am != 16) && (vv[0] > 255 || vv[0] < -256)
+						&& bl == 2) {
+					er = E_OVERFLOW;
+				} else if ((am != 11 && am != 16)
+						&& (vv[0] > 65535 || vv[0] < -65536)
+						&& (bl == 2 || bl == 3)) {
+					er = E_OVERFLOW;
+				}
+				*ll = bl;
+			}
 
 #ifdef DEBUG_AM
 fprintf(stderr, "byte length is now %d, am=%d, er=%d\n", bl, am, er);
 #endif
 
-               if(!er)
-               {
-                    t[0]=ct[n][am]&0x00ff;
-                    if(ct[n][am]&0x0300)
-                    {
-                         if(ct[n][am]&0x100) {
-                              ncmos++;
-                              if(!cmosfl)
-                                  er=E_CMOS;
-                         } else {
-                              n65816++;
-                              if(!w65816) {
+			if (!er) {
+				t[0] = ct[n][am] & 0x00ff;
+				if (ct[n][am] & 0x0300) {
+					if (ct[n][am] & 0x100) {
+						ncmos++;
+						if (!cmosfl)
+							er = E_CMOS;
+					} else {
+						n65816++;
+						if (!w65816) {
 #ifdef DEBUG_AM
 fprintf(stderr,"not 65816 n=%d, am=%d\n", n, am);
 #endif
-                                  er=E_65816;
-			      }
-                         }
-                    }
-                    if(am!=0)
-                    {
-                         if((am<8 && !( ((ct[n][am]&0x400) && memode) || ((ct[n][am]&0x800) && xmode) )) || (am>=19 && am!=23))
-                         {
-                              if(vv[0]&0xff00) {
+							er = E_65816;
+						}
+					}
+				}
+				if (am != 0) {
+					if ((am < 8
+							&& !(((ct[n][am] & 0x400) && memode)
+									|| ((ct[n][am] & 0x800) && xmode)))
+							|| (am >= 19 && am != 23)) {
+						if (vv[0] & 0xff00) {
 #ifdef DEBUG_AM
 fprintf(stderr, "address mode: %i address: %i\n", am, vv[0]);
 #endif
-                                   er=E_OVERFLOW;
-				}
-                              else
-                                   t[1]=vv[0];
-/*if(rlt[0]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[0],pc[segment]+1,*vv); */
-			      if(rlt[0]) u_set(pc[segment]+1, rlt[0], lab[0], 1);
-                         } else
-                         if(((am<14 || am==23) && am!=11) || am==7)
-                         {
-                              if (vv[0]>0xffff) {
+							er = E_OVERFLOW;
+						} else
+							t[1] = vv[0];
+						/*if(rlt[0]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[0],pc[segment]+1,*vv); */
+						if (rlt[0])
+							u_set(pc[segment] + 1, rlt[0], lab[0], 1);
+					} else if (((am < 14 || am == 23) && am != 11) || am == 7) {
+						if (vv[0] > 0xffff) {
 #ifdef DEBUG_AM
 fprintf(stderr, "address mode: %i address: %i\n", am, vv[0]);
 #endif
-                                   er=E_OVERFLOW;
-				}
-                              else {
-                                   t[1]=vv[0]&255;
-                                   t[2]=(vv[0]>>8)&255;
-/*if(rlt[0]) printf("relocation 2 byte %04x at pc=$%04x, value now =$%04x\n",rlt[0],pc[segment]+1,*vv); */
-			           if(rlt[0]) u_set(pc[segment]+1, rlt[0], lab[0], 2);
-                              }
-                         } else
-                         if(am==11 || am==16) {
-			   /* relative, relative long */
-			   if((segment!=SEG_ABS) && (!rlt[0])) {
-			     er=E_ILLPOINTER;
-			   } else {
-/*printf("am=11, pc=%04x, vv[0]=%04x, segment=%d\n",pc[segment],vv[0], segment);*/
-                              v=vv[0]-pc[segment]-le[am];
-                              if(((v&0xff80)!=0xff80) && (v&0xff80) && (am==11))
-                                   er=E_RANGE;
-                              else {
-                                   t[1]=v&255;
-                                   t[2]=(v>>8)&255;
-                              }
-			   }
-                         } else
-                         if(am==14) {
-                              if(vv[0]&0xfff8 || vv[1]&0xff00)
-                                   er=E_RANGE;
-                              else
-			      if((segment!=SEG_ABS) && (rlt[0] || !rlt[2])) {
-				   er=E_ILLPOINTER;
-			      } else {
-/*if(rlt[1]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[1],pc[segment]+1,*vv); */
-			           if(rlt[1]) u_set(pc[segment]+1, rlt[1], lab[1], 1);
-                                   t[0]=t[0]|(vv[0]<<4);
-                                   t[1]=vv[1];
-                                   v=vv[2]-pc[segment]-3;
-                                   if((v&0xff80) && ((v&0xff80)!=0xff80))
-                                        er=E_OVERFLOW;
-                                   else
-                                        t[2]=v;
-                              }
-                         } else
-                         if(am==15)
-                         {
-/*if(rlt[1]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[1],pc[segment]+1,*vv); */
-			      if(rlt[1]) u_set(pc[segment]+1, rlt[1], lab[1], 1);
-                              if(vv[0]&0xfff8 || vv[1]&0xff00)
-                                   er=E_OVERFLOW;
-                              else
-                              {
-                                   t[0]=t[0]|(vv[0]<<4);
-                                   t[1]=vv[1];
-                              }
-                         } else
-                         if(am==17 || am==18)
-                         {
-                                   t[1]=vv[0]&255;
-                                   t[2]=(vv[0]>>8)&255;
-                                   t[3]=(vv[0]>>16)&255;
-			           if(rlt[0]) {
-                                        rlt[0]|=A_LONG;
-			                u_set(pc[segment]+1, rlt[0], lab[0], 3);
-                                   }
+							er = E_OVERFLOW;
+						} else {
+							t[1] = vv[0] & 255;
+							t[2] = (vv[0] >> 8) & 255;
+							/*if(rlt[0]) printf("relocation 2 byte %04x at pc=$%04x, value now =$%04x\n",rlt[0],pc[segment]+1,*vv); */
+							if (rlt[0])
+								u_set(pc[segment] + 1, rlt[0], lab[0], 2);
+						}
+					} else if (am == 11 || am == 16) {
+						/* relative, relative long */
+						if ((segment != SEG_ABS) && (!rlt[0])) {
+							er = E_ILLPOINTER;
+						} else {
+							/*printf("am=11, pc=%04x, vv[0]=%04x, segment=%d\n",pc[segment],vv[0], segment);*/
+							v = vv[0] - pc[segment] - le[am];
+							if (((v & 0xff80) != 0xff80) && (v & 0xff80)
+									&& (am == 11))
+								er = E_RANGE;
+							else {
+								t[1] = v & 255;
+								t[2] = (v >> 8) & 255;
+							}
+						}
+					} else if (am == 14) {
+						if (vv[0] & 0xfff8 || vv[1] & 0xff00)
+							er = E_RANGE;
+						else if ((segment != SEG_ABS) && (rlt[0] || !rlt[2])) {
+							er = E_ILLPOINTER;
+						} else {
+							/*if(rlt[1]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[1],pc[segment]+1,*vv); */
+							if (rlt[1])
+								u_set(pc[segment] + 1, rlt[1], lab[1], 1);
+							t[0] = t[0] | (vv[0] << 4);
+							t[1] = vv[1];
+							v = vv[2] - pc[segment] - 3;
+							if ((v & 0xff80) && ((v & 0xff80) != 0xff80))
+								er = E_OVERFLOW;
+							else
+								t[2] = v;
+						}
+					} else if (am == 15) {
+						/*if(rlt[1]) printf("relocation 1 byte %04x at pc=$%04x, value now =$%04x\n",rlt[1],pc[segment]+1,*vv); */
+						if (rlt[1])
+							u_set(pc[segment] + 1, rlt[1], lab[1], 1);
+						if (vv[0] & 0xfff8 || vv[1] & 0xff00)
+							er = E_OVERFLOW;
+						else {
+							t[0] = t[0] | (vv[0] << 4);
+							t[1] = vv[1];
+						}
+					} else if (am == 17 || am == 18) {
+						t[1] = vv[0] & 255;
+						t[2] = (vv[0] >> 8) & 255;
+						t[3] = (vv[0] >> 16) & 255;
+						if (rlt[0]) {
+							rlt[0] |= A_LONG;
+							u_set(pc[segment] + 1, rlt[0], lab[0], 3);
+						}
 
-                         } else
-                              er=E_SYNTAX;
-                    }
-               }          
-               
-          } else
-               er=E_SYNTAX;
-     }
+					} else
+						er = E_SYNTAX;
+				}
+			}
+
+		} else
+			er = E_SYNTAX;
+	}
 
 #ifdef DEBUG_AM
 fprintf(stderr, "-- endof P2\n");
 #endif
-     pc[segment]+=bl;
-     if(segment==SEG_TEXT) pc[SEG_ABS]+=bl;
-     if(segment==SEG_ABS) pc[SEG_TEXT]+=bl;
-     *al = bl;
-     return(er);
+	pc[segment] += bl;
+	if (segment == SEG_TEXT)
+		pc[SEG_ABS] += bl;
+	if (segment == SEG_ABS)
+		pc[SEG_TEXT] += bl;
+	*al = bl;
+	return (er);
 }
 
 /*********************************************************************************************/
@@ -2084,19 +1971,17 @@ fprintf(stderr, "-- endof P2\n");
  * (e.g. for #if or #print).
  * First tokenizes it, then calculates the value
  */
-int b_term(char *s, int *v, int *l, int pc)
-{
-     static signed char t[MAXLINE];
-     int er,i,afl, label;
+int b_term(char *s, int *v, int *l, int pc) {
+	static signed char t[MAXLINE];
+	int er, i, afl, label;
 
-     if(!(er=t_conv((signed char*)s,t,l,pc,&i,&i,&i,1,NULL)))
-     {
-          er=a_term(t,v,&i,pc,&afl,&label,0);
-     
-     }
-     return(er);
+	if (!(er = t_conv((signed char*) s, t, l, pc, &i, &i, &i, 1, NULL))) {
+		er = a_term(t, v, &i, pc, &afl, &label, 0);
+
+	}
+	return (er);
 }
-     
+
 /*********************************************************************************************/
 /* translate a string into a first-pass sequence of tokens;
  * Take the text from *s (stopping at \0 or ';'), tokenize it
@@ -2117,720 +2002,703 @@ int b_term(char *s, int *v, int *l, int pc)
  * 	bytep	???
  */
 static int t_conv(signed char *s, signed char *t, int *l, int pc, int *nk,
-             int *na1, int *na2, int af, int *bytep)  
-{
-     static int v,f;
-     static int operand,o;
-     int fl,afl;
-     int p,q,ll,mk,er;
-     int ud;	/* counts undefined labels */
-     int n;	/* label number to be passed between l_def (definition) and l_set (set the value) */
-     int byte;
-     int uz;	/* unused at the moment */
-     /*static unsigned char cast;*/
+		int *na1, int *na2, int af, int *bytep) {
+	static int v, f;
+	static int operand, o;
+	int fl, afl;
+	int p, q, ll, mk, er;
+	int ud; /* counts undefined labels */
+	int n; /* label number to be passed between l_def (definition) and l_set (set the value) */
+	int byte;
+	int uz; /* unused at the moment */
+	/*static unsigned char cast;*/
 
-/* ich verstehe deutsch, aber verstehen andere leute nicht; so, werde ich
-   diese bemerkungen uebersetzen ... cameron */
-/* I understand German, but other folks don't, so I'll translate these
-   comments ... Cameron */
-/* note that I don't write so good tho' ;) */
+	/* ich verstehe deutsch, aber verstehen andere leute nicht; so, werde ich
+	 diese bemerkungen uebersetzen ... cameron */
+	/* I understand German, but other folks don't, so I'll translate these
+	 comments ... Cameron */
+	/* note that I don't write so good tho' ;) */
 
-     *nk=0;         /* comma count */
-     *na1=0;        /* asc text count */
-     *na2=0;        /* total bytecount in asc texts */
-     ll=0;
-     er=E_OK;		/* error state */
-     p=0;
-     q=0;
-     ud = uz = byte =0;
-     mk=0;          /* 0 = add'l commas ok */
-     fl=0;          /* 1 = pass text thru */
-     afl=0;         /* pointer flag for label */
+	*nk = 0; /* comma count */
+	*na1 = 0; /* asc text count */
+	*na2 = 0; /* total bytecount in asc texts */
+	ll = 0;
+	er = E_OK; /* error state */
+	p = 0;
+	q = 0;
+	ud = uz = byte = 0;
+	mk = 0; /* 0 = add'l commas ok */
+	fl = 0; /* 1 = pass text thru */
+	afl = 0; /* pointer flag for label */
 
-     // skip leading whitespace
-     while(isspace(s[p])) p++;
-
-     n=T_END;
-     /*cast='\0';*/
-
-     if(!af)
-     {
-          while(s[p]!='\0' && s[p]!=';')
-          {
-		//printf("CONV: %s\n", s);
-
-	       if (s[p] == ':') {
-			// this is a ca65 unnamed label
-			if ((er = l_def((char*)s+p, &ll, &n, &f)))
-				break;
-                    	l_set(n,pc,segment);        /* set as address value */
-		    	t[q++]=T_DEFINE;
-		    	t[q++]=n&255;
-		    	t[q++]=(n>>8)&255;
-                    	n=0;
-
-			p+=ll;
-
-               		while(isspace(s[p])) p++;
-
-			// end of line
-			if (s[p] == 0 || s[p] == ';') {
-				break;
-			}
-	       }
-			
-		/* is keyword? */
-               if(!(er=t_keyword(s+p,&ll,&n)))
-                    break;
-
-		/* valid syntax, but just not a real token? */
-               if(er && er!=E_NOKEY)
-                    break;
-
-		// if so, try to understand as label 
-		// it returns the label number in n
-               if((er=l_def((char*)s+p,&ll,&n,&f)))
-                    break;
-
-               p+=ll;
-
-               while(isspace(s[p])) p++;
-
-               if(s[p]=='=')
-               {
-		    /*printf("Found = @%s\n",s+p);*/
-                    t[q++]=T_OP;
-                    t[q++]=n&255;
-                    t[q++]=(n>>8)&255;
-                    t[q++]='=';
-                    p++;
-                    ll=n=0;
-                    break;
-               } else
-               if(s[p]==':' && s[p+1]=='=')		/* support := label assignments (ca65 compatibility) */
-	       {
-		    /*printf("Found := @%s\n", s+p);*/
-		    t[q++]=T_OP;
-		    t[q++]=n&255;
-		    t[q++]=(n>>8)&255;
-		    t[q++]='=';
-		    p+=2;
-		    ll=n=0;
-		    break;
-               } else
-               if(f && s[p]!='\0' && s[p+1]=='=')
-               {
-                    t[q++]=T_OP;
-                    t[q++]=n&255;
-                    t[q++]=(n>>8)&255;
-                    t[q++]=s[p];
-                    p+=2;
-                    ll=n=0;
-                    break;
-               } else
-               if(s[p]==':')	/* to support label: ... syntax */
-               {
-                    p++;
-                    while(s[p]==' ') p++;
-                    l_set(n,pc,segment);        /* set as address value */
-		    t[q++]=T_DEFINE;
-		    t[q++]=n&255;
-		    t[q++]=(n>>8)&255;
-                    n=0;
-
-               } else {		/* label ... syntax */
-                    l_set(n,pc,segment);        /* set as address value */
-      		    t[q++]=T_DEFINE;
-		    t[q++]=n&255;
-		    t[q++]=(n>>8)&255;
-        	    n=0;
-               }
-
-          }
-
-          if(n != Kmvn && n != Kmvp && ((n & 0xff) <=Lastbef)) {
-               mk=1;     /* = only 1 comma ok for normal opcodes */
-	  }
-     }
-
-     if(s[p]=='\0' || s[p]==';')
-     {
-          er=E_NOLINE;
-          ll=0;
-     } else
-     if(!er)
-     {
-
-          p+=ll;
-          if(ll) {
-             t[q++]= n & 0xff;
-/*
-             if( (n&0xff) == Kmacro) {
-                t[q++]= (n >> 8) & 0xff;
-             }
-*/
-          }
-
-          operand=1;
-
-	  // skip whitespace
-          while(isspace(s[p])) {
+	// skip leading whitespace
+	while (isspace(s[p]))
 		p++;
-	  }
 
-          if(s[p]=='#')
-          {
-               mk=0;
-               t[q++]=s[p++];
+	n = T_END;
+	/*cast='\0';*/
 
-	       // skip following whitespace
-               while(isspace(s[p])) {
-		   p++;
-	       }
-          }
+	if (!af) {
+		while (s[p] != '\0' && s[p] != ';') {
+			//printf("CONV: %s\n", s);
 
-/*
- *
- * operand processing
- * byte = length of operand in bytes to be assembled
- *
- *
- */
+			if (s[p] == ':') {
+				// this is a ca65 unnamed label
+				if ((er = l_def((char*) s + p, &ll, &n, &f)))
+					break;
+				l_set(n, pc, segment); /* set as address value */
+				t[q++] = T_DEFINE;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				n = 0;
 
-          /* this addresses forced high/low/two byte addressing, but only
-             for the first operand. Further processing is done in a_term()
-          */
+				p += ll;
 
-/* FIXIT2 */
+				while (isspace(s[p]))
+					p++;
 
-          while(s[p]!='\0' && s[p]!=';' && !er)
-          {
-               if(fl)
-               {
-		    // pass through text (e.g. for ",y")
-                    t[q++]=s[p++];
+				// end of line
+				if (s[p] == 0 || s[p] == ';') {
+					break;
+				}
+			}
 
-               } else
-               {
-                 if(operand)
-                 {
-			/* are we forcing the operand into a particular
-			   addressing mode? !, @, ` operators 
-			   Note these are not available in ca65, but we only
-			   switch off "@" which are used for cheap local labels*/
-                    if(s[p]=='!' || (s[p]=='@' && !ca65) || s[p]=='`')
-                    {
+			/* is keyword? */
+			if (!(er = t_keyword(s + p, &ll, &n)))
+				break;
+
+			/* valid syntax, but just not a real token? */
+			if (er && er != E_NOKEY)
+				break;
+
+			// if so, try to understand as label
+			// it returns the label number in n
+			if ((er = l_def((char*) s + p, &ll, &n, &f)))
+				break;
+
+			p += ll;
+
+			while (isspace(s[p]))
+				p++;
+
+			if (s[p] == '=') {
+				/*printf("Found = @%s\n",s+p);*/
+				t[q++] = T_OP;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				t[q++] = '=';
+				p++;
+				ll = n = 0;
+				break;
+			} else if (s[p] == ':' && s[p + 1] == '=') /* support := label assignments (ca65 compatibility) */
+			{
+				/*printf("Found := @%s\n", s+p);*/
+				t[q++] = T_OP;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				t[q++] = '=';
+				p += 2;
+				ll = n = 0;
+				break;
+			} else if (f && s[p] != '\0' && s[p + 1] == '=') {
+				t[q++] = T_OP;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				t[q++] = s[p];
+				p += 2;
+				ll = n = 0;
+				break;
+			} else if (s[p] == ':') /* to support label: ... syntax */
+			{
+				p++;
+				while (s[p] == ' ')
+					p++;
+				l_set(n, pc, segment); /* set as address value */
+				t[q++] = T_DEFINE;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				n = 0;
+
+			} else { /* label ... syntax */
+				l_set(n, pc, segment); /* set as address value */
+				t[q++] = T_DEFINE;
+				t[q++] = n & 255;
+				t[q++] = (n >> 8) & 255;
+				n = 0;
+			}
+
+		}
+
+		if (n != Kmvn && n != Kmvp && ((n & 0xff) <= Lastbef)) {
+			mk = 1; /* = only 1 comma ok for normal opcodes */
+		}
+	}
+
+	if (s[p] == '\0' || s[p] == ';') {
+		er = E_NOLINE;
+		ll = 0;
+	} else if (!er) {
+
+		p += ll;
+		if (ll) {
+			t[q++] = n & 0xff;
+			/*
+			 if( (n&0xff) == Kmacro) {
+			 t[q++]= (n >> 8) & 0xff;
+			 }
+			 */
+		}
+
+		operand = 1;
+
+		// skip whitespace
+		while (isspace(s[p])) {
+			p++;
+		}
+
+		if (s[p] == '#') {
+			mk = 0;
+			t[q++] = s[p++];
+
+			// skip following whitespace
+			while (isspace(s[p])) {
+				p++;
+			}
+		}
+
+		/*
+		 *
+		 * operand processing
+		 * byte = length of operand in bytes to be assembled
+		 *
+		 *
+		 */
+
+		/* this addresses forced high/low/two byte addressing, but only
+		 for the first operand. Further processing is done in a_term()
+		 */
+
+		/* FIXIT2 */
+
+		while (s[p] != '\0' && s[p] != ';' && !er) {
+			if (fl) {
+				// pass through text (e.g. for ",y")
+				t[q++] = s[p++];
+
+			} else {
+				if (operand) {
+					/* are we forcing the operand into a particular
+					 addressing mode? !, @, ` operators
+					 Note these are not available in ca65, but we only
+					 switch off "@" which are used for cheap local labels*/
+					if (s[p] == '!' || (s[p] == '@' && !ca65) || s[p] == '`') {
 #ifdef DEBUG_CAST
 	printf("Setting cast to: %c\n", s[p]);
 #endif
-		       t[q++]=T_CAST;
-		       t[q++]=s[p];
-                       operand= -operand+1;
-                       p++;
-                    } else
-                    if(s[p]=='(' || s[p]=='-' || s[p]=='>' ||
-			s[p]=='<' || s[p]=='[')
-                    {
-                         t[q++]=s[p++];
-                         operand= -operand+1; /* invert to become reinverted */
-                    } else
-                    if(s[p]=='*')
-                    {
-                         t[q++]=s[p++];
-                    } else
-		    /* maybe it's a label 
- 			Note that for ca65 cheap local labels, we check for "@" */
-                    if(isalpha(s[p]) || s[p]=='_' || (s[p]==':' && collab) || ((s[p]==':' || s[p]=='@') && ca65))
-                    {
-                       
-			int p2 = 0; 
-			if (n == (Klistbytes & 0xff)) {
-				// check for "unlimited"
-				// Note: this could be done by a more general "constants" handling,
-				// where in appropriate places (like the one here), constants are
-				// replaced by a pointer to a predefined constants info, e.g. using 
-				// a T_CONSTANT. Which would also fix the listing of this constant
-				// (which is currently listed as "0")
-				static char *unlimited = "unlimited";
-				while (s[p+p2] != 0 && unlimited[p2] != 0 && s[p+p2] == unlimited[p2]) p2++;
-			} 
-			if (p2 == 9) {	// length of "unlimited"
-				er = E_OK;
-				// found constant
-                       		wval(q, 0, 'd');
-				p += p2;
-			} else {
-			 //m=n;
-                         er=l_search((char*)s+p,&ll,&n,&v,&afl);
+						t[q++] = T_CAST;
+						t[q++] = s[p];
+						operand = -operand + 1;
+						p++;
+					} else if (s[p] == '(' || s[p] == '-' || s[p] == '>'
+							|| s[p] == '<' || s[p] == '[') {
+						t[q++] = s[p++];
+						operand = -operand + 1; /* invert to become reinverted */
+					} else if (s[p] == '*') {
+						t[q++] = s[p++];
+					} else
+					/* maybe it's a label
+					 Note that for ca65 cheap local labels, we check for "@" */
+					if (isalpha(s[p]) || s[p] == '_' || (s[p] == ':' && collab)
+							|| ((s[p] == ':' || s[p] == '@') && ca65)) {
 
-			 if (er == E_NODEF && undefok) {
-				lg_toglobal(s+p);
-			 }
+						int p2 = 0;
+						if (n == (Klistbytes & 0xff)) {
+							// check for "unlimited"
+							// Note: this could be done by a more general "constants" handling,
+							// where in appropriate places (like the one here), constants are
+							// replaced by a pointer to a predefined constants info, e.g. using
+							// a T_CONSTANT. Which would also fix the listing of this constant
+							// (which is currently listed as "0")
+							static char *unlimited = "unlimited";
+							while (s[p + p2] != 0 && unlimited[p2] != 0
+									&& s[p + p2] == unlimited[p2])
+								p2++;
+						}
+						if (p2 == 9) {	// length of "unlimited"
+							er = E_OK;
+							// found constant
+							wval(q, 0, 'd');
+							p += p2;
+						} else {
+							//m=n;
+							er = l_search((char*) s + p, &ll, &n, &v, &afl);
 
-                         if(!er)
-                         {
-                           if(afl) {
-                             t[q++]=T_POINTER;
-                             t[q++]=afl & 255;
-                             t[q++]=v & 255;
-                             t[q++]=(v>>8) & 255;
-			     t[q++]=n & 255;		/* cheap fix for listing */
-			     t[q++]=(n>>8) & 255;	/* why is the label already resolved in t_conv? */
-                           } else {
-                              t[q++]=T_LABEL;
-                              t[q++]=n & 255;
-                              t[q++]=(n>>8) & 255;
-                             /*wval(q,v, 0);*/
-                           }
-                         } else
-                         if(er==E_NODEF)
-                         {
+							if (er == E_NODEF && undefok) {
+								lg_toglobal(s + p);
+							}
+
+							if (!er) {
+								if (afl) {
+									t[q++] = T_POINTER;
+									t[q++] = afl & 255;
+									t[q++] = v & 255;
+									t[q++] = (v >> 8) & 255;
+									t[q++] = n & 255; /* cheap fix for listing */
+									t[q++] = (n >> 8) & 255; /* why is the label already resolved in t_conv? */
+								} else {
+									t[q++] = T_LABEL;
+									t[q++] = n & 255;
+									t[q++] = (n >> 8) & 255;
+									/*wval(q,v, 0);*/
+								}
+							} else if (er == E_NODEF) {
 #ifdef DEBUG_AM
 fprintf(stderr, "could not find %s\n", (char *)s+p);
 #endif
-                              t[q++]=T_LABEL;
-                              t[q++]=n & 255;
-                              t[q++]=(n>>8) & 255;
-/*
-                              if(afl==SEG_ZEROUNDEF) uz++;
-*/
-                              ud++;	// number of undefined labels
-                              er=E_OK;
-                         }
-                         p+=ll;
+								t[q++] = T_LABEL;
+								t[q++] = n & 255;
+								t[q++] = (n >> 8) & 255;
+								/*
+								 if(afl==SEG_ZEROUNDEF) uz++;
+								 */
+								ud++;	// number of undefined labels
+								er = E_OK;
+							}
+							p += ll;
+						}
+					} else if (s[p] <= '9'
+							&& (s[p] > '0' || (s[p] == '0' && !ctypes))) {
+						tg_dez(s + p, &ll, &v);
+						p += ll;
+						wval(q, v, 'd');
+					} else
+						/* handle encodings: hex, binary, octal, quoted strings */
+						switch (s[p]) {
+						case '0':
+							// only gets here when "ctypes" is set, and starts with 0
+							// we here check for the C stype "0xHEX" and "0OCTAL" encodings
+							if ('x' == tolower(s[p + 1])) {
+								// c-style hex
+								tg_hex(s + p + 2, &ll, &v);
+								p += 2 + ll;
+								wval(q, v, '$');
+							} else if (isdigit(s[p + 1])) {
+								// c-style octal if digit follows
+								tg_oct(s + p + 1, &ll, &v);
+								p += 1 + ll;
+								wval(q, v, '&');
+							} else {
+								// else use decimal (0)
+								tg_dez(s + p, &ll, &v);
+								p += ll;
+								wval(q, v, 'd');
+							}
+							break;
+						case '$':
+							tg_hex(s + p + 1, &ll, &v);
+							p += 1 + ll;
+							wval(q, v, '$');
+							break;
+						case '%':
+							tg_bin(s + p + 1, &ll, &v);
+							p += 1 + ll;
+							wval(q, v, '%');
+							break;
+						case '&':
+							tg_oct(s + p + 1, &ll, &v);
+							p += 1 + ll;
+							wval(q, v, '&');
+							break;
+						case '\'':
+						case '\"':
+							er = tg_asc(s + p, t + q, &q, &p, na1, na2, n);
+							break;
+						case ',':
+							if (mk)
+								while (s[p] != '\0' && s[p] != ';') {
+									while (s[p] == ' ')
+										p++;
+									*nk += (s[p] == ',');
+									t[q++] = s[p++];
+								}
+							else {
+								*nk += 1;
+								t[q++] = s[p++];
+							}
+							break;
+						default:
+							er = E_SYNTAX;
+							break;
+						}
+					operand = -operand + 1;
+
+				} else /* operator    */
+				{
+					o = 0;
+					if (s[p] == ')' || s[p] == ']') {
+						t[q++] = s[p++];
+						operand = -operand + 1;
+					} else if (s[p] == ',') {
+						t[q++] = s[p++];
+						if (mk) {
+							// if only one comma, pass through all following text - esp. ",y" or ",x" etc
+							fl++;
+						}
+						*nk += 1;
+					} else
+						switch (s[p]) {
+						case '+':
+							o = 1;
+							break;
+						case '-':
+							o = 2;
+							break;
+						case '*':
+							o = 3;
+							break;
+						case '/':
+							o = 4;
+							break;
+						case '!':
+							if (s[p + 1] == '=')
+								o = 12;
+							break;
+						case '<':
+							switch (s[p + 1]) {
+							case '<':
+								o = 6;
+								break;
+							case '>':
+								o = 12;
+								break;
+							case '=':
+								o = 10;
+								break;
+							default:
+								o = 7;
+								break;
+							}
+							break;
+						case '>':
+							switch (s[p + 1]) {
+							case '>':
+								o = 5;
+								break;
+							case '<':
+								o = 12;
+								break;
+							case '=':
+								o = 11;
+								break;
+							default:
+								o = 8;
+								break;
+							}
+							break;
+						case '=':
+							switch (s[p + 1]) {
+							case '<':
+								o = 10;
+								break;
+							case '>':
+								o = 11;
+								break;
+							case '=':
+								o = 9;
+								p++; /* hack */
+								break;
+							default:
+								o = 9;
+								break;
+							}
+							break;
+						case '&':
+							if (s[p + 1] == '&')
+								o = 16;
+							else
+								o = 13;
+							break;
+						case '|':
+							if (s[p + 1] == '|')
+								o = 17;
+							else
+								o = 15;
+							break;
+						case '^':
+							o = 14;
+							break;
+						default:
+							er = E_SYNTAX;
+							break;
+						}
+					if (o) {
+						t[q++] = o;
+						p += lp[o];
+					}
+					operand = -operand + 1;
+				}
+
+				while (s[p] == ' ')
+					p++;
 			}
-                    }
-                    else
-                    if(s[p]<='9' && (s[p]>'0' || (s[p] == '0' && !ctypes)))
-                    {
-                         tg_dez(s+p,&ll,&v);
-                         p+=ll;
-                         wval(q,v, 'd');
-                    }
-                    else
-		    /* handle encodings: hex, binary, octal, quoted strings */
-                    switch(s[p]) {
-                    case '0':
-			 // only gets here when "ctypes" is set, and starts with 0
-			 // we here check for the C stype "0xHEX" and "0OCTAL" encodings
-			 if ('x' == tolower(s[p+1])) {
-				// c-style hex
-				tg_hex(s+p+2, &ll, &v);
-				p+=2+ll;
-				wval(q, v, '$');
-			 } else 
-			 if (isdigit(s[p+1])) {
-				// c-style octal if digit follows
-                         	tg_oct(s+p+1,&ll,&v);
-                         	p+=1+ll;
-                         	wval(q,v, '&');
-			 } else {
-				// else use decimal (0)
-                         	tg_dez(s+p,&ll,&v);
-                         	p+=ll;
-                         	wval(q,v, 'd');
-			 }
-			 break;
-                    case '$':
-                         tg_hex(s+p+1,&ll,&v);
-                         p+=1+ll;
-                         wval(q,v, '$');
-                         break;
-                    case '%':
-                         tg_bin(s+p+1,&ll,&v);
-                         p+=1+ll;
-                         wval(q,v, '%');
-                         break;
-                    case '&':
-                         tg_oct(s+p+1,&ll,&v);
-                         p+=1+ll;
-                         wval(q,v, '&');
-                         break;
-                    case '\'':
-                    case '\"':
-                         er=tg_asc(s+p,t+q,&q,&p,na1,na2,n);
-                         break;
-                    case ',':
-                         if(mk)
-                              while(s[p]!='\0' && s[p]!=';')
-                              {
-                                   while(s[p]==' ') p++;
-                                   *nk+=(s[p]==',');
-                                   t[q++]=s[p++];
-                              }
-                         else
-                         {
-                              *nk+=1;
-                              t[q++]=s[p++];
-                         }
-                         break;
-                    default :
-                         er=E_SYNTAX;
-                         break;
-                    }
-                    operand= -operand+1;
-
-                 } else    /* operator    */
-                 {
-                    o=0;
-                    if(s[p]==')' || s[p]==']')
-                    {
-                         t[q++]=s[p++];
-                         operand =-operand+1;
-                    } else
-                    if(s[p]==',')
-                    {
-                         t[q++]=s[p++];
-                         if(mk) {
-			      // if only one comma, pass through all following text - esp. ",y" or ",x" etc
-                              fl++;
-			 }
-                         *nk+=1;
-                    } else
-                    switch(s[p]) {
-                    case '+':
-                         o=1;
-                         break;
-                    case '-':
-                         o=2;
-                         break;
-                    case '*':
-                         o=3;
-                         break;
-                    case '/':
-                         o=4;
-                         break;
-                    case '!':
-                         if (s[p+1] == '=') o=12;
-                         break;
-                    case '<':
-                         switch (s[p+1]) {
-                         case '<':
-                              o=6;
-                              break;
-                         case '>':
-                              o=12;
-                              break;
-                         case '=':
-                              o=10;
-                              break;
-                         default :
-                              o=7;
-                              break;
-                         }
-                         break;
-                    case '>':
-                         switch (s[p+1]) {
-                         case '>':
-                              o=5;
-                              break;
-                         case '<':
-                              o=12;
-                              break;
-                         case '=':
-                              o=11;
-                              break;
-                         default:
-                              o=8;
-                              break;
-                         }
-                         break;
-                    case '=':
-                         switch (s[p+1]) {
-                         case '<':
-                              o=10;
-                              break;
-                         case '>':
-                              o=11;
-                              break;
-                         case '=':
-                              o=9; p++; /* hack */
-                              break;
-                         default:
-                              o=9;
-                              break;
-                         }
-                         break;
-                    case '&':
-                         if (s[p+1]=='&')
-                              o=16;
-                         else
-                              o=13;
-                         break;
-                    case '|':
-                         if (s[p+1]=='|')
-                              o=17;
-                         else
-                              o=15;
-                         break;
-                    case '^':
-                         o=14;
-                         break;
-                    default:
-                         er=E_SYNTAX;
-                         break;
-                    }
-                    if(o)
-                    {
-                         t[q++]=o;
-                         p+=lp[o];
-                    }
-                    operand= -operand+1;
-                 }
-
-                 while(s[p]==' ') p++;
-               }
-          }
-     }
+		}
+	}
 //printf("er=%d, ud=%d\n", er, ud);
-     if(!er)
-     {
-/*
-          if(uz==1 && ud==1 && byte!=2) {
-               byte=1;
-	  }
-          if(byte == 1) {
-               t[q++] = T_FBYTE;
-          } else if(byte == 2) {
-               t[q++] = T_FADDR;
-          }
-*/
-	  byte = 0;
-          if(ud > 0) {
-               er=E_NODEF;
-		byte = 1;
-          }
-     }
-    
-     if (s[p] == ';') {
-	/* handle comments */
-	/* first find out how long */
-	int i;
-	for (i = p+1; s[i] != '\0'; i++);
-	i = i - p;	/* actual length of the comment, including zero-byte terminator */
-	/*if (i >= 1) {*/
+	if (!er) {
+		/*
+		 if(uz==1 && ud==1 && byte!=2) {
+		 byte=1;
+		 }
+		 if(byte == 1) {
+		 t[q++] = T_FBYTE;
+		 } else if(byte == 2) {
+		 t[q++] = T_FADDR;
+		 }
+		 */
+		byte = 0;
+		if (ud > 0) {
+			er = E_NODEF;
+			byte = 1;
+		}
+	}
+
+	if (s[p] == ';') {
+		/* handle comments */
+		/* first find out how long */
+		int i;
+		for (i = p + 1; s[i] != '\0'; i++)
+			;
+		i = i - p; /* actual length of the comment, including zero-byte terminator */
+		/*if (i >= 1) {*/
 		/* there actually is a comment */
 		t[q++] = T_COMMENT;
-		t[q++] = i&255;
-		t[q++] = (i>>8)&255;
-		memcpy(t+q, s+p+1, i);	/* also copy zero terminator, used in listing */
+		t[q++] = i & 255;
+		t[q++] = (i >> 8) & 255;
+		memcpy(t + q, s + p + 1, i); /* also copy zero terminator, used in listing */
 		q += i;
-	/*}*/
-     } 
-     t[q++]=T_END;
-     /* FIXME: this is an unholy union of two "!" implementations :-( */
-     /* FIXME FIXME FIXME ... 
-     if (operand==1) {
-         t[q++]='\0';
-         t[q++]=cast;
-     }
-     */
-     *l=q;
-     if(bytep) *bytep=byte; 
-     return(er);
+		/*}*/
+	}
+	t[q++] = T_END;
+	/* FIXME: this is an unholy union of two "!" implementations :-( */
+	/* FIXME FIXME FIXME ...
+	 if (operand==1) {
+	 t[q++]='\0';
+	 t[q++]=cast;
+	 }
+	 */
+	*l = q;
+	if (bytep)
+		*bytep = byte;
+	return (er);
 }
 
 /*********************************************************************************************
  * identifies a keyword in s, if it is found, starting with s[0]
  * A keyword is either a mnemonic, or a pseudo-opcode
  */
-static int t_keyword(signed char *s, int *l, int *n)
-{
-     int i = 0;		// index into keywords
-     int j = 0;
-     int hash;
+static int t_keyword(signed char *s, int *l, int *n) {
+	int i = 0;		// index into keywords
+	int j = 0;
+	int hash;
 
-     // keywords either start with a character, a "." or "*"
-     if(!isalpha(s[0]) && s[0]!='.' && s[0]!='*' )
-          return(E_NOKEY);
+	// keywords either start with a character, a "." or "*"
+	if (!isalpha(s[0]) && s[0] != '.' && s[0] != '*')
+		return (E_NOKEY);
 
-     // if first char is a character, use it as hash...
-     if(isalpha(s[0]))
-          hash=tolower(s[0])-'a';
-     else
-          hash=26;
-     
+	// if first char is a character, use it as hash...
+	if (isalpha(s[0]))
+		hash = tolower(s[0]) - 'a';
+	else
+		hash = 26;
 
-     // check for "*="
-     if(s[0]=='*') {
- 	j=1;
-	while(s[j] && isspace(s[j])) j++;
-	if(s[j]=='=') {
-	  i=Kpcdef;
-	  j++;
+	// check for "*="
+	if (s[0] == '*') {
+		j = 1;
+		while (s[j] && isspace(s[j]))
+			j++;
+		if (s[j] == '=') {
+			i = Kpcdef;
+			j++;
+		}
 	}
-     } 
 
-     // no keyword yet found?
-     if(!i) {    
-       // get sub-table from hash code, and compare with table content
-       // (temporarily) redefine i as start index in opcode table, and hash as end index
-       i=ktp[hash];
-       hash=ktp[hash+1];
-       // check all entries in opcode table from start to end for that hash code
-       while(i<hash)
-       {
-          j=0;
-          while(kt[i][j]!='\0' && kt[i][j]==tolower(s[j]))
-               j++;
+	// no keyword yet found?
+	if (!i) {
+		// get sub-table from hash code, and compare with table content
+		// (temporarily) redefine i as start index in opcode table, and hash as end index
+		i = ktp[hash];
+		hash = ktp[hash + 1];
+		// check all entries in opcode table from start to end for that hash code
+		while (i < hash) {
+			j = 0;
+			while (kt[i][j] != '\0' && kt[i][j] == tolower(s[j]))
+				j++;
 
-          if((kt[i][j]=='\0') && ((i==Kpcdef) || ((s[j]!='_') && !isalnum(s[j]))))
-               break;
-          i++;
-       }
-     }    
-     if(i==Kbyte) i=Kbyt;
-     if(i==Kdupb) i=Kdsb;
-     if(i==Kblkb) i=Kdsb;
-     if(i==Kdb) i=Kbyt;
-     if(i==Kdw) i=Kword;
-     if(i==Kblock) i=Kopen;
-     if(i==Kbend) i=Kclose;
-     if(i==Kcode) i=Ktext;
-     if(i==Kproc || i==Kscope) i=Kopen;
-     if(i==Kendproc || i==Kendscope) i=Kclose;
-     if(i==Kzeropage) i=Kzero;
-     if(i==Korg) i=Kpcdef;
-     if(i==Krelocx) i=Kpcdef;
+			if ((kt[i][j] == '\0')
+					&& ((i == Kpcdef) || ((s[j] != '_') && !isalnum(s[j]))))
+				break;
+			i++;
+		}
+	}
+	if (i == Kbyte)
+		i = Kbyt;
+	if (i == Kdupb)
+		i = Kdsb;
+	if (i == Kblkb)
+		i = Kdsb;
+	if (i == Kdb)
+		i = Kbyt;
+	if (i == Kdw)
+		i = Kword;
+	if (i == Kblock)
+		i = Kopen;
+	if (i == Kbend)
+		i = Kclose;
+	if (i == Kcode)
+		i = Ktext;
+	if (i == Kproc || i == Kscope)
+		i = Kopen;
+	if (i == Kendproc || i == Kendscope)
+		i = Kclose;
+	if (i == Kzeropage)
+		i = Kzero;
+	if (i == Korg)
+		i = Kpcdef;
+	if (i == Krelocx)
+		i = Kpcdef;
 
-
-     *l=j;
-     *n=i;
-     return( i==hash ? E_NOKEY : E_OK );
+	*l = j;
+	*n = i;
+	return (i == hash ? E_NOKEY : E_OK);
 }
 
-static void tg_dez(s,l,v)
-signed char *s;
-int *l,*v;
-{
-     int i=0,val=0;
+static void tg_dez(s, l, v)
+	signed char *s;int *l, *v; {
+	int i = 0, val = 0;
 
-     while(isdigit(s[i]))
-          val=val*10+(s[i++]-'0');
+	while (isdigit(s[i]))
+		val = val * 10 + (s[i++] - '0');
 
-     *l=i;
-     *v=val;
+	*l = i;
+	*v = val;
 }
 
-static void tg_bin(signed char *s, int *l, int *v)
-{
-     int i=0,val=0;
+static void tg_bin(signed char *s, int *l, int *v) {
+	int i = 0, val = 0;
 
-     while(s[i]=='0' || s[i]=='1')
-          val=val*2+(s[i++]-'0');
+	while (s[i] == '0' || s[i] == '1')
+		val = val * 2 + (s[i++] - '0');
 
-     *l=i;
-     *v=val;
+	*l = i;
+	*v = val;
 }
 
-static void tg_oct(signed char *s, int *l, int *v)
-{
-     int i=0,val=0;
+static void tg_oct(signed char *s, int *l, int *v) {
+	int i = 0, val = 0;
 
-     while(s[i]<'8' && s[i]>='0')
-          val=val*8+(s[i++]-'0');
+	while (s[i] < '8' && s[i] >= '0')
+		val = val * 8 + (s[i++] - '0');
 
-     *l=i;
-     *v=val;
+	*l = i;
+	*v = val;
 }
 
-static void tg_hex(signed char *s, int *l, int *v)
-{
-     int i=0,val=0;
+static void tg_hex(signed char *s, int *l, int *v) {
+	int i = 0, val = 0;
 
-     while((s[i]>='0' && s[i]<='9') || (tolower(s[i])<='f' && tolower(s[i])>='a'))
-     {
-          val=val*16+(s[i]<='9' ? s[i]-'0' : tolower(s[i])-'a'+10);
-          i++;
-     }
-     *l=i;
-     *v=val;
+	while ((s[i] >= '0' && s[i] <= '9')
+			|| (tolower(s[i]) <= 'f' && tolower(s[i]) >= 'a')) {
+		val = val * 16 + (s[i] <= '9' ? s[i] - '0' : tolower(s[i]) - 'a' + 10);
+		i++;
+	}
+	*l = i;
+	*v = val;
 }
 
 /* 
  * tokenize a string - handle two delimiter types, ' and " 
  */
-static int tg_asc(signed char *s, signed char *t, int *q, int *p, int *na1, int *na2,int n)
-{
+static int tg_asc(signed char *s, signed char *t, int *q, int *p, int *na1,
+		int *na2, int n) {
 
-     int er=E_OK,i=0,j=0,bs=0;
+	int er = E_OK, i = 0, j = 0, bs = 0;
 
-     signed char delimiter = s[i++];
-     
+	signed char delimiter = s[i++];
+
 #ifdef DEBUG_AM
 fprintf(stderr, "tg_asc token = %i\n", n);
 #endif
 
-     t[j++]='"';	/* pass2 token for string */
-     j++;		/* skip place for length */
+	t[j++] = '"'; /* pass2 token for string */
+	j++; /* skip place for length */
 
-     while(s[i]!='\0' && (bs || s[i]!=delimiter))
-     {
+	while (s[i] != '\0' && (bs || s[i] != delimiter)) {
 
-	/* implement backslashed quotes for 2.4 */
-          if(n != Kbin && s[i] == '\\' && !bs && !xa23) {
-               bs=1; i++; continue;
-          } else bs=0;
-	/* do NOT convert for Kbin or Kaasc, or for initial parse */
-	  if (!n || n == Kbin || n == Kaasc) {
-		t[j++]=s[i];
-/* XXX 2.4 implement option for ^ for backwards compatibility */
-          } else if(ca65 || (!xa23 && !mask) || s[i]!='^') { 	/* no escape code "^" - TODO: does ca65 has an escape code */
-               t[j++]=convert_char(s[i]);
-          } else { 		/* escape code */
-		  signed char payload = s[i+1];
-	          switch(payload) {
-	          case '\0':
-	               er=E_SYNTAX;
-	               break;
-	          case '\"':
-		       if (payload == delimiter) {
-	                 t[j++]=convert_char(payload);
-	                 i++;
-		       } else {
-	                 er=E_SYNTAX;
-		       }
-	               break;
-	          case '\'':
-		       if (payload == delimiter) {
-	                 t[j++]=convert_char(payload);
-	                 i++;
-		       } else {
-	                 er=E_SYNTAX;
-		       }
-	               break;
-	          case '^':
-	               t[j++]=convert_char('^');
-	               i++;
-	               break;
-	          default:
-	               t[j++]=convert_char(payload&0x1f);
-	               i++;
-	               break;
-	          }
-	  }
-          i++;
-     }
-     if(j==3)	/* optimize single byte string to value */
-     {
-          t[0]=T_VALUE;
-          t[1]=t[2];
-          t[2]=0;
-          t[3]=0;
-	  t[4]=delimiter;
-          j+=2;
-     } else
-     {		/* handle as string */
-          t[1]=j-2;
-          *na1 +=1;
-          *na2 +=j-2;
-     }
-     if(s[i]==delimiter) {	/* in case of no error */
-          i++;			/* skip ending delimiter */
-     }
-     *q +=j;
-     *p +=i;
-     return(er);
+		/* implement backslashed quotes for 2.4 */
+		if (n != Kbin && s[i] == '\\' && !bs && !xa23) {
+			bs = 1;
+			i++;
+			continue;
+		} else
+			bs = 0;
+		/* do NOT convert for Kbin or Kaasc, or for initial parse */
+		if (!n || n == Kbin || n == Kaasc) {
+			t[j++] = s[i];
+			/* XXX 2.4 implement option for ^ for backwards compatibility */
+		} else if (ca65 || (!xa23 && !mask) || s[i] != '^') { /* no escape code "^" - TODO: does ca65 has an escape code */
+			t[j++] = convert_char(s[i]);
+		} else { /* escape code */
+			signed char payload = s[i + 1];
+			switch (payload) {
+			case '\0':
+				er = E_SYNTAX;
+				break;
+			case '\"':
+				if (payload == delimiter) {
+					t[j++] = convert_char(payload);
+					i++;
+				} else {
+					er = E_SYNTAX;
+				}
+				break;
+			case '\'':
+				if (payload == delimiter) {
+					t[j++] = convert_char(payload);
+					i++;
+				} else {
+					er = E_SYNTAX;
+				}
+				break;
+			case '^':
+				t[j++] = convert_char('^');
+				i++;
+				break;
+			default:
+				t[j++] = convert_char(payload & 0x1f);
+				i++;
+				break;
+			}
+		}
+		i++;
+	}
+	if (j == 3) /* optimize single byte string to value */
+	{
+		t[0] = T_VALUE;
+		t[1] = t[2];
+		t[2] = 0;
+		t[3] = 0;
+		t[4] = delimiter;
+		j += 2;
+	} else { /* handle as string */
+		t[1] = j - 2;
+		*na1 += 1;
+		*na2 += j - 2;
+	}
+	if (s[i] == delimiter) { /* in case of no error */
+		i++; /* skip ending delimiter */
+	}
+	*q += j;
+	*p += i;
+	return (er);
 }
-
 

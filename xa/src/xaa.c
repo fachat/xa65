@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * Preprocessing arithmetic module
  *
@@ -30,84 +30,80 @@
 #include "xaa.h"
 #include "xat.h"
 
-static int pr[]= { P_START,P_ADD,P_ADD,P_MULT,P_MULT,P_SHIFT,P_SHIFT,P_CMP,
-            P_CMP,P_EQU,P_CMP,P_CMP,P_EQU,P_AND,P_XOR,P_OR,
-            P_LAND,P_LOR,P_EQU,P_START };
+static int pr[] = { P_START, P_ADD, P_ADD, P_MULT, P_MULT, P_SHIFT, P_SHIFT,
+		P_CMP,
+		P_CMP, P_EQU, P_CMP, P_CMP, P_EQU, P_AND, P_XOR, P_OR,
+		P_LAND, P_LOR, P_EQU, P_START };
 
-static int pp,pcc;
+static int pp, pcc;
 static int fundef;
 
-static int ag_term(signed char*,int,int*,int*,int*);
-static int get_op(signed char*,int*);
-static int do_op(int*,int,int);
+static int ag_term(signed char*, int, int*, int*, int*);
+static int get_op(signed char*, int*);
+static int do_op(int*, int, int);
 
 /* s = string, v = variable */
-int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f)
-{
-     int er=E_OK;
-     int afl = 0, bfl;
+int a_term(signed char *s, int *v, int *l, int xpc, int *pfl, int *label, int f) {
+	int er = E_OK;
+	int afl = 0, bfl;
 
-     *pfl = 0;
-     fundef = f;
+	*pfl = 0;
+	fundef = f;
 
-     pp=0;
-     pcc=xpc;
+	pp = 0;
+	pcc = xpc;
 
-     if(s[0]=='<')
-     {
-          pp++;
-          er=ag_term(s,P_START,v,&afl, label);
-	  bfl = afl & (A_MASK>>8);
-	  if( bfl && (bfl != (A_ADR>>8)) && (bfl != (A_LOW>>8)) ) {
-/*fprintf(stderr,"low byte relocation for a high byte - won't work!\n");*/
-	    errout(W_LOWACC);
-	  }
-	  if(afl) *pfl=A_LOW | ((afl<<8) & A_FMASK);
-          *v = *v & 255;
-     } else
-     if(s[pp]=='>')
-     {    
-          pp++;
-          er=ag_term(s,P_START,v,&afl, label);
-	  bfl = afl & (A_MASK>>8);
-	  if( bfl && (bfl != (A_ADR>>8)) && (bfl != (A_HIGH>>8)) ) {
-/*fprintf(stderr,"high byte relocation for a low byte - won't work!\n");*/
-	    errout(W_HIGHACC);
-	  }
-	  if(afl) *pfl=A_HIGH | ((afl<<8) & A_FMASK) | (*v & 255);
-          *v=(*v>>8)&255;
-     }
-     else 
-     if(s[pp]!=T_END) {
-          er=ag_term(s,P_START,v,&afl, label);
-	  bfl = afl & (A_MASK>>8);
-	  if(bfl && (bfl != (A_ADR>>8)) ) {
-/*fprintf(stderr,"address relocation for a low or high byte - won't work!\n");*/
-	    errout(W_ADDRACC);
-	  }
-	  if(afl) *pfl = A_ADR | ((afl<<8) & A_FMASK);
-     } else {
-	er = E_SYNTAX;
-     }
+	if (s[0] == '<') {
+		pp++;
+		er = ag_term(s, P_START, v, &afl, label);
+		bfl = afl & (A_MASK >> 8);
+		if (bfl && (bfl != (A_ADR >> 8)) && (bfl != (A_LOW >> 8))) {
+			/*fprintf(stderr,"low byte relocation for a high byte - won't work!\n");*/
+			errout(W_LOWACC);
+		}
+		if (afl)
+			*pfl = A_LOW | ((afl << 8) & A_FMASK);
+		*v = *v & 255;
+	} else if (s[pp] == '>') {
+		pp++;
+		er = ag_term(s, P_START, v, &afl, label);
+		bfl = afl & (A_MASK >> 8);
+		if (bfl && (bfl != (A_ADR >> 8)) && (bfl != (A_HIGH >> 8))) {
+			/*fprintf(stderr,"high byte relocation for a low byte - won't work!\n");*/
+			errout(W_HIGHACC);
+		}
+		if (afl)
+			*pfl = A_HIGH | ((afl << 8) & A_FMASK) | (*v & 255);
+		*v = (*v >> 8) & 255;
+	} else if (s[pp] != T_END) {
+		er = ag_term(s, P_START, v, &afl, label);
+		bfl = afl & (A_MASK >> 8);
+		if (bfl && (bfl != (A_ADR >> 8))) {
+			/*fprintf(stderr,"address relocation for a low or high byte - won't work!\n");*/
+			errout(W_ADDRACC);
+		}
+		if (afl)
+			*pfl = A_ADR | ((afl << 8) & A_FMASK);
+	} else {
+		er = E_SYNTAX;
+	}
 
-     *l=pp;
+	*l = pp;
 //fprintf(stderr, "a_term: nolink=%d, noundef=%d ->er=%d; l=%d, pp=%d, afl->%04x *pfl=%04x, (pc=%04x)\n",nolink, noundef ,er, *l, pp, afl,*pfl, xpc); 
-     return(er);
+	return (er);
 }
 
-static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
-{
-     int er=E_OK,o,w,mf=1,afl;
+static int ag_term(signed char *s, int p, int *v, int *nafl, int *label) {
+	int er = E_OK, o, w, mf = 1, afl;
 
-     afl = 0;
+	afl = 0;
 
 //fprintf(stderr, "ag_term(%02x %02x %02x %02x %02x %02x\n",s[0],s[1],s[2],s[3],s[4],s[5]);
 
-     while(s[pp]=='-')
-     {
-          pp++;
-          mf=-mf;
-     }
+	while (s[pp] == '-') {
+		pp++;
+		mf = -mf;
+	}
 
 #if(0) /* NYI: this is hacked into .assert for now */
      if(s[pp]==18) /* logical not */
@@ -123,198 +119,180 @@ static int ag_term(signed char *s, int p, int *v, int *nafl, int *label)
           *v = !(*v);
      } else
 #endif
-     if(s[pp]=='(')
-     {
-          pp++;
-          if(!(er=ag_term(s,P_START,v,&afl,label)))
-          {
-               if(s[pp]!=')')
-                    er=E_SYNTAX;
-               else 
-                    pp++;
-          }
-     } else
-     if(s[pp]==T_LABEL)
-     {
-          er=l_get(cval(s+pp+1),v, &afl);
+	if (s[pp] == '(') {
+		pp++;
+		if (!(er = ag_term(s, P_START, v, &afl, label))) {
+			if (s[pp] != ')')
+				er = E_SYNTAX;
+			else
+				pp++;
+		}
+	} else if (s[pp] == T_LABEL) {
+		er = l_get(cval(s + pp + 1), v, &afl);
 
-/*
- printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n", 
-			er, segment, afl, nolink, fundef);
-*/
-	  if(er==E_NODEF && segment != SEG_ABS && fundef ) {
-	    if( nolink || ((afl==SEG_UNDEF) || (afl==SEG_UNDEFZP))) {
-	      er = E_OK;
-	      *v = 0;
-	      if(afl!=SEG_UNDEFZP) {
-	        afl = SEG_UNDEF;
-	      }
-	      *label = cval(s+pp+1);
-	    }
-	  }
-          pp+=3;
-     }
-     else
-     if(s[pp]==T_VALUE || s[pp] == T_CAST)
-     {
-	  while (s[pp] == T_CAST) {
-		pp+=2;
-	  }
-          *v=lval(s+pp+1);
-          pp+=5;
-/*
-printf("value: v=%04x\n",*v);
-*/
-     }
-     else
-     if(s[pp]==T_POINTER)
-     {
-	  afl = s[pp+1];
-          *v=cval(s+pp+2);
-          pp+=6;
-/*
-printf("pointer: v=%04x, afl=%04x\n",*v,afl);
-*/
-     }
-     else
-     if(s[pp]=='*')
-     {
-          *v=pcc;
-          pp++;
-	  afl = segment;
-     } 
-     else {
-          er=E_SYNTAX;
+		/*
+		 printf("label: er=%d, seg=%d, afl=%d, nolink=%d, fundef=%d\n",
+		 er, segment, afl, nolink, fundef);
+		 */
+		if (er == E_NODEF && segment != SEG_ABS && fundef) {
+			if (nolink || ((afl == SEG_UNDEF) || (afl == SEG_UNDEFZP))) {
+				er = E_OK;
+				*v = 0;
+				if (afl != SEG_UNDEFZP) {
+					afl = SEG_UNDEF;
+				}
+				*label = cval(s + pp + 1);
+			}
+		}
+		pp += 3;
+	} else if (s[pp] == T_VALUE || s[pp] == T_CAST) {
+		while (s[pp] == T_CAST) {
+			pp += 2;
+		}
+		*v = lval(s + pp + 1);
+		pp += 5;
+		/*
+		 printf("value: v=%04x\n",*v);
+		 */
+	} else if (s[pp] == T_POINTER) {
+		afl = s[pp + 1];
+		*v = cval(s + pp + 2);
+		pp += 6;
+		/*
+		 printf("pointer: v=%04x, afl=%04x\n",*v,afl);
+		 */
+	} else if (s[pp] == '*') {
+		*v = pcc;
+		pp++;
+		afl = segment;
+	} else {
+		er = E_SYNTAX;
 	}
 
-     *v *= mf;
+	*v *= mf;
 
-     while(!er && s[pp]!=')' && s[pp]!=']' && s[pp]!=',' && s[pp]!=T_END && s[pp]!=T_COMMENT)
-     {
+	while (!er && s[pp] != ')' && s[pp] != ']' && s[pp] != ',' && s[pp] != T_END
+			&& s[pp] != T_COMMENT) {
 //fprintf(stderr, "ag_term while: s[pp=%d]=%02x\n", pp, s[pp]);
-          er=get_op(s,&o);
+		er = get_op(s, &o);
 
-          if(!er && pr[o]>p)
-          {
-               pp+=1;
-               if(!(er=ag_term(s,pr[o],&w, nafl, label)))
-               {
-		    if(afl || *nafl) {	/* check pointer arithmetic */
-		      if((afl == *nafl) && (afl!=SEG_UNDEFZP) && (afl!=SEG_UNDEF) && o==2) {
-			afl = 0; 	/* subtract two pointers */
-		      } else 
-		      if(((afl && !*nafl) || (*nafl && !afl)) && o==1) {
-			afl=(afl | *nafl);  /* add constant to pointer */
-		      } else 
-		      if((afl && !*nafl) && o==2) {
-			afl=(afl | *nafl);  /* subtract constant from pointer */
-		      } else {
-       		        if((!afl && *nafl) && o==2) {
-			  /* subtract pointer from constant */
-			  errout(W_SUBTRACT);
+		if (!er && pr[o] > p) {
+			pp += 1;
+			if (!(er = ag_term(s, pr[o], &w, nafl, label))) {
+				if (afl || *nafl) { /* check pointer arithmetic */
+					if ((afl == *nafl) && (afl != SEG_UNDEFZP)
+							&& (afl != SEG_UNDEF) && o == 2) {
+						afl = 0; /* subtract two pointers */
+					} else if (((afl && !*nafl) || (*nafl && !afl)) && o == 1) {
+						afl = (afl | *nafl); /* add constant to pointer */
+					} else if ((afl && !*nafl) && o == 2) {
+						afl = (afl | *nafl); /* subtract constant from pointer */
+					} else {
+						if ((!afl && *nafl) && o == 2) {
+							/* subtract pointer from constant */
+							errout(W_SUBTRACT);
+						}
+						/* allow math in the same segment */
+						if (segment != SEG_ABS && segment != afl) {
+							if (!dsb_len) {
+								/*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
+								/* e.g. adding two pointers, adding two undefined values */
+								er = E_ILLSEGMENT;
+							}
+						}
+						afl = 0;
+					}
+				}
+				if (!er)
+					er = do_op(v, w, o);
 			}
-                 	/* allow math in the same segment */
-			if(segment!=SEG_ABS && segment != afl) { 
-			  if(!dsb_len) {
-			    /*printf("ILLPOINTER=dsb_len=%d,segment=%d\n",dsb_len, segment);*/
-			    /* e.g. adding two pointers, adding two undefined values */
-			    er=E_ILLSEGMENT;
-			  }
-			}
-			afl=0;
-		      }
-		    }
-                    if(!er) er=do_op(v,w,o);
-               }
-          } else {
-               break;
-	  }
-     }
-     *nafl = afl;
-     return(er);
-}
-
-static int get_op(signed char *s, int *o)
-{
-     int er;
-
-     *o=s[pp];
-
-     if(*o<1 || *o>17) {
-/*
-	printf("*o=%d, pp=%d, s=%s\n", *o, pp, s);
-	for (int i=0; i< 10; i++) {
-		printf(" %02x", s[i]);
+		} else {
+			break;
+		}
 	}
-	printf("\n");
-*/
-          er=E_SYNTAX;
-     } else {
-          er=E_OK;
-     }
-
-     return(er);
+	*nafl = afl;
+	return (er);
 }
-         
-static int do_op(int *w,int w2,int o)
-{
-     int er=E_OK;
-     switch (o) {
-     case 1:
-          *w +=w2;
-          break;
-     case 2:
-          *w -=w2;
-          break;
-     case 3:
-          *w *=w2;
-          break;
-     case 4:
-          if (w2!=0)
-               *w /=w2;
-          else
-               er =E_DIV;
-          break;
-     case 5:
-          *w >>=w2;
-          break;
-     case 6:
-          *w <<=w2;
-          break;
-     case 7:
-          *w = *w<w2;
-          break;
-     case 8:
-          *w = *w>w2;
-          break;
-     case 9:
-          *w = *w==w2;
-          break;
-     case 10:
-          *w = *w<=w2;
-          break;
-     case 11:
-          *w = *w>=w2;
-          break;
-     case 12:
-          *w = *w!=w2;
-          break;
-     case 13:
-          *w &=w2;
-          break;
-     case 14:
-          *w ^=w2;
-          break;
-     case 15:
-          *w |=w2;
-          break;
-     case 16:
-          *w =*w&&w2;
-          break;
-     case 17:
-          *w =*w||w2;
-          break;
-     }
-     return(er);
+
+static int get_op(signed char *s, int *o) {
+	int er;
+
+	*o = s[pp];
+
+	if (*o < 1 || *o > 17) {
+		/*
+		 printf("*o=%d, pp=%d, s=%s\n", *o, pp, s);
+		 for (int i=0; i< 10; i++) {
+		 printf(" %02x", s[i]);
+		 }
+		 printf("\n");
+		 */
+		er = E_SYNTAX;
+	} else {
+		er = E_OK;
+	}
+
+	return (er);
+}
+
+static int do_op(int *w, int w2, int o) {
+	int er = E_OK;
+	switch (o) {
+	case 1:
+		*w += w2;
+		break;
+	case 2:
+		*w -= w2;
+		break;
+	case 3:
+		*w *= w2;
+		break;
+	case 4:
+		if (w2 != 0)
+			*w /= w2;
+		else
+			er = E_DIV;
+		break;
+	case 5:
+		*w >>= w2;
+		break;
+	case 6:
+		*w <<= w2;
+		break;
+	case 7:
+		*w = *w < w2;
+		break;
+	case 8:
+		*w = *w > w2;
+		break;
+	case 9:
+		*w = *w == w2;
+		break;
+	case 10:
+		*w = *w <= w2;
+		break;
+	case 11:
+		*w = *w >= w2;
+		break;
+	case 12:
+		*w = *w != w2;
+		break;
+	case 13:
+		*w &= w2;
+		break;
+	case 14:
+		*w ^= w2;
+		break;
+	case 15:
+		*w |= w2;
+		break;
+	case 16:
+		*w = *w && w2;
+		break;
+	case 17:
+		*w = *w || w2;
+		break;
+	}
+	return (er);
 }
 

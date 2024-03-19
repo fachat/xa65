@@ -1,6 +1,6 @@
 /* xa65 - 65xx/65816 cross-assembler and utility suite
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  * Maintained by Cameron Kaiser
  *
  * File handling and preprocessor (also see xaa.c) module
@@ -46,16 +46,16 @@
 char s[MAXLINE];
 Datei *filep;
 
-static int tcompare(char*,char**,int);
-static int pp_replace(char*,char*,int,int);
+static int tcompare(char*, char**, int);
+static int pp_replace(char*, char*, int, int);
 static int searchdef(char*);
-static int fgetline(char*,int len, int *rlen, FILE*);
+static int fgetline(char*, int len, int *rlen, FILE*);
 
 /*static int icl_open(char*);*/
-static int pp_ifdef(char*),pp_ifndef(char*);
-static int pp_else(char*),pp_endif(char*);
-static int pp_echo(char*),pp_if(char*),pp_print(char*),pp_prdef(char*);
-static int pp_ifldef(char*),pp_iflused(char*);
+static int pp_ifdef(char*), pp_ifndef(char*);
+static int pp_else(char*), pp_endif(char*);
+static int pp_echo(char*), pp_if(char*), pp_print(char*), pp_prdef(char*);
+static int pp_ifldef(char*), pp_iflused(char*);
 static int pp_undef(char*);
 static int pp_error(char*);
 
@@ -65,344 +65,316 @@ static int pp_error(char*);
 static int quotebs = 0;
 static int inquote = 0;
 
-static char *cmd[]={
-"echo","include","define","undef","printdef","print","error", /* VALBEF */
-			"ifdef","ifndef","else","endif",
-               "ifldef","iflused","if" }; /* ANZBEF */
-               
-static int (*func[])(char*) = { pp_echo,icl_open,pp_define,pp_undef,
-			 pp_prdef,pp_print,pp_error,pp_ifdef,pp_ifndef,
-                         pp_else,pp_endif,
-                         pp_ifldef,pp_iflused,pp_if };
+static char *cmd[] = { "echo", "include", "define", "undef", "printdef",
+		"print", "error", /* VALBEF */
+		"ifdef", "ifndef", "else", "endif", "ifldef", "iflused", "if" }; /* ANZBEF */
 
-static char 		*mem;
-static unsigned long 	memfre;
-static int 		nlf;
-static int 		nff;
-static int 		hashindex[256];
+static int (*func[])(char*) = {pp_echo,icl_open,pp_define,pp_undef,
+	pp_prdef,pp_print,pp_error,pp_ifdef,pp_ifndef,
+	pp_else,pp_endif,
+	pp_ifldef,pp_iflused,pp_if };
 
-static List 	     	*liste;
-static unsigned int     rlist;
-static int       	fsp;
-static int       	loopfl;
-static Datei     	flist[MAXFILE+1];
-static char      	in_line[MAXLINE];
+static char *mem;
+static unsigned long memfre;
+static int nlf;
+static int nff;
+static int hashindex[256];
 
-int pp_comand(char *t)
-{
-     int i,l,er=1;
+static List *liste;
+static unsigned int rlist;
+static int fsp;
+static int loopfl;
+static Datei flist[MAXFILE + 1];
+static char in_line[MAXLINE];
 
-     i=tcompare(t,cmd,ANZBEF);
+int pp_comand(char *t) {
+	int i, l, er = 1;
 
-     if(i>=0)
-     {
-          if(loopfl && (i<VALBEF))
-               er=0;
-          else
-          {
-               l=(int)strlen(cmd[i]);
-               while(isspace(t[l])) l++;
+	i = tcompare(t, cmd, ANZBEF);
 
-               er=(*func[i])(t+l);
-          }
-     }
-     return(er);
+	if (i >= 0) {
+		if (loopfl && (i < VALBEF))
+			er = 0;
+		else {
+			l = (int) strlen(cmd[i]);
+			while (isspace(t[l]))
+				l++;
+
+			er = (*func[i])(t + l);
+		}
+	}
+	return (er);
 }
 
-int pp_ifdef(char *t)
-{
-/*     int x;
-     printf("t=%s\n",t);
-     x=searchdef(t);
-     printf("searchdef(t)=%d\n",x);
-*/   
-     loopfl=(loopfl<<1)+( searchdef(t) ? 0 : 1 );
-     return(0);
+int pp_ifdef(char *t) {
+	/*     int x;
+	 printf("t=%s\n",t);
+	 x=searchdef(t);
+	 printf("searchdef(t)=%d\n",x);
+	 */
+	loopfl = (loopfl << 1) + (searchdef(t) ? 0 : 1);
+	return (0);
 }
 
-int pp_ifndef(char *t)
-{
-     loopfl=(loopfl<<1)+( searchdef(t) ? 1 : 0 );
-     return(0);
+int pp_ifndef(char *t) {
+	loopfl = (loopfl << 1) + (searchdef(t) ? 1 : 0);
+	return (0);
 }
 
-int pp_ifldef(char *t)
-{
-	loopfl=(loopfl<<1)+( ll_pdef(t) ? 1 : 0 );
-	return(0);
+int pp_ifldef(char *t) {
+	loopfl = (loopfl << 1) + (ll_pdef(t) ? 1 : 0);
+	return (0);
 }
 
-int pp_iflused(char *t)
-{
+int pp_iflused(char *t) {
 	int n;
-	loopfl=(loopfl<<1)+( ll_search(t,&n,STD) ? 1 : 0 );
-	return(0);
+	loopfl = (loopfl << 1) + (ll_search(t, &n, STD) ? 1 : 0);
+	return (0);
 }
 
-int pp_echo(char *t)
-{
-     int er;
-     
-     if((er=pp_replace(s,t,-1,rlist)))
-          errout(er);
-     else
-     {
-          logout(s);
-          logout("\n");
-     }
-     return(0);
+int pp_echo(char *t) {
+	int er;
+
+	if ((er = pp_replace(s, t, -1, rlist)))
+		errout(er);
+	else {
+		logout(s);
+		logout("\n");
+	}
+	return (0);
 }
 
-int pp_print(char *t)
-{
-     int f,a,er;
-     
-     logout(t);
-     if((er=pp_replace(s,t,-1,rlist)))
-     {
-          logout("\n");
-          errout(er);
-     }
-     else
-     {
-          logout("=");
-          logout(s);
-          logout("=");
-          er=b_term(s,&a,&f,pc[segment]);
-          if(er)
-          {
-               logout("\n");
-               errout(er);
-          }
-          else
-               { sprintf(s,"%d\n",a); logout(s); }
-     }
-     
-     return(0);
+int pp_print(char *t) {
+	int f, a, er;
+
+	logout(t);
+	if ((er = pp_replace(s, t, -1, rlist))) {
+		logout("\n");
+		errout(er);
+	} else {
+		logout("=");
+		logout(s);
+		logout("=");
+		er = b_term(s, &a, &f, pc[segment]);
+		if (er) {
+			logout("\n");
+			errout(er);
+		} else {
+			sprintf(s, "%d\n", a);
+			logout(s);
+		}
+	}
+
+	return (0);
 }
 
-int pp_error(char *t)
-{
+int pp_error(char *t) {
 	/* the offending line is printed for us */
 	return E_UERROR;
 }
 
-int pp_if(char *t)
-{
-     int a,f,l,er;
+int pp_if(char *t) {
+	int a, f, l, er;
 
-/* XXX: #if XYZ, if XYZ is not defined, XYZ gets treated as a label. */
+	/* XXX: #if XYZ, if XYZ is not defined, XYZ gets treated as a label. */
 
-     if((er=pp_replace(s,t,-1,rlist))) {
-          errout(er);
-     } else
-     {
-	dsb_len = 1;
-          f=b_term(s,&a,&l,pc[segment]);
-	dsb_len = 0;
+	if ((er = pp_replace(s, t, -1, rlist))) {
+		errout(er);
+	} else {
+		dsb_len = 1;
+		f = b_term(s, &a, &l, pc[segment]);
+		dsb_len = 0;
 
-          if((!loopfl) && f) {
-               errout(f);
-          } else
-               loopfl=(loopfl<<1)+( a ? 0 : 1 );
-     }
-     return(0);
+		if ((!loopfl) && f) {
+			errout(f);
+		} else
+			loopfl = (loopfl << 1) + (a ? 0 : 1);
+	}
+	return (0);
 }
 
-int pp_else(char *t)
-{
-     (void)t;		/* quench warning */
-     loopfl ^=1;
-     return(0);
+int pp_else(char *t) {
+	(void) t; /* quench warning */
+	loopfl ^= 1;
+	return (0);
 }
 
-int pp_endif(char *t)
-{
-     (void)t;		/* quench warning */
-     loopfl=loopfl>>1;
-     return(0);
+int pp_endif(char *t) {
+	(void) t; /* quench warning */
+	loopfl = loopfl >> 1;
+	return (0);
 }
-
 
 /* stub for handling CPP directives */
 int pp_cpp(char *t) {
 	char name[MAXLINE];
 
-	if(sscanf(t, " %d \"%s\"", &filep->fline, name) == 2) {
+	if (sscanf(t, " %d \"%s\"", &filep->fline, name) == 2) {
 		/* massage it into our parameters and drop last quote */
 		char *u;
 
 		filep->fline--;
-		if((u = (char *)strrchr(name, '"')))
+		if ((u = (char*) strrchr(name, '"')))
 			*u = '\0';
 
 		free(filep->fname);
 		filep->fname = strdup(name);
-		if(!filep->fname) {
-			fprintf(stderr,"Oops, no more memory!\n");
+		if (!filep->fname) {
+			fprintf(stderr, "Oops, no more memory!\n");
 			exit(1);
 		}
 		return (0);
 	} else {
-		return(E_SYNTAX);
+		return (E_SYNTAX);
 	}
 }
 
 /* pp_undef is a great hack to get it working fast... */
 int pp_undef(char *t) {
-     int i;
-     if((i=searchdef(t))) {
-	i+=rlist;
-	liste[i].s_len=0;
-     }
-     return 0;
+	int i;
+	if ((i = searchdef(t))) {
+		i += rlist;
+		liste[i].s_len = 0;
+	}
+	return 0;
 }
 
-int pp_prdef(char *t)
-{
-     char *x;
-     int i,j;
+int pp_prdef(char *t) {
+	char *x;
+	int i, j;
 
-     if((i=searchdef(t)))
-     {
-          i+=rlist;
-          x=liste[i].search;
-          sprintf(s,"\n%s",x);
-          if(liste[i].p_anz)
-          {
-               sprintf(s+strlen(s),"(");
-               for(j=0;j<liste[i].p_anz;j++)
-               {
-                    x+=strlen(x)+1;
-                    sprintf(s+strlen(s),"%s%c",x,(liste[i].p_anz-j-1) ? ',' : ')');
-               }
-          }
-          sprintf(s+strlen(s),"=%s\n",liste[i].replace);
-          logout(s);
-     }
-     return(E_OK);
+	if ((i = searchdef(t))) {
+		i += rlist;
+		x = liste[i].search;
+		sprintf(s, "\n%s", x);
+		if (liste[i].p_anz) {
+			sprintf(s + strlen(s), "(");
+			for (j = 0; j < liste[i].p_anz; j++) {
+				x += strlen(x) + 1;
+				sprintf(s + strlen(s), "%s%c", x,
+						(liste[i].p_anz - j - 1) ? ',' : ')');
+			}
+		}
+		sprintf(s + strlen(s), "=%s\n", liste[i].replace);
+		logout(s);
+	}
+	return (E_OK);
 }
 
-int searchdef(char *t)
-{
-     int i=0,j,k,l=0;
+int searchdef(char *t) {
+	int i = 0, j, k, l = 0;
 
-     while(t[l]!=' ' && t[l]!='\0') l++;
+	while (t[l] != ' ' && t[l] != '\0')
+		l++;
 
-     if(rlist)
-     {
-       i=hashindex[hashcode(t,l)];
-     
-       do   /*for(i=0;i<rlist;i++)*/
-       {
-          k=liste[i].s_len;
-          j=0;
+	if (rlist) {
+		i = hashindex[hashcode(t, l)];
 
-          if(k && (k==l))
-          {
-               while((t[j]==liste[i].search[j])&&j<k) j++;
-               if(j==k)
-                    break;
-          }
-          
-          if(!i)
-          {
-               i=rlist;
-               break;
-          }
-          
-          i=liste[i].nextindex;
-               
-       } while(1);
-     } 
-    
-     return(i-rlist);
+		do /*for(i=0;i<rlist;i++)*/
+		{
+			k = liste[i].s_len;
+			j = 0;
+
+			if (k && (k == l)) {
+				while ((t[j] == liste[i].search[j]) && j < k)
+					j++;
+				if (j == k)
+					break;
+			}
+
+			if (!i) {
+				i = rlist;
+				break;
+			}
+
+			i = liste[i].nextindex;
+
+		} while (1);
+	}
+
+	return (i - rlist);
 }
 
-int ga_pp(void)
-{
-	return(rlist);
+int ga_pp(void) {
+	return (rlist);
 }
 
-int gm_pp(void)
-{
-	return(ANZDEF);
+int gm_pp(void) {
+	return (ANZDEF);
 }
 
-long gm_ppm(void)
-{
-	return(MAXPP);
+long gm_ppm(void) {
+	return (MAXPP);
 }
 
-long ga_ppm(void)
-{
-	return(MAXPP-memfre);
+long ga_ppm(void) {
+	return (MAXPP - memfre);
 }
-    
-int pp_define(char *k)
-{
-     int i,er=E_OK,hash,rl;
-     char h[MAXLINE*2],*t;
-     unsigned int j;
-     
-     t=k;
-          
-     if(rlist>=ANZDEF || memfre<MAXLINE*2)
-          return(E_NOMEM);
-/*
-     printf("define:mem=%04lx\n",mem);
-     getchar();
-*/   
-     rl=rlist++;
-     
-     liste[rl].search=mem;
-     for(i=0; (t[i]!=' ') && (t[i]!='\0') && (t[i]!='(') ;i++)
-          *mem++=t[i];
-     *mem++='\0';
-     memfre-=i+1;
-     liste[rl].s_len=i;
-     liste[rl].p_anz=0;
 
+int pp_define(char *k) {
+	int i, er = E_OK, hash, rl;
+	char h[MAXLINE * 2], *t;
+	unsigned int j;
 
-/*   printf("define:%s\nlen1=%d\n",liste[rl].search,liste[rl].s_len);
-     getchar();
-*/
+	t = k;
 
-     if(t[i]=='(')
-     {
-          while(t[i]!=')' && t[i]!='\0')
-          {
-               i++;
-               liste[rl].p_anz++;
-	       // skip whitespace before parameter name
-	       while(isspace(t[i])) i++;
-	       // find length
-               for(j=0; (!isspace(t[i+j])) && t[i+j]!=')' && t[i+j]!=',' && t[i+j]!='\0';j++);
-               if(j<memfre)
-               {
-                    strncpy(mem,t+i,j);
-                    mem+=j;
-		    *mem++='\0';
-                    memfre-=j+1;
-               }
-               i+=j;
-	       // skip trailing whitespace after parameter name
-	       while(isspace(t[i])) i++;
-          }
-          if(t[i]==')')
-               i++;
-     }
-     while(t[i]==' ')
-          i++;
-     t+=i;
-     
-     er = pp_replace(h,t,-1,rlist);
+	if (rlist >= ANZDEF || memfre < MAXLINE * 2)
+		return (E_NOMEM);
+	/*
+	 printf("define:mem=%04lx\n",mem);
+	 getchar();
+	 */
+	rl = rlist++;
 
-     t=h;     
+	liste[rl].search = mem;
+	for (i = 0; (t[i] != ' ') && (t[i] != '\0') && (t[i] != '('); i++)
+		*mem++ = t[i];
+	*mem++ = '\0';
+	memfre -= i + 1;
+	liste[rl].s_len = i;
+	liste[rl].p_anz = 0;
 
-     liste[rl].replace=mem;
-     (void)strcpy(mem,t);
-     mem+=strlen(t)+1;
+	/*   printf("define:%s\nlen1=%d\n",liste[rl].search,liste[rl].s_len);
+	 getchar();
+	 */
+
+	if (t[i] == '(') {
+		while (t[i] != ')' && t[i] != '\0') {
+			i++;
+			liste[rl].p_anz++;
+			// skip whitespace before parameter name
+			while (isspace(t[i]))
+				i++;
+			// find length
+			for (j = 0;
+					(!isspace(t[i + j])) && t[i + j] != ')' && t[i + j] != ','
+							&& t[i + j] != '\0'; j++)
+				;
+			if (j < memfre) {
+				strncpy(mem, t + i, j);
+				mem += j;
+				*mem++ = '\0';
+				memfre -= j + 1;
+			}
+			i += j;
+			// skip trailing whitespace after parameter name
+			while (isspace(t[i]))
+				i++;
+		}
+		if (t[i] == ')')
+			i++;
+	}
+	while (t[i] == ' ')
+		i++;
+	t += i;
+
+	er = pp_replace(h, t, -1, rlist);
+
+	t = h;
+
+	liste[rl].replace = mem;
+	(void) strcpy(mem, t);
+	mem += strlen(t) + 1;
 #if 0	/* debug */
      { char *ss;
      if(liste[rl].p_anz)
@@ -424,54 +396,50 @@ int pp_define(char *k)
      }
      }
 #endif
-     if(!er)
-     {
-          hash=hashcode(liste[rl].search,liste[rl].s_len);
-          liste[rl].nextindex=hashindex[hash];
-          hashindex[hash]=rl;
-     } else
-          rlist=rl;
-     
-     return(er);
+	if (!er) {
+		hash = hashcode(liste[rl].search, liste[rl].s_len);
+		liste[rl].nextindex = hashindex[hash];
+		hashindex[hash] = rl;
+	} else
+		rlist = rl;
+
+	return (er);
 }
 
-int tcompare(char s[],char *v[], int n)
-{
-     int i,j,l;
-     static char t[MAXLINE];
+int tcompare(char s[], char *v[], int n) {
+	int i, j, l;
+	static char t[MAXLINE];
 
-     for(i=0; s[i]!='\0'; i++) 
-          t[i]=tolower(s[i]);
-     t[i]='\0';
+	for (i = 0; s[i] != '\0'; i++)
+		t[i] = tolower(s[i]);
+	t[i] = '\0';
 
-     for(i=0;i<n;i++)
-     {
-          l=(int)strlen(v[i]);
-          
-          for(j=0;j<l;j++)
-          {
-               if(t[j]!=v[i][j])
-                    break;
-          }
-          if(j==l)
-               break;
-     }
-     return((i==n)? -1 : i);
+	for (i = 0; i < n; i++) {
+		l = (int) strlen(v[i]);
+
+		for (j = 0; j < l; j++) {
+			if (t[j] != v[i][j])
+				break;
+		}
+		if (j == l)
+			break;
+	}
+	return ((i == n) ? -1 : i);
 }
 
 static int check_name(char *t, int n) {
 
-                    int i=0;
-		    { 
-                        char *x=liste[n].search;
-                        while(t[i]==*x++ && t[i] && (isalnum(t[i]) || t[i]=='_'))
-                            i++;
-		    }
+	int i = 0;
+	{
+		char *x = liste[n].search;
+		while (t[i] == *x++ && t[i] && (isalnum(t[i]) || t[i] == '_'))
+			i++;
+	}
 
 #ifdef DEBUG_RECMAC	
 	printf("check name with n=%d, name='%s' ->i=%d, len=%d\n", n, liste[n].search,i, liste[n].s_len);
 #endif
-		    return i == liste[n].s_len;
+	return i == liste[n].s_len;
 }
 
 /**
@@ -487,11 +455,11 @@ static int check_name(char *t, int n) {
  * blist -> 
  * 
  */
-static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int *l, int blist) 
-{
+static int pp_replace_part(char *to, char *t, int n, int sl, int recursive,
+		int *l, int blist) {
 	int er = E_OK;
 	int i, d;
-        char c;
+	char c;
 
 	// save mem, to restore it when we don't need the pseudo replacements anymore
 	// Note: in a real version, that should probably be a parameter, and not fiddling
@@ -502,130 +470,118 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 	printf("replace part: n=%d, sl=%d, rec=%d, %s\n", n, sl, recursive, t);
 #endif
 
-	 // yes, mark replacement string
-        char *rs=liste[n].replace;
-                        
-	 // does it have parameters? 
+	// yes, mark replacement string
+	char *rs = liste[n].replace;
 
-                         
-                         if(liste[n].p_anz)        
-                         {
-			      // yes, we have parameters, so we need to pp_replace them
-			      // as well.
-     			      char fti[MAXLINE],fto[MAXLINE];
+	// does it have parameters?
 
-			      // copy replacement into temp buffer
-                              (void)strcpy(fti,liste[n].replace);
+	if (liste[n].p_anz) {
+		// yes, we have parameters, so we need to pp_replace them
+		// as well.
+		char fti[MAXLINE], fto[MAXLINE];
 
-			      // boundary checks ...
-                              if(blist+liste[n].p_anz>=ANZDEF || memfre<MAXLINE*2)
-                                   er=E_NOMEM;
-                              else
-                              {
-				   // ... passed
-				   // y points to the char behind the input name (i.e. the '(')
-                                   char *y=t+sl; 
-				   // x points into the pp definition, with the parameter definition names
-				   // following the definition name, separated by \0. Starts here behind the 
-				   // name - i.e. now points to the name of the first parameter
-                                   char *x=liste[n].search+sl+1;
-				   // does the input actually have a '(' as parameter marker?
-                                   if(*y!='(') {
-					// no. Should probably get an own error (E_PARAMETER_EXPECTED)
-                                        er=E_SYNTAX;
-				   }
-                                   else
-                                   {
-					// mx now points to next free memory (mem current pointer in text table)
-                                        char *mx=mem-1;
-					// walk through the pp parameters
-					// by creating "fake" preprocessor definitions at the end
-					// of the current definition list, i.e. in liste[] after index
-					// rlist.
-                                        for(i=0;i<liste[n].p_anz;i++)
-                                        {
-					     char c;
-                                             int hkfl=0;	// quote flag
-					     int klfl=0;	// brackets counter
+		// copy replacement into temp buffer
+		(void) strcpy(fti, liste[n].replace);
 
-					     // create new replacement entry
-                                             liste[blist+i].search=x;
-                                             liste[blist+i].s_len=(int)strlen(x);
-                                             liste[blist+i].p_anz=0;
-                                             liste[blist+i].replace=mx+1;
-					     // move x over to the next parameter name
-                                             x+=strlen(x)+1;
-					     // points to first char of the parameter name in the input
-					     // copy over first char into text memory (note that the position
-					     // is already stored in liste[].replace above)
-                                             c=*(++mx)=*(++y);
-					     // copy over the other characters
-                                             while(c!='\0' 
-                                                  && ((hkfl!=0 
-                                                       || klfl!=0) 
-                                                       || (c!=',' 
-                                                       && c!=')') 
-                                                       )
-                                                  )
-                                             {
-                                                  if(c=='\"')
-                                                       hkfl=hkfl^1;
-                                                  if(!hkfl)
-                                                  {
-                                                       if(c=='(')
-                                                            klfl++;
-                                                       if(c==')')
-                                                            klfl--;
-                                                  }     
-                                                  c=*(++mx)=*(++y);
-                                             } 
-                                             // zero-terminate stored string
-                                             *mx='\0';
-					     // if i is for the last parameter, then check if the
-					     // last copied char was ')', otherwise it should be ','
-					     // as separator for the next parameter
-                                             if(c!=((i==liste[n].p_anz-1) ? ')' : ','))
-                                             {
-                                                  er=E_ANZPAR;
-						  // note: this break only exits the innermost loop!
-                                                  break;
-                                             }
-                                        }
-					// at this point we have "augmented" the pp definitions
-					// with a list of new definitions for the macro parameters
-					// so that when pp_replace'ing them recursively the macro parameters
-					// will automatically be replaced.   
-					
-					// if we ran into an error, report so
-					if (er != E_OK) {
-						return (er);
+		// boundary checks ...
+		if (blist + liste[n].p_anz >= ANZDEF || memfre < MAXLINE * 2)
+			er = E_NOMEM;
+		else {
+			// ... passed
+			// y points to the char behind the input name (i.e. the '(')
+			char *y = t + sl;
+			// x points into the pp definition, with the parameter definition names
+			// following the definition name, separated by \0. Starts here behind the
+			// name - i.e. now points to the name of the first parameter
+			char *x = liste[n].search + sl + 1;
+			// does the input actually have a '(' as parameter marker?
+			if (*y != '(') {
+				// no. Should probably get an own error (E_PARAMETER_EXPECTED)
+				er = E_SYNTAX;
+			} else {
+				// mx now points to next free memory (mem current pointer in text table)
+				char *mx = mem - 1;
+				// walk through the pp parameters
+				// by creating "fake" preprocessor definitions at the end
+				// of the current definition list, i.e. in liste[] after index
+				// rlist.
+				for (i = 0; i < liste[n].p_anz; i++) {
+					char c;
+					int hkfl = 0;	// quote flag
+					int klfl = 0;	// brackets counter
+
+					// create new replacement entry
+					liste[blist + i].search = x;
+					liste[blist + i].s_len = (int) strlen(x);
+					liste[blist + i].p_anz = 0;
+					liste[blist + i].replace = mx + 1;
+					// move x over to the next parameter name
+					x += strlen(x) + 1;
+					// points to first char of the parameter name in the input
+					// copy over first char into text memory (note that the position
+					// is already stored in liste[].replace above)
+					c = *(++mx) = *(++y);
+					// copy over the other characters
+					while (c != '\0'
+							&& ((hkfl != 0 || klfl != 0)
+									|| (c != ',' && c != ')'))) {
+						if (c == '\"')
+							hkfl = hkfl ^ 1;
+						if (!hkfl) {
+							if (c == '(')
+								klfl++;
+							if (c == ')')
+								klfl--;
+						}
+						c = *(++mx) = *(++y);
 					}
+					// zero-terminate stored string
+					*mx = '\0';
+					// if i is for the last parameter, then check if the
+					// last copied char was ')', otherwise it should be ','
+					// as separator for the next parameter
+					if (c != ((i == liste[n].p_anz - 1) ? ')' : ',')) {
+						er = E_ANZPAR;
+						// note: this break only exits the innermost loop!
+						break;
+					}
+				}
+				// at this point we have "augmented" the pp definitions
+				// with a list of new definitions for the macro parameters
+				// so that when pp_replace'ing them recursively the macro parameters
+				// will automatically be replaced.
 
-					// let mx point to first free (and not last non-free) byte
-					mx++;
-	
-					// before we use the parameter replacements, we need to 
-					// recursively evaluate and replace them as well.
-					
+				// if we ran into an error, report so
+				if (er != E_OK) {
+					return (er);
+				}
+
+				// let mx point to first free (and not last non-free) byte
+				mx++;
+
+				// before we use the parameter replacements, we need to
+				// recursively evaluate and replace them as well.
+
 #ifdef DEBUG_RECMAC
      printf("replace (er=%d):\n", er);
      printf("%s=%s\n",liste[n].search,liste[n].replace);
 #endif
-     // loop over all arguments
-     for(i=0;i<liste[n].p_anz;i++) {
-/* recursively evaluate arguments */
-	char nfto[MAXLINE];
-	char nfwas[MAXLINE];
-	//int j = 0;
-	//int k = 0;
+				// loop over all arguments
+				for (i = 0; i < liste[n].p_anz; i++) {
+					/* recursively evaluate arguments */
+					char nfto[MAXLINE];
+					char nfwas[MAXLINE];
+					//int j = 0;
+					//int k = 0;
 
-	// copy over the replacement string into a buffer nfwas
-	(void)strcpy(nfwas, liste[blist+i].replace);
-	if (!er) {
-		// replace the tokens in the parameter, adding possible pseudo params
-		// on top of the liste[] into nfto
-		er=pp_replace(nfto,nfwas,-1,blist+liste[n].p_anz);
-	}
+					// copy over the replacement string into a buffer nfwas
+					(void) strcpy(nfwas, liste[blist + i].replace);
+					if (!er) {
+						// replace the tokens in the parameter, adding possible pseudo params
+						// on top of the liste[] into nfto
+						er = pp_replace(nfto, nfwas, -1,
+								blist + liste[n].p_anz);
+					}
 #ifdef DEBUG_RECMAC
         printf("-%s=%s\n",liste[rlist+i].search,liste[rlist+i].replace);
 	printf("SUBB: -%s=%s\n", nfwas, nfto);
@@ -654,85 +610,86 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
 		}
 	}
 #endif
-	// catch an error situation
-	if (liste[rlist+i].replace == NULL) {
-		errout(E_ANZPAR);
-		return E_ANZPAR;
-	}
+					// catch an error situation
+					if (liste[rlist + i].replace == NULL) {
+						errout(E_ANZPAR);
+						return E_ANZPAR;
+					}
 
-	// copy over the replacement string into free memory (using mx as pointer)
-	(void)strcpy(mx, nfto);
-	// replace the pointer to the (now obsolete) old replacement with the one we just created
-	// Note that due to the nature of the (more or less static) memory allocation, this is not
-	// being freed. Oh well...
-	liste[blist+i].replace = mx;
-	mx += strlen(mx)+1;
+					// copy over the replacement string into free memory (using mx as pointer)
+					(void) strcpy(mx, nfto);
+					// replace the pointer to the (now obsolete) old replacement with the one we just created
+					// Note that due to the nature of the (more or less static) memory allocation, this is not
+					// being freed. Oh well...
+					liste[blist + i].replace = mx;
+					mx += strlen(mx) + 1;
 
 #ifdef DEBUG_RECMAC
         printf("FINAL: -%s=%s\n",liste[rlist+i].search,liste[rlist+i].replace);
 #endif
-    }
+				}
 
-                                        if(!er) {
-					     // safe-guard our memory allocations
-					     mem = mx;
-					     // only change (of two) from recursive: rlist is 0 there
+				if (!er) {
+					// safe-guard our memory allocations
+					mem = mx;
+					// only change (of two) from recursive: rlist is 0 there
 #ifdef DEBUG_RECMAC
 	printf("replace macro: recursive=%d, blist=%d, -> b=%d\n", recursive, blist, blist+liste[n].p_anz);
 	printf("         from: %s\n", fti);					    
 #endif
-                                             er=pp_replace(fto,fti,recursive ? 0 : blist,blist+liste[n].p_anz);
+					er = pp_replace(fto, fti, recursive ? 0 : blist,
+							blist + liste[n].p_anz);
 #ifdef DEBUG_RECMAC
 	printf("           to: %s\n", fto);					    
 #endif
-					}
-/*               if(flag) printf("sl=%d,",sl);*/
-                                        sl=(int)((long)y+1L-(long)t);
-/*               if(flag) printf("sl=%d\n",sl);*/
-                                        rs=fto;
+				}
+				/*               if(flag) printf("sl=%d,",sl);*/
+				sl = (int) ((long) y + 1L - (long) t);
+				/*               if(flag) printf("sl=%d\n",sl);*/
+				rs = fto;
 #ifdef DEBUG_RECMAC
      printf("->%s\n",fto);
 #endif
-                                   }    
-                              }
-                              if(er) {
-				   mem = saved_mem;
-                                   return(er);     
-			      }
-                         }  // end if(liste[n].p_anz), i.e. if it has parameters
+			}
+		}
+		if (er) {
+			mem = saved_mem;
+			return (er);
+		}
+	}  // end if(liste[n].p_anz), i.e. if it has parameters
 
-                         d=(int)strlen(rs)-sl;
+	d = (int) strlen(rs) - sl;
 
-                         if(strlen(to)+d>=MAXLINE) {
-			      mem = saved_mem;
-                              return(E_NOMEM);
-			 }
+	if (strlen(to) + d >= MAXLINE) {
+		mem = saved_mem;
+		return (E_NOMEM);
+	}
 
-/*
-                         if(d<0)
-                         {
-                              y=t+sl+d;
-                              x=t+sl;
-                              while(*y++=*x++);
-                         }
-                         if(d>0)
-                         {
-                              for(ll=strlen(t);ll>=sl;ll--)
-                                   t[ll+d]=t[ll];
-                         }
-*/
-                         if(d) {
-			      // d can be positive or negative, so strcpy cannot be used, use memmove instead
-                              (void)memmove(t+sl+d,t+sl, strlen(t) - sl + 1);
-			 }
+	/*
+	 if(d<0)
+	 {
+	 y=t+sl+d;
+	 x=t+sl;
+	 while(*y++=*x++);
+	 }
+	 if(d>0)
+	 {
+	 for(ll=strlen(t);ll>=sl;ll--)
+	 t[ll+d]=t[ll];
+	 }
+	 */
+	if (d) {
+		// d can be positive or negative, so strcpy cannot be used, use memmove instead
+		(void) memmove(t + sl + d, t + sl, strlen(t) - sl + 1);
+	}
 
-                         i=0;
-                         while((c=rs[i])) {
-                              t[i++]=c;
-			 }
-			 // other change from recursive. there sl is missing from add
-                         //*l=(recursive ? 0 : sl) + d;/*=0;*/
-                         *l=sl + d;/*=0;*/
+	i = 0;
+	while ((c = rs[i])) {
+		t[i++] = c;
+	}
+	// other change from recursive. there sl is missing from add
+	//*l=(recursive ? 0 : sl) + d;/*=0;*/
+	*l = sl + d;/*=0;*/
 
 	mem = saved_mem;
 
@@ -753,478 +710,465 @@ static int pp_replace_part(char *to, char *t, int n, int sl, int recursive, int 
  * parameters
  *
  */
-int pp_replace(char *to, char *ti, int a,int b)
-{
-     char *t=to;
-     int l,n,sl,er=E_OK;
-     int ld; 	// length of name/token to analyse
-/*
-     int flag=!strncmp(ti,"TOUT",4);
-     if(flag) printf("flag=%d\n",flag);
-*/   
-     // t points to to, so copy input to output 1:1
-     // then below work on the copy in-place
-     (void)strcpy(t,ti);
+int pp_replace(char *to, char *ti, int a, int b) {
+	char *t = to;
+	int l, n, sl, er = E_OK;
+	int ld; 	// length of name/token to analyse
+	/*
+	 int flag=!strncmp(ti,"TOUT",4);
+	 if(flag) printf("flag=%d\n",flag);
+	 */
+	// t points to to, so copy input to output 1:1
+	// then below work on the copy in-place
+	(void) strcpy(t, ti);
 
-     // if there are replacements in the list of replacements
-     if(rlist)
-     {
-       // loop over the whole input
-       while(t[0]!='\0' && t[0] != ';')
-       {
-	  // skip over the whitespace
-	  // comment handling is NASTY NASTY NASTY
-	  // but I currently don't see another way, as comments and colons
-	  // can (and do) appear in preprocessor replacements
-          char quotefl = 0;
-	  char commentfl = 0;
-          while((t[0] != 0) && (quotefl || commentfl || ((!isalpha(t[0]) && t[0]!='_')))) {
-               	if (t[0]=='\0') {
-                    break;    /*return(E_OK);*/
-	       	} else 
-               	{
-	       	    if (t[0] == ';' && !quotefl) {
-			commentfl = 1;
-		    }
-		    if (t[0] == ':' && !quotefl && !ca65 && !masm) {
-			// note that both ca65 and masm allow colons in comments
-			// so in these cases we cannot reset the comment handling here
-			commentfl = 0;
-		    }
-		    if (quotefl) {
-			// ignore other quotes within a quote
-			if (t[0] == quotefl) {
-				quotefl = 0;
+	// if there are replacements in the list of replacements
+	if (rlist) {
+		// loop over the whole input
+		while (t[0] != '\0' && t[0] != ';') {
+			// skip over the whitespace
+			// comment handling is NASTY NASTY NASTY
+			// but I currently don't see another way, as comments and colons
+			// can (and do) appear in preprocessor replacements
+			char quotefl = 0;
+			char commentfl = 0;
+			while ((t[0] != 0)
+					&& (quotefl || commentfl
+							|| ((!isalpha(t[0]) && t[0] != '_')))) {
+				if (t[0] == '\0') {
+					break; /*return(E_OK);*/
+				} else {
+					if (t[0] == ';' && !quotefl) {
+						commentfl = 1;
+					}
+					if (t[0] == ':' && !quotefl && !ca65 && !masm) {
+						// note that both ca65 and masm allow colons in comments
+						// so in these cases we cannot reset the comment handling here
+						commentfl = 0;
+					}
+					if (quotefl) {
+						// ignore other quotes within a quote
+						if (t[0] == quotefl) {
+							quotefl = 0;
+						}
+					} else if (t[0] == '"' || t[0] == '\'') {
+						quotefl = t[0];
+					}
+					t++;
+					ti++;
+				}
 			}
-		    } else
-		    if (t[0] == '"' || t[0] == '\'') {
-			quotefl = t[0];
-		    }
-                    t++;
-                    ti++;
-               	}
-	  }
-        
-	  // determine the length of the name 
-          for(l=0;isalnum(t[l])||t[l]=='_';l++);
-	  // store in ld
-          ld=l;
+
+			// determine the length of the name
+			for (l = 0; isalnum(t[l]) || t[l] == '_'; l++)
+				;
+			// store in ld
+			ld = l;
 #ifdef DEBUG_RECMAC          
           printf("l=%d,a=%d,b=%d, t=%s\n",l,a, b ,t);
 #endif
-       
-	  // the following if() is executed when being called from an 
-	  // 'external' context, i.e. not from a recursion 
-          if(a<0)
-          {
-	    // when called from an external context, not by recursion
 
-	    // compute hashcode for the name for the search index entry (liste[n])
-            n=hashindex[hashcode(t,l)];
-            
-	    // loop over all entries in linked list for hash code (think: hash collisions)
-            do  // while(1); 
-            {
-	       // length of name of pp definition
-               sl=liste[n].s_len;
+			// the following if() is executed when being called from an
+			// 'external' context, i.e. not from a recursion
+			if (a < 0) {
+				// when called from an external context, not by recursion
+
+				// compute hashcode for the name for the search index entry (liste[n])
+				n = hashindex[hashcode(t, l)];
+
+				// loop over all entries in linked list for hash code (think: hash collisions)
+				do// while(1);
+				{
+					// length of name of pp definition
+					sl = liste[n].s_len;
 
 #ifdef DEBUG_RECMAC
 	printf("macro entry: name=%s, sl=%d, p_anz=%d\n", liste[n].search, sl, liste[n].p_anz);
 #endif
-	       // does pp definition match what we have found?
-               if(sl && (sl==l) && check_name(t, n))
-               {
-			er = pp_replace_part(to, t, n, sl, 0, &l, b);
-			if (er != E_OK) {
-				return er;
+					// does pp definition match what we have found?
+					if (sl && (sl == l) && check_name(t, n)) {
+						er = pp_replace_part(to, t, n, sl, 0, &l, b);
+						if (er != E_OK) {
+							return er;
+						}
+						break;
+					}
+					if (!n)
+						break;
+
+					// next index in linked list for given hash code
+					n = liste[n].nextindex;
+
+				} while (1);
+			} else {
+				// called when in recursive call
+				// loop over all the replacement entries from the given b down to 0
+				// that allows to replace the parameters first (as they were added at
+				// the end of the list)
+				for (n = b - 1; n >= a; n--) {
+					sl = liste[n].s_len;
+
+					if (sl && (sl == l) && check_name(t, n)) {
+						er = pp_replace_part(to, t, n, sl, 1, &l, b);
+						break;
+					}
+				}
 			}
-                        break;
-               }
-               if(!n)
-                    break;
-                   
-	       // next index in linked list for given hash code 
-               n=liste[n].nextindex;
-               
-            } while(1);
-          } else
-          {
-	    // called when in recursive call
-	    // loop over all the replacement entries from the given b down to 0
-	    // that allows to replace the parameters first (as they were added at
-	    // the end of the list)
-            for(n=b-1;n>=a;n--)
-            {
-               sl=liste[n].s_len;
-          
-               if(sl && (sl==l) && check_name(t, n))
-               {
-			er = pp_replace_part(to, t, n, sl, 1, &l, b); 
-                        break;
-               }
-            }
-          }
-	  // advance input by length of name
-          ti+=ld;
-	  // advance output by l
-          t+=l;
-       } /* end while(t[0] != 0) */
-     }  /* end if(rlist) */
-     return(E_OK);
+			// advance input by length of name
+			ti += ld;
+			// advance output by l
+			t += l;
+		} /* end while(t[0] != 0) */
+	} /* end if(rlist) */
+	return (E_OK);
 }
 
-int pp_init(void)
-{
-     int er;
+int pp_init(void) {
+	int er;
 
-     for(er=0;er<256;er++)
-          hashindex[er]=0;
-          
-     fsp=0;
+	for (er = 0; er < 256; er++)
+		hashindex[er] = 0;
 
-     er=0;
-     mem=malloc(MAXPP);
-     if(!mem) er=E_NOMEM;
+	fsp = 0;
 
-     memfre=MAXPP;
-     rlist=0;
-     nlf=1;
-     nff=1;
-     if(!er) {
-          liste=malloc((long)ANZDEF*sizeof(List));
-	  if(!liste) er=E_NOMEM;
-	  if(!er && !xa23) {
-		er = pp_define("XA_MAJOR " progmajor);
-		if (!er) er = pp_define("XA_MINOR " progminor);
-		if (!er) er = pp_define("XA_PATCH " progpatch);
+	er = 0;
+	mem = malloc(MAXPP);
+	if (!mem)
+		er = E_NOMEM;
+
+	memfre = MAXPP;
+	rlist = 0;
+	nlf = 1;
+	nff = 1;
+	if (!er) {
+		liste = malloc((long) ANZDEF * sizeof(List));
+		if (!liste)
+			er = E_NOMEM;
+		if (!er && !xa23) {
+			er = pp_define("XA_MAJOR " progmajor);
+			if (!er)
+				er = pp_define("XA_MINOR " progminor);
+			if (!er)
+				er = pp_define("XA_PATCH " progpatch);
+		}
 	}
-     }
-     return(er);
+	return (er);
 }
 
-int pp_open(char *name)
-{
-     FILE *fp;
-     int l;
+int pp_open(char *name) {
+	FILE *fp;
+	int l;
 
-     fp=xfopen(name,"r");
+	fp = xfopen(name, "r");
 
-     l = strlen(name);
+	l = strlen(name);
 
-     /* we have to alloc it dynamically to make the name survive another
- 	pp_open - it's used in the cross-reference list */	
-     flist[0].fname = malloc(l+1);
-     if(!flist[0].fname) {
-	fprintf(stderr,"Oops, no more memory!\n");
-	exit(1);
-     }	
-     (void)strncpy(flist[0].fname,name,l+1);
-     flist[0].fline=0;
-     flist[0].bdepth=b_depth();
-     flist[0].filep=fp;
-     flist[0].flinep=NULL;    
+	/* we have to alloc it dynamically to make the name survive another
+	 pp_open - it's used in the cross-reference list */
+	flist[0].fname = malloc(l + 1);
+	if (!flist[0].fname) {
+		fprintf(stderr, "Oops, no more memory!\n");
+		exit(1);
+	}
+	(void) strncpy(flist[0].fname, name, l + 1);
+	flist[0].fline = 0;
+	flist[0].bdepth = b_depth();
+	flist[0].filep = fp;
+	flist[0].flinep = NULL;
 
-     return (fp == NULL);
+	return (fp == NULL);
 }
 
-void pp_close(void)
-{
-     if(flist[fsp].bdepth != b_depth()) {
-	fprintf(stderr, "Blocks not consistent in file %s: start depth=%d, end depth=%d\n",
-	  flist[fsp].fname, flist[fsp].bdepth, b_depth());
-     }
-     fclose(flist[fsp].filep);
+void pp_close(void) {
+	if (flist[fsp].bdepth != b_depth()) {
+		fprintf(stderr,
+				"Blocks not consistent in file %s: start depth=%d, end depth=%d\n",
+				flist[fsp].fname, flist[fsp].bdepth, b_depth());
+	}
+	fclose(flist[fsp].filep);
 }
 
-void pp_end(void) { }
+void pp_end(void) {
+}
 
-Datei *pp_getidat(void) {
+Datei* pp_getidat(void) {
 	return &flist[fsp];
 }
 
-int icl_close(int *c)
-{
-     *c='\n';
-     if(!fsp)
-          return(E_EOF);
-     
-     if(flist[fsp].bdepth != b_depth()) {
-	fprintf(stderr, "Blocks not consistent in file %s: start depth=%d, end depth=%d\n",
-	  flist[fsp].fname, flist[fsp].bdepth, b_depth());
-     }
+int icl_close(int *c) {
+	*c = '\n';
+	if (!fsp)
+		return (E_EOF);
 
-     fclose(flist[fsp--].filep);
-     nff=1;
-
-     return(E_OK);
-}
-
-int icl_open(char *tt)
-{
-     FILE *fp2;
-     char *namep;
-     int len,j,i=0;
-
-     pp_replace(s,tt,-1,rlist);
-
-     if(fsp>=MAXFILE)
-          return(-1);
-
-     if(s[i]=='<' || s[i]=='"')
-          i++;
-
-     for(j=i;s[j];j++)
-          if(s[j]=='>' || s[j]=='"')
-               s[j]='\0';
-
-     fp2=xfopen(s+i,"r");
-
-     if(!fp2)
-          return(E_FNF);
-
-	setvbuf(fp2,NULL,_IOFBF,BUFSIZE);
-	
-     fsp++;
-
-     namep = s+i;
-     len = strlen(namep);
-
-     /* we have to alloc it dynamically to make the name survive another
-        pp_open - it's used in the cross-reference list */
-     flist[fsp].fname = malloc(len+1);
-     if(!flist[fsp].fname) {
-        fprintf(stderr,"Oops, no more memory!\n");
-        exit(1);
-     }
-     strncpy(flist[fsp].fname,namep, len+1);
-     flist[fsp].fline=0;
-     flist[fsp].bdepth=b_depth();
-     flist[fsp].flinep=NULL;
-     flist[fsp].filep=fp2;
-     nff=1;
-
-     return(0);
-}
-
-
-int pgetline(char *t)
-{
-     int c,er=E_OK;
-     int rlen, tlen;
-     char *p = 0;
-     char *q = 0;
-
-     loopfl =0; /* set if additional fetch needed */
-
-     filep =flist+fsp;
-
-     do {
-	int is_continuation = 0;
-  	tlen = 0;	// start of current line in in_line[]
-	do {
-          c=fgetline(in_line + tlen, MAXLINE - tlen, &rlen, flist[fsp].filep);
-	  //fprintf(stderr, "fgetline -> c=%02x, rlen->%d, t->%s\n", c, rlen, in_line+tlen);
-
-	  /* check for continuation lines */
-	  is_continuation = ((c == '\n') && (rlen > 0) && (in_line[tlen + rlen - 1]=='\\'));
-	  if (is_continuation) {
-		// cut off the continuation character
-		rlen--;
-		in_line[tlen + rlen] = 0;
-	  }
-
-	  tlen += rlen;
-	} while (is_continuation);
-
-        if(in_line[0]=='#' || in_line[0] == altppchar)
-        {
-		if (in_line[1]==' ') { /* cpp comment -- pp_comand doesn't
-					handle this right */
-			er=pp_cpp(in_line+1);
-		} else {
-        	       if((er=pp_comand(in_line+1)))
-        	       {
-        	            if(er!=1)
-        	            {
-        	                 logout(in_line);
-        	                 logout("\n");
-        	            }
-        	       }
-		}
-        } else {
-               er=1;
- 	}
-
-        if(c==EOF) {
-		if (loopfl && fsp) {
-			char bletch[MAXLINE];
-			sprintf(bletch, 
-		"at end of included file %s:\n", flist[fsp].fname);
-			logout(bletch);
-			errout(W_OPENPP);
-		}
-               er=icl_close(&c);
+	if (flist[fsp].bdepth != b_depth()) {
+		fprintf(stderr,
+				"Blocks not consistent in file %s: start depth=%d, end depth=%d\n",
+				flist[fsp].fname, flist[fsp].bdepth, b_depth());
 	}
 
-     } while(!er || (loopfl && er!=E_EOF));
+	fclose(flist[fsp--].filep);
+	nff = 1;
+
+	return (E_OK);
+}
+
+int icl_open(char *tt) {
+	FILE *fp2;
+	char *namep;
+	int len, j, i = 0;
+
+	pp_replace(s, tt, -1, rlist);
+
+	if (fsp >= MAXFILE)
+		return (-1);
+
+	if (s[i] == '<' || s[i] == '"')
+		i++;
+
+	for (j = i; s[j]; j++)
+		if (s[j] == '>' || s[j] == '"')
+			s[j] = '\0';
+
+	fp2 = xfopen(s + i, "r");
+
+	if (!fp2)
+		return (E_FNF);
+
+	setvbuf(fp2, NULL, _IOFBF, BUFSIZE);
+
+	fsp++;
+
+	namep = s + i;
+	len = strlen(namep);
+
+	/* we have to alloc it dynamically to make the name survive another
+	 pp_open - it's used in the cross-reference list */
+	flist[fsp].fname = malloc(len + 1);
+	if (!flist[fsp].fname) {
+		fprintf(stderr, "Oops, no more memory!\n");
+		exit(1);
+	}
+	strncpy(flist[fsp].fname, namep, len + 1);
+	flist[fsp].fline = 0;
+	flist[fsp].bdepth = b_depth();
+	flist[fsp].flinep = NULL;
+	flist[fsp].filep = fp2;
+	nff = 1;
+
+	return (0);
+}
+
+int pgetline(char *t) {
+	int c, er = E_OK;
+	int rlen, tlen;
+	char *p = 0;
+	char *q = 0;
+
+	loopfl = 0; /* set if additional fetch needed */
+
+	filep = flist + fsp;
+
+	do {
+		int is_continuation = 0;
+		tlen = 0;	// start of current line in in_line[]
+		do {
+			c = fgetline(in_line + tlen, MAXLINE - tlen, &rlen,
+					flist[fsp].filep);
+			//fprintf(stderr, "fgetline -> c=%02x, rlen->%d, t->%s\n", c, rlen, in_line+tlen);
+
+			/* check for continuation lines */
+			is_continuation = ((c == '\n') && (rlen > 0)
+					&& (in_line[tlen + rlen - 1] == '\\'));
+			if (is_continuation) {
+				// cut off the continuation character
+				rlen--;
+				in_line[tlen + rlen] = 0;
+			}
+
+			tlen += rlen;
+		} while (is_continuation);
+
+		if (in_line[0] == '#' || in_line[0] == altppchar) {
+			if (in_line[1] == ' ') { /* cpp comment -- pp_comand doesn't
+			 handle this right */
+				er = pp_cpp(in_line + 1);
+			} else {
+				if ((er = pp_comand(in_line + 1))) {
+					if (er != 1) {
+						logout(in_line);
+						logout("\n");
+					}
+				}
+			}
+		} else {
+			er = 1;
+		}
+
+		if (c == EOF) {
+			if (loopfl && fsp) {
+				char bletch[MAXLINE];
+				sprintf(bletch, "at end of included file %s:\n",
+						flist[fsp].fname);
+				logout(bletch);
+				errout(W_OPENPP);
+			}
+			er = icl_close(&c);
+		}
+
+	} while (!er || (loopfl && er != E_EOF));
 
 	if (loopfl) {
 		errout(E_OPENPP);
 	}
 
+	if (!er || loopfl) {
+		in_line[0] = '\0';
+	}
 
-     if(!er || loopfl) {
-          in_line[0]='\0';
-     }
+	er = (er == 1) ? E_OK : er;
 
-     er= (er==1) ? E_OK : er ;
-
-     if(!er) {
+	if (!er) {
 #ifdef DEBUG_REPLACE
 //	  printf("<<<: %s\n", in_line);
 #endif
-          er=pp_replace(t,in_line,-1,rlist);
+		er = pp_replace(t, in_line, -1, rlist);
 #ifdef DEBUG_REPLACE
 	  printf(">>>: %s\n", t);
 #endif
-     }
+	}
 
-     if(!er && nff)
-          er=E_NEWFILE;
-     if(!er && nlf)
-          er=E_NEWLINE;
-     nlf=nff=0;
+	if (!er && nff)
+		er = E_NEWFILE;
+	if (!er && nlf)
+		er = E_NEWLINE;
+	nlf = nff = 0;
 
-     filep=flist+fsp;
-     filep->flinep=in_line;
-    
-     //fprintf(stderr, "pgetline -> er=%d, t=%s\n", er, t); 
-     return(er);
+	filep = flist + fsp;
+	filep->flinep = in_line;
+
+	//fprintf(stderr, "pgetline -> er=%d, t=%s\n", er, t);
+	return (er);
 }
-
 
 /*************************************************************************/
 
 /* smart getc that can skip C comment blocks */
-int rgetc(FILE *fp)
-{
-     int incomment;
-     int c;
-     static int d;
-     static int d_isvalid = 0;
-     static int last = 0;
+int rgetc(FILE *fp) {
+	int incomment;
+	int c;
+	static int d;
+	static int d_isvalid = 0;
+	static int last = 0;
 
-     incomment=0;
+	incomment = 0;
 
-     do
-     {
-	  restart:
+	do {
+		restart:
 
-	  /* we had a look-ahead to see if two-char sequence was received? */
-	  if (d_isvalid) {
-		  c = d;
-		  d_isvalid = 0;
-	  } else {
-		  c = getc(fp);
-	  }
-          while(c==13) {
-		  c = getc(fp);
-	  };  /* remove ^M for unices */
-
-	  /* a newlinebreaks any quote */
-	  if (c == '\n') {
-		  inquote = 0;
-
-      		  flist[fsp].fline++;
-      		  nlf=1;
-       	  } 
-
-	  /* check for start of comment anyway, to allow for nested comments */
-	  /* only allow this with 2.3 compatibility */
-          if(!inquote && c=='/' && (xa23 || !incomment))
-          {
-		d = getc(fp);
-
-		// C++ double slash comment
-		if (d == '/') {
-			do {
-				c = getc(fp);
-			} while (c != '\n' && c != EOF);
-			if (c == '\n') {
-      		  		flist[fsp].fline++;
-				nlf=1;
-			}
-		} else
-               	if (d == '*') {
-			/* start block comment */
-                   	incomment++;
-			/* convene normal processing */
-			goto restart;
+		/* we had a look-ahead to see if two-char sequence was received? */
+		if (d_isvalid) {
+			c = d;
+			d_isvalid = 0;
 		} else {
-			d_isvalid = 1;
+			c = getc(fp);
 		}
-          }
+		while (c == 13) {
+			c = getc(fp);
+		}; /* remove ^M for unices */
 
+		/* a newlinebreaks any quote */
+		if (c == '\n') {
+			inquote = 0;
 
-	/* here we are in a dilemma. If we interpret quotes in comments,
-	 * this may break end-of-block comment when singular quotes are
-	 * in a comment. If we don't interpret quotes in a comment,
-	 * a quoted string with end-of-comment in it may break when
-	 * commented.
-	 *
-	 * Unfortunately GeckOS has quotes in comments, and in an inconsistent way.
-	 *
-	 * #define   E_FILLNAM     <-34    / * illegal name (joker "*","?","\"")    * /
-	 *
-	 * ... except if we handle backslash-escaped quotes? No, then this breaks
-	 * in apps/lsh/lsh.a65:347
-	 *
-	 * / * TODO: interpret "\" escape codes, shell variables * /
-	 *
-	 * But I guess for 2.4 it is ok to break things like this.
-	 */ 
+			flist[fsp].fline++;
+			nlf = 1;
+		}
 
-	  if (!incomment) {
-		/* not in comment */
+		/* check for start of comment anyway, to allow for nested comments */
+		/* only allow this with 2.3 compatibility */
+		if (!inquote && c == '/' && (xa23 || !incomment)) {
+			d = getc(fp);
 
-	        /* flag if we're in a quoted string */
-		/* but only if quote isnot escaped with backslash */
-         	if(c=='"' && last!='\\' && !quotebs) {
-			inquote ^= 1;
-	 	}
-
-		/* implement backslashed quotes for 2.4 */
-	        if(!xa23 && c=='\\') quotebs=1; else quotebs=0;
-
-	  } else {
-		/* in comment */
-
-		/* check for end of comment */
-		/* note: for xa2.3, incomment only set true if not quoted, and quote not changed in comment */
-          	if((!inquote || !xa23) && (c=='*'))
-          	{
-               		if((d=getc(fp))!='/') {
-				d_isvalid = 1;
-			} else {
-                    		incomment--;
+			// C++ double slash comment
+			if (d == '/') {
+				do {
+					c = getc(fp);
+				} while (c != '\n' && c != EOF);
+				if (c == '\n') {
+					flist[fsp].fline++;
+					nlf = 1;
+				}
+			} else if (d == '*') {
+				/* start block comment */
+				incomment++;
 				/* convene normal processing */
 				goto restart;
+			} else {
+				d_isvalid = 1;
 			}
-               	}
+		}
 
-          }
-    
-	  /* force newline at the end of a file */ 
-	  if (c == EOF && last != EOF) {
-		last = EOF;
-		c = '\n';
-	  } else {
-	  	last = c;
-	  }
+		/* here we are in a dilemma. If we interpret quotes in comments,
+		 * this may break end-of-block comment when singular quotes are
+		 * in a comment. If we don't interpret quotes in a comment,
+		 * a quoted string with end-of-comment in it may break when
+		 * commented.
+		 *
+		 * Unfortunately GeckOS has quotes in comments, and in an inconsistent way.
+		 *
+		 * #define   E_FILLNAM     <-34    / * illegal name (joker "*","?","\"")    * /
+		 *
+		 * ... except if we handle backslash-escaped quotes? No, then this breaks
+		 * in apps/lsh/lsh.a65:347
+		 *
+		 * / * TODO: interpret "\" escape codes, shell variables * /
+		 *
+		 * But I guess for 2.4 it is ok to break things like this.
+		 */
 
-     } while(incomment && (c!=EOF));
+		if (!incomment) {
+			/* not in comment */
 
-     return(c-'\t'?c:' ');
+			/* flag if we're in a quoted string */
+			/* but only if quote isnot escaped with backslash */
+			if (c == '"' && last != '\\' && !quotebs) {
+				inquote ^= 1;
+			}
+
+			/* implement backslashed quotes for 2.4 */
+			if (!xa23 && c == '\\')
+				quotebs = 1;
+			else
+				quotebs = 0;
+
+		} else {
+			/* in comment */
+
+			/* check for end of comment */
+			/* note: for xa2.3, incomment only set true if not quoted, and quote not changed in comment */
+			if ((!inquote || !xa23) && (c == '*')) {
+				if ((d = getc(fp)) != '/') {
+					d_isvalid = 1;
+				} else {
+					incomment--;
+					/* convene normal processing */
+					goto restart;
+				}
+			}
+
+		}
+
+		/* force newline at the end of a file */
+		if (c == EOF && last != EOF) {
+			last = EOF;
+			c = '\n';
+		} else {
+			last = c;
+		}
+
+	} while (incomment && (c != EOF));
+
+	return (c - '\t' ? c : ' ');
 }
 
 /**
@@ -1232,25 +1176,23 @@ int rgetc(FILE *fp)
  * the rlen out parameter is just convenience, so that
  * a further strlen() can be saved
  */
-int fgetline(char *t, int len, int *rlen, FILE *fp)
-{
-     static int c,i;
+int fgetline(char *t, int len, int *rlen, FILE *fp) {
+	static int c, i;
 
-     i=0;
+	i = 0;
 
-     do {
-          c=rgetc(fp);
-          
-          if(c==EOF || c=='\n')
-          {
-             t[i]='\0';
-             break;
-          }
-          t[i]=c;
-          i= (i<len-1) ? i+1 : len-1;
-     } while(1);
+	do {
+		c = rgetc(fp);
 
-     *rlen = i;
-     return(c);
+		if (c == EOF || c == '\n') {
+			t[i] = '\0';
+			break;
+		}
+		t[i] = c;
+		i = (i < len - 1) ? i + 1 : len - 1;
+	} while (1);
+
+	*rlen = i;
+	return (c);
 }
 

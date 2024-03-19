@@ -1,7 +1,7 @@
 /* reloc65 -- A part of xa65 - 65xx/65816 cross-assembler and utility suite
  * o65 file relocator
  *
- * Copyright (C) 1989-1997 André Fachat (a.fachat@physik.tu-chemnitz.de)
+ * Copyright (C) 1989-1997 Andrï¿½ Fachat (a.fachat@physik.tu-chemnitz.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,273 +127,309 @@ int main(int argc, char *argv[]) {
 	char *arg;		// temporary argument pointer
 
 	if (argc <= 1) {
-	  usage(stderr);
-	  exit(1);
+		usage(stderr);
+		exit(1);
 	}
 
-	if (strstr(argv[1], "--help") || strstr(argv[1], "-?") || strstr(argv[1], "-h")) {
-          usage(stdout);
-	  exit(0);
+	if (strstr(argv[1], "--help") || strstr(argv[1], "-?")
+			|| strstr(argv[1], "-h")) {
+		usage(stdout);
+		exit(0);
 	}
 
 	if (strstr(argv[1], "--version")) {
-          version(programname, progversion, author, copyright);
-	  exit(0);
+		version(programname, progversion, author, copyright);
+		exit(0);
 	}
 
-	while(i<argc) {
-	  arg = NULL;
-	  if(argv[i][0]=='-') {
-	    /* process options */
-	    switch(argv[i][1]) {
-	    case 'v':
-		verbose = 1;
-		break;
-	    case 'o':
-		if(argv[i][2]) outfile=argv[i]+2;
-		else if(i + 1 < argc) outfile=argv[++i];
-		else fprintf(stderr,"%s: missing output file\n",programname);
-		break;
-	    case 'X':
-		extract=3;
-		break;
-	    case 'b':
-	        base=NULL;
-		switch(argv[i][2]) {
-		case 't':
-			tflag= 1;
-			base=&tbase;
-			break;
-		case 'd':
-			dflag= 1;
-			base=&dbase;
-			break;
-		case 'b':
-			bflag= 1;
-			base=&bbase;
-			break;
-		case 'z':
-			zflag= 1;
-			base=&zbase;
-			break;
-		default:
-			printf("Unknown segment type '%c' - ignored!\n", argv[i][2]);
-			break;
-		}
-		if (base != NULL) {
-			if(argv[i][3]) *base = atoi(argv[i]+3);
-			else if(i + 1 < argc) *base = atoi(argv[++i]);
-			else fprintf(stderr,"%s: missing address\n",programname);
-		}
-		break;
-	    case 'x':		/* extract segment */
-	        switch(argv[i][2]) {
-		case 't':
-			extract = 1;
-			break;
-		case 'd':
-			extract = 2;
-			break;
-		case 'z':
-		case 'b':
-			printf("Cannot extract segment type '%c' - ignored!\n", argv[i][2]);
-			break;
-		default:
-			printf("Unknown segment type '%c' - ignored!\n", argv[i][2]);
-			break;
-		}
-		break;
-	    case 'C':
-		if(argv[i][2]) arg=argv[i]+2;
-		else if(i + 1 < argc) arg=argv[++i];
-		if (arg == NULL) {
-			printf("Missing CPU parameter to -C - ignored\n");
-			break;
-		}
-		for(j = 0; j < 16; j++) {
-			if (cpunames[j] != NULL && !strcmp(arg, cpunames[j])) {
+	while (i < argc) {
+		arg = NULL;
+		if (argv[i][0] == '-') {
+			/* process options */
+			switch (argv[i][1]) {
+			case 'v':
+				verbose = 1;
+				break;
+			case 'o':
+				if (argv[i][2])
+					outfile = argv[i] + 2;
+				else if (i + 1 < argc)
+					outfile = argv[++i];
+				else
+					fprintf(stderr, "%s: missing output file\n", programname);
+				break;
+			case 'X':
+				extract = 3;
+				break;
+			case 'b':
+				base = NULL;
+				switch (argv[i][2]) {
+				case 't':
+					tflag = 1;
+					base = &tbase;
+					break;
+				case 'd':
+					dflag = 1;
+					base = &dbase;
+					break;
+				case 'b':
+					bflag = 1;
+					base = &bbase;
+					break;
+				case 'z':
+					zflag = 1;
+					base = &zbase;
+					break;
+				default:
+					printf("Unknown segment type '%c' - ignored!\n",
+							argv[i][2]);
+					break;
+				}
+				if (base != NULL) {
+					if (argv[i][3])
+						*base = atoi(argv[i] + 3);
+					else if (i + 1 < argc)
+						*base = atoi(argv[++i]);
+					else
+						fprintf(stderr, "%s: missing address\n", programname);
+				}
+				break;
+			case 'x': /* extract segment */
+				switch (argv[i][2]) {
+				case 't':
+					extract = 1;
+					break;
+				case 'd':
+					extract = 2;
+					break;
+				case 'z':
+				case 'b':
+					printf("Cannot extract segment type '%c' - ignored!\n",
+							argv[i][2]);
+					break;
+				default:
+					printf("Unknown segment type '%c' - ignored!\n",
+							argv[i][2]);
+					break;
+				}
+				break;
+			case 'C':
+				if (argv[i][2])
+					arg = argv[i] + 2;
+				else if (i + 1 < argc)
+					arg = argv[++i];
+				if (arg == NULL) {
+					printf("Missing CPU parameter to -C - ignored\n");
+					break;
+				}
+				for (j = 0; j < 16; j++) {
+					if (cpunames[j] != NULL && !strcmp(arg, cpunames[j])) {
+						break;
+					}
+				}
+				if (j == 16) {
+					printf("Unknown CPU identifier '%s' for -C - ignored\n",
+							arg);
+				} else {
+					trgcpu = j;
+				}
+				break;
+			default:
+				fprintf(stderr, "%s: %s unknown option, use '-h' for help\n",
+						programname, argv[i]);
 				break;
 			}
-		}
-		if (j == 16) {
-			printf("Unknown CPU identifier '%s' for -C - ignored\n",
-				arg);
 		} else {
-			trgcpu = j;
-		}
-		break;
-	    default:
-		fprintf(stderr,"%s: %s unknown option, use '-h' for help\n",programname,argv[i]);
-		break;
-	    }
-	  } else {
-	    struct stat fs;
-	    file.fname=argv[i];
-	    stat(argv[i], &fs);
-	    file.fsize=fs.st_size;
-	    file.buf=malloc(file.fsize);
-	    if(!file.buf) {
-	      fprintf(stderr,"Oops, no more memory! (%d)\n", file.fsize);
-	      exit(1);
-	    }
-	    printf("reloc65: read file %s -> %s\n",argv[i],outfile);
-	    fp = fopen(argv[i],"rb");
-	    if(fp) {
-	      n = fread(file.buf, 1, file.fsize, fp);
-	      fclose(fp);
-	      if((n>=file.fsize) && (!memcmp(file.buf, cmp, 5))) {
-		mode=file.buf[7]*256+file.buf[6];
-		if(mode & FM_SIZE) {
-	          fprintf(stderr,"reloc65: %s: 32 bit size not supported\n", argv[i]);
-		} else
-		if(mode & FM_RELOC) {
-	          fprintf(stderr,"reloc65: %s: pagewise relocation not supported\n", argv[i]);
-		} else {
-		  if (trgcpu >= 0) {
-			// change CPU flags
-			mode &= ~FM_CPU;
-			mode &= ~FM_CPU2;
-			mode |= (trgcpu << 4);
-			if (trgcpu == 5) {
-				// this trgcpu is actually 65816 in emulation mode
-				// unsure if we should do an own cmdline option
-				mode |= FM_CPU;		// 65816 native
+			struct stat fs;
+			file.fname = argv[i];
+			stat(argv[i], &fs);
+			file.fsize = fs.st_size;
+			file.buf = malloc(file.fsize);
+			if (!file.buf) {
+				fprintf(stderr, "Oops, no more memory! (%d)\n", file.fsize);
+				exit(1);
 			}
-		  }
-		  file.buf[6] = mode & 0xff;
-		  file.buf[7] = (mode >> 8) & 0xff;
+			printf("reloc65: read file %s -> %s\n", argv[i], outfile);
+			fp = fopen(argv[i], "rb");
+			if (fp) {
+				n = fread(file.buf, 1, file.fsize, fp);
+				fclose(fp);
+				if ((n >= file.fsize) && (!memcmp(file.buf, cmp, 5))) {
+					mode = file.buf[7] * 256 + file.buf[6];
+					if (mode & FM_SIZE) {
+						fprintf(stderr,
+								"reloc65: %s: 32 bit size not supported\n",
+								argv[i]);
+					} else if (mode & FM_RELOC) {
+						fprintf(stderr,
+								"reloc65: %s: pagewise relocation not supported\n",
+								argv[i]);
+					} else {
+						if (trgcpu >= 0) {
+							// change CPU flags
+							mode &= ~FM_CPU;
+							mode &= ~FM_CPU2;
+							mode |= (trgcpu << 4);
+							if (trgcpu == 5) {
+								// this trgcpu is actually 65816 in emulation mode
+								// unsure if we should do an own cmdline option
+								mode |= FM_CPU;		// 65816 native
+							}
+						}
+						file.buf[6] = mode & 0xff;
+						file.buf[7] = (mode >> 8) & 0xff;
 
-		  hlen = BUF+read_options(file.buf+BUF);
-		  
-		  file.tbase = file.buf[ 9]*256+file.buf[ 8];
-		  file.tlen  = file.buf[11]*256+file.buf[10];
-		  file.tdiff = tflag ? tbase - file.tbase : 0;
+						hlen = BUF + read_options(file.buf + BUF);
 
-		  file.dbase = file.buf[13]*256+file.buf[12];
-		  file.dlen  = file.buf[15]*256+file.buf[14];
-		  file.ddiff = dflag ? dbase - file.dbase : 0;
-		  if (extract == 3) {
-		    if (dflag) {
-	              fprintf(stderr,"reloc65: %s: Warning: data segment address overrides -X option\n", argv[i]);
-		    } else {
-		      dbase = file.tbase + file.tdiff + file.tlen;
-		      file.ddiff = dbase - file.dbase;
-		    }
-		  }
+						file.tbase = file.buf[9] * 256 + file.buf[8];
+						file.tlen = file.buf[11] * 256 + file.buf[10];
+						file.tdiff = tflag ? tbase - file.tbase : 0;
 
-		  file.bbase = file.buf[17]*256+file.buf[16];
-		  file.blen  = file.buf[19]*256+file.buf[18];
-		  file.bdiff = bflag ? bbase - file.bbase : 0;
-		  if (extract == 3) {
-		    if (bflag) {
-	              fprintf(stderr,"reloc65: %s: Warning: bss segment address overrides -X option\n", argv[i]);
-		    }  else {
-		      bbase = file.dbase + file.ddiff + file.dlen;
-		      file.bdiff = bbase - file.bbase;
-		    }
-		  }
+						file.dbase = file.buf[13] * 256 + file.buf[12];
+						file.dlen = file.buf[15] * 256 + file.buf[14];
+						file.ddiff = dflag ? dbase - file.dbase : 0;
+						if (extract == 3) {
+							if (dflag) {
+								fprintf(stderr,
+										"reloc65: %s: Warning: data segment address overrides -X option\n",
+										argv[i]);
+							} else {
+								dbase = file.tbase + file.tdiff + file.tlen;
+								file.ddiff = dbase - file.dbase;
+							}
+						}
 
-		  file.zbase = file.buf[21]*256+file.buf[20];
-		  file.zlen  = file.buf[23]*256+file.buf[22];
-		  file.zdiff = zflag ? zbase - file.zbase : 0;
+						file.bbase = file.buf[17] * 256 + file.buf[16];
+						file.blen = file.buf[19] * 256 + file.buf[18];
+						file.bdiff = bflag ? bbase - file.bbase : 0;
+						if (extract == 3) {
+							if (bflag) {
+								fprintf(stderr,
+										"reloc65: %s: Warning: bss segment address overrides -X option\n",
+										argv[i]);
+							} else {
+								bbase = file.dbase + file.ddiff + file.dlen;
+								file.bdiff = bbase - file.bbase;
+							}
+						}
 
-		  if (verbose) {
-			printf("Relocating segments to:\n");
-			printf("text segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
-				file.tbase + file.tdiff, file.tbase + file.tdiff + file.tlen, 
-				file.tlen, file.tlen, file.tdiff, file.tdiff & 0xffff);
-			printf("data segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
-				file.dbase + file.ddiff, file.dbase + file.ddiff + file.dlen,
-				file.dlen, file.dlen, file.ddiff, file.ddiff & 0xffff);
-			printf("bss  segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
-				file.bbase + file.bdiff, file.bbase + file.bdiff + file.blen,
-				file.blen, file.blen, file.bdiff, file.bdiff & 0xffff);
-			printf("zero segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n", 
-				file.zbase + file.zdiff, file.zbase + file.zdiff + file.zlen,
-				file.zlen, file.zlen, file.zdiff, file.zdiff & 0xffff);
-		  }
+						file.zbase = file.buf[21] * 256 + file.buf[20];
+						file.zlen = file.buf[23] * 256 + file.buf[22];
+						file.zdiff = zflag ? zbase - file.zbase : 0;
 
-		  /* pointer of position in file */
-		  file.segt  = file.buf + hlen;
-		  file.segd  = file.segt + file.tlen;
-		  file.utab  = file.segd + file.dlen;
+						if (verbose) {
+							printf("Relocating segments to:\n");
+							printf(
+									"text segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n",
+									file.tbase + file.tdiff,
+									file.tbase + file.tdiff + file.tlen,
+									file.tlen, file.tlen, file.tdiff,
+									file.tdiff & 0xffff);
+							printf(
+									"data segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n",
+									file.dbase + file.ddiff,
+									file.dbase + file.ddiff + file.dlen,
+									file.dlen, file.dlen, file.ddiff,
+									file.ddiff & 0xffff);
+							printf(
+									"bss  segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n",
+									file.bbase + file.bdiff,
+									file.bbase + file.bdiff + file.blen,
+									file.blen, file.blen, file.bdiff,
+									file.bdiff & 0xffff);
+							printf(
+									"zero segment @ $%04x - $%04x, %5d ($%04x) bytes, diff is %5d ($%04x)\n",
+									file.zbase + file.zdiff,
+									file.zbase + file.zdiff + file.zlen,
+									file.zlen, file.zlen, file.zdiff,
+									file.zdiff & 0xffff);
+						}
 
-		  file.rttab = file.utab + read_undef(file.utab);
-		  file.rdtab = reloc_seg(file.segt, file.tlen, file.rttab, 
-					&file, extract);
-		  file.extab = reloc_seg(file.segd, file.dlen, file.rdtab, 
-					&file, extract);
+						/* pointer of position in file */
+						file.segt = file.buf + hlen;
+						file.segd = file.segt + file.tlen;
+						file.utab = file.segd + file.dlen;
 
-		  reloc_globals(file.extab, &file);
+						file.rttab = file.utab + read_undef(file.utab);
+						file.rdtab = reloc_seg(file.segt, file.tlen, file.rttab,
+								&file, extract);
+						file.extab = reloc_seg(file.segd, file.dlen, file.rdtab,
+								&file, extract);
 
-		  if(tflag) {
-			file.buf[ 9]= (tbase>>8)&255;
-			file.buf[ 8]= tbase & 255;
-		  }
-  		  if(dflag) {
-			file.buf[13]= (dbase>>8)&255;
-			file.buf[12]= dbase & 255;
-		  }
-		  if(bflag) {
-			file.buf[17]= (bbase>>8)&255;
-			file.buf[16]= bbase & 255;
-		  }
-		  if(zflag) {
-			file.buf[21]= (zbase>>8)&255;
-			file.buf[20]= zbase & 255;
-		  }
+						reloc_globals(file.extab, &file);
 
-		  fp = fopen(outfile, "wb");
-		  if(fp) {
-		    switch(extract) {
-		    case 0:	/* whole file */
-		    	fwrite(file.buf, 1, file.fsize, fp);
-			break;
-		    case 1:	/* text segment */
-			fwrite(file.segt, 1, file.tlen, fp);
-			break;
-		    case 2:	/* data segment */
-			fwrite(file.segd, 1, file.dlen, fp);
-			break;
-		    case 3:	/* text+data */
-			fwrite(file.segt, 1, file.tlen, fp);
-			fwrite(file.segd, 1, file.dlen, fp);
-			break;
-		    }
-		    fclose(fp);
-		  } else {
-	            fprintf(stderr,"reloc65: write '%s': %s\n", 
-						outfile, strerror(errno));
-		  }
+						if (tflag) {
+							file.buf[9] = (tbase >> 8) & 255;
+							file.buf[8] = tbase & 255;
+						}
+						if (dflag) {
+							file.buf[13] = (dbase >> 8) & 255;
+							file.buf[12] = dbase & 255;
+						}
+						if (bflag) {
+							file.buf[17] = (bbase >> 8) & 255;
+							file.buf[16] = bbase & 255;
+						}
+						if (zflag) {
+							file.buf[21] = (zbase >> 8) & 255;
+							file.buf[20] = zbase & 255;
+						}
+
+						fp = fopen(outfile, "wb");
+						if (fp) {
+							switch (extract) {
+							case 0: /* whole file */
+								fwrite(file.buf, 1, file.fsize, fp);
+								break;
+							case 1: /* text segment */
+								fwrite(file.segt, 1, file.tlen, fp);
+								break;
+							case 2: /* data segment */
+								fwrite(file.segd, 1, file.dlen, fp);
+								break;
+							case 3: /* text+data */
+								fwrite(file.segt, 1, file.tlen, fp);
+								fwrite(file.segd, 1, file.dlen, fp);
+								break;
+							}
+							fclose(fp);
+						} else {
+							fprintf(stderr, "reloc65: write '%s': %s\n",
+									outfile, strerror(errno));
+						}
+					}
+				} else {
+					fprintf(stderr, "reloc65: %s: not an o65 file!\n", argv[i]);
+					if (file.buf[0] == 1 && file.buf[1] == 8
+							&& file.buf[3] == 8) {
+						printf(
+								"%s: C64 BASIC executable (start address $0801)?\n",
+								argv[i]);
+					} else if (file.buf[0] == 1 && file.buf[1] == 4
+							&& file.buf[3] == 4) {
+						printf(
+								"%s: CBM PET BASIC executable (start address $0401)?\n",
+								argv[i]);
+					}
+				}
+			} else {
+				fprintf(stderr, "reloc65: read '%s': %s\n", argv[i],
+						strerror(errno));
+			}
 		}
-	      } else {
-	        fprintf(stderr,"reloc65: %s: not an o65 file!\n", argv[i]);
-		if(file.buf[0]==1 && file.buf[1]==8 && file.buf[3]==8) {
-		  printf("%s: C64 BASIC executable (start address $0801)?\n", argv[i]);
-		} else
-		if(file.buf[0]==1 && file.buf[1]==4 && file.buf[3]==4) {
-		  printf("%s: CBM PET BASIC executable (start address $0401)?\n", argv[i]);
-		}
-	      }
-	    } else {
-	      fprintf(stderr,"reloc65: read '%s': %s\n", 
-						argv[i], strerror(errno));
-	    }
-	  }
-	  i++;
+		i++;
 	}
 	exit(0);
 }
 
-
 int read_options(unsigned char *buf) {
-	int c, l=0;
+	int c, l = 0;
 
-	c=buf[0];
-	while(c && c!=EOF) {
-	  c&=255;
-	  l+=c;
-	  c=buf[l];
+	c = buf[0];
+	while (c && c != EOF) {
+		c &= 255;
+		l += c;
+		c = buf[l];
 	}
 	return ++l;
 }
@@ -401,90 +437,94 @@ int read_options(unsigned char *buf) {
 int read_undef(unsigned char *buf) {
 	int n, l = 2;
 
-	n = buf[0] + 256*buf[1];
-	while(n){
-	  n--;
-	  while(buf[l] != 0) {
+	n = buf[0] + 256 * buf[1];
+	while (n) {
+		n--;
+		while (buf[l] != 0) {
+			l++;
+		}
 		l++;
-	  }
-	  l++;
 	}
 	return l;
 }
 
 #define	reldiff(s)	(((s)==2)?fp->tdiff:(((s)==3)?fp->ddiff:(((s)==4)?fp->bdiff:(((s)==5)?fp->zdiff:0))))
 
-unsigned char *reloc_seg(unsigned char *buf, int len, unsigned char *rtab, 
-			file65 *fp, int undefwarn) {
+unsigned char* reloc_seg(unsigned char *buf, int len, unsigned char *rtab,
+		file65 *fp, int undefwarn) {
 	int adr = -1;
 	int type, seg, old, new;
-/*printf("tdiff=%04x, ddiff=%04x, bdiff=%04x, zdiff=%04x\n",
-		fp->tdiff, fp->ddiff, fp->bdiff, fp->zdiff);*/
-	while(*rtab) {
-	  if((*rtab & 255) == 255) {
-	    adr += 254;
-	    rtab++;
-	  } else {
-	    adr += *rtab & 255;
-	    rtab++;
-	    type = *rtab & 0xe0;
-	    seg = *rtab & 0x07;
-/*printf("reloc entry @ rtab=%p (offset=%d), adr=%04x, type=%02x, seg=%d\n",rtab-1, *(rtab-1), adr, type, seg);*/
-	    rtab++;
-	    switch(type) {
-	    case 0x80:	/* WORD - two byte address */
-		old = buf[adr] + 256*buf[adr+1];
-		new = old + reldiff(seg);
-		buf[adr] = new & 255;
-		buf[adr+1] = (new>>8)&255;
-		break;
-	    case 0x40:	/* HIGH - high byte of an address */
-		old = buf[adr]*256 + *rtab;
-		new = old + reldiff(seg);
-		buf[adr] = (new>>8)&255;
-		*rtab = new & 255;
-		rtab++;
-		break;
-	    case 0x20:	/* LOW - low byt of an address */
-		old = buf[adr];
-		new = old + reldiff(seg);
-		buf[adr] = new & 255;
-		break;
-	    }
-	    if(seg==0) {
-		/* undefined segment entry */
-		if (undefwarn) {
-	          fprintf(stderr,"reloc65: %s: Warning: undefined relocation table entry not handled!\n", fp->fname);
+	/*printf("tdiff=%04x, ddiff=%04x, bdiff=%04x, zdiff=%04x\n",
+	 fp->tdiff, fp->ddiff, fp->bdiff, fp->zdiff);*/
+	while (*rtab) {
+		if ((*rtab & 255) == 255) {
+			adr += 254;
+			rtab++;
+		} else {
+			adr += *rtab & 255;
+			rtab++;
+			type = *rtab & 0xe0;
+			seg = *rtab & 0x07;
+			/*printf("reloc entry @ rtab=%p (offset=%d), adr=%04x, type=%02x, seg=%d\n",rtab-1, *(rtab-1), adr, type, seg);*/
+			rtab++;
+			switch (type) {
+			case 0x80: /* WORD - two byte address */
+				old = buf[adr] + 256 * buf[adr + 1];
+				new = old + reldiff(seg);
+				buf[adr] = new & 255;
+				buf[adr + 1] = (new >> 8) & 255;
+				break;
+			case 0x40: /* HIGH - high byte of an address */
+				old = buf[adr] * 256 + *rtab;
+				new = old + reldiff(seg);
+				buf[adr] = (new >> 8) & 255;
+				*rtab = new & 255;
+				rtab++;
+				break;
+			case 0x20: /* LOW - low byt of an address */
+				old = buf[adr];
+				new = old + reldiff(seg);
+				buf[adr] = new & 255;
+				break;
+			}
+			if (seg == 0) {
+				/* undefined segment entry */
+				if (undefwarn) {
+					fprintf(stderr,
+							"reloc65: %s: Warning: undefined relocation table entry not handled!\n",
+							fp->fname);
+				}
+				rtab += 2;
+			}
 		}
-		rtab+=2;
-	    }
-	  }
 	}
-	if(adr > len) {
-	  fprintf(stderr,"reloc65: %s: Warning: relocation table entries past segment end!\n",
-		fp->fname);
-	  fprintf(stderr, "reloc65: adr=%x len=%x\n", adr, len);
+	if (adr > len) {
+		fprintf(stderr,
+				"reloc65: %s: Warning: relocation table entries past segment end!\n",
+				fp->fname);
+		fprintf(stderr, "reloc65: adr=%x len=%x\n", adr, len);
 	}
 	return ++rtab;
 }
 
-unsigned char *reloc_globals(unsigned char *buf, file65 *fp) {
+unsigned char* reloc_globals(unsigned char *buf, file65 *fp) {
 	int n, old, new, seg;
 
-	n = buf[0] + 256*buf[1];
-	buf +=2;
+	n = buf[0] + 256 * buf[1];
+	buf += 2;
 
-	while(n) {
-/*printf("relocating %s, ", buf);*/
-	  while(*(buf++));
-	  seg = *buf;
-	  old = buf[1] + 256*buf[2];
-	  new = old + reldiff(seg);
-/*printf("old=%04x, seg=%d, rel=%04x, new=%04x\n", old, seg, reldiff(seg), new);*/
-	  buf[1] = new & 255;
-	  buf[2] = (new>>8) & 255;
-	  buf +=3;
-	  n--;
+	while (n) {
+		/*printf("relocating %s, ", buf);*/
+		while (*(buf++))
+			;
+		seg = *buf;
+		old = buf[1] + 256 * buf[2];
+		new = old + reldiff(seg);
+		/*printf("old=%04x, seg=%d, rel=%04x, new=%04x\n", old, seg, reldiff(seg), new);*/
+		buf[1] = new & 255;
+		buf[2] = (new >> 8) & 255;
+		buf += 3;
+		n--;
 	}
 	return buf;
 }
